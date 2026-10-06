@@ -17,6 +17,13 @@ from app.domain.errors import DomainValidationError, ErrorCode
 
 DEFAULT_DRIVER_TZ = timezone(timedelta(hours=5))
 
+# Supported calendar range. Keeps every UTC conversion far from datetime's
+# year 1 / 9999 limits (date=0001-01-01 with +05:00 would overflow).
+MIN_SUPPORTED_YEAR = 2000
+MAX_SUPPORTED_YEAR = 2099
+MIN_SUPPORTED_INSTANT = datetime(MIN_SUPPORTED_YEAR, 1, 1, tzinfo=UTC)
+MAX_SUPPORTED_INSTANT = datetime(MAX_SUPPORTED_YEAR + 1, 1, 1, tzinfo=UTC)
+
 _OFFSET_PATTERN = re.compile(r"^(?P<sign>[+-])(?P<hours>\d{2}):(?P<minutes>\d{2})$")
 _MAX_OFFSET = timedelta(hours=14)
 

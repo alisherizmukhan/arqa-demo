@@ -8,7 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.errors import ApiError, ApiErrorCode
 from app.application.ports import TripRepository
-from app.domain.day import DEFAULT_DRIVER_TZ, DayWindow, format_utc_offset, parse_utc_offset
+from app.domain.day import (
+    DEFAULT_DRIVER_TZ,
+    MAX_SUPPORTED_YEAR,
+    MIN_SUPPORTED_YEAR,
+    DayWindow,
+    format_utc_offset,
+    parse_utc_offset,
+)
 from app.infrastructure.repository import SqlTripRepository
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -38,11 +45,12 @@ def _parse_day(raw: str) -> date:
             parsed = date.fromisoformat(raw)
         except ValueError:  # e.g. 2026-02-30
             parsed = None
-    if parsed is None:
+    if parsed is None or not MIN_SUPPORTED_YEAR <= parsed.year <= MAX_SUPPORTED_YEAR:
         raise ApiError(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             ApiErrorCode.INVALID_DATE,
-            f"date must be a calendar date in YYYY-MM-DD format, got {raw!r}",
+            f"date must be a calendar date in YYYY-MM-DD format between "
+            f"{MIN_SUPPORTED_YEAR} and {MAX_SUPPORTED_YEAR}, got {raw!r}",
             field="date",
         )
     return parsed

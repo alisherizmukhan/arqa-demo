@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 
+from app.domain.day import MAX_SUPPORTED_INSTANT, MIN_SUPPORTED_INSTANT
 from app.domain.errors import DomainValidationError, ErrorCode
 
 TRIP_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
 # Sanity cap (tenge). Keeps sums far inside BIGINT and rejects typos like an extra "000000".
 MAX_AMOUNT = 10_000_000
+
+# Sanity cap: no single ride lasts a day; longer means a typo in the date.
+MAX_TRIP_DURATION = timedelta(hours=24)
 
 
 class PaymentMethod(StrEnum):
@@ -83,9 +87,19 @@ def _validate(trip: Trip) -> None:
                 f"{name} must include a UTC offset, e.g. 2026-10-01T08:10:00+05:00",
                 field=name,
             )
+        if not MIN_SUPPORTED_INSTANT <= getattr(trip, name) < MAX_SUPPORTED_INSTANT:
+            raise DomainValidationError(
+                ErrorCode.DATETIME_OUT_OF_RANGE,
+                f"{name} must be between 2000-01-01 and 2099-12-31",
+                field=name,
+            )
     if trip.end <= trip.start:
         raise DomainValidationError(
             ErrorCode.INVALID_TIME_RANGE, "end must be after start", field="end"
+        )
+    if trip.end - trip.start > MAX_TRIP_DURATION:
+        raise DomainValidationError(
+            ErrorCode.TRIP_TOO_LONG, "a trip cannot last longer than 24 hours", field="end"
         )
     if not isinstance(trip.payment, PaymentMethod):
         PaymentMethod.parse(str(trip.payment))

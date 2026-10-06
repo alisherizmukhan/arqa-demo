@@ -99,3 +99,53 @@ def test_same_payload_ignores_id() -> None:
 )
 def test_different_payload_is_detected(changes: dict[str, Any]) -> None:
     assert not make_trip(start=START).has_same_payload(make_trip(start=START, **changes))
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "code", "field"),
+    [
+        (
+            datetime(1999, 12, 31, 23, 59, 59, tzinfo=UTC),
+            datetime(2000, 1, 1, 0, 30, tzinfo=UTC),
+            ErrorCode.DATETIME_OUT_OF_RANGE,
+            "start",
+        ),
+        (
+            datetime(2099, 12, 31, 23, 50, tzinfo=UTC),
+            datetime(2100, 1, 1, 0, 10, tzinfo=UTC),
+            ErrorCode.DATETIME_OUT_OF_RANGE,
+            "end",
+        ),
+        (
+            datetime(1, 1, 1, 1, 0, tzinfo=KZ),
+            datetime(1, 1, 1, 2, 0, tzinfo=KZ),
+            ErrorCode.DATETIME_OUT_OF_RANGE,
+            "start",
+        ),
+        (START, START + timedelta(hours=24, seconds=1), ErrorCode.TRIP_TOO_LONG, "end"),
+        (START, START + timedelta(days=3 * 365), ErrorCode.TRIP_TOO_LONG, "end"),
+    ],
+)
+def test_implausible_times_are_rejected(
+    start: datetime, end: datetime, code: ErrorCode, field: str
+) -> None:
+    with pytest.raises(DomainValidationError) as exc:
+        make_trip(start=start, end=end)
+
+    assert exc.value.code is code
+    assert exc.value.field == field
+
+
+@pytest.mark.parametrize(
+    ("start", "end"),
+    [
+        (datetime(2000, 1, 1, tzinfo=UTC), datetime(2000, 1, 1, 0, 20, tzinfo=UTC)),
+        (
+            datetime(2099, 12, 31, 23, 0, tzinfo=UTC),
+            datetime(2099, 12, 31, 23, 59, 59, tzinfo=UTC),
+        ),
+        (START, START + timedelta(hours=24)),
+    ],
+)
+def test_boundary_times_are_allowed(start: datetime, end: datetime) -> None:
+    make_trip(start=start, end=end)

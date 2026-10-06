@@ -42,6 +42,12 @@ def assert_error(response: Response, status: int, code: str, field: str | None) 
         ({"id": "has space"}, "invalid_id", "id"),
         ({"id": 42}, "invalid_id", "id"),
         ({"tip": 100}, "unknown_field", "tip"),
+        (
+            {"start": "0001-01-01T01:00:00+05:00", "end": "0001-01-01T02:00:00+05:00"},
+            "datetime_out_of_range",
+            "start",
+        ),
+        ({"end": "2026-10-03T10:00:00+05:00"}, "trip_too_long", "end"),
     ],
 )
 async def test_invalid_trip_is_rejected_with_error_shape(
@@ -86,6 +92,10 @@ async def test_body_must_be_an_object(client: AsyncClient) -> None:
         ("date=2026-02-30", "invalid_date", "date"),
         ("date=01.10.2026", "invalid_date", "date"),
         ("date=2026-10-01T00:00:00", "invalid_date", "date"),
+        ("date=0001-01-01", "invalid_date", "date"),
+        ("date=1999-12-31", "invalid_date", "date"),
+        ("date=2100-01-01", "invalid_date", "date"),
+        ("date=9999-12-31", "invalid_date", "date"),
         ("date=2026-10-01&tz=Asia/Almaty", "invalid_timezone", "tz"),
         ("date=2026-10-01&tz=%2B15:00", "invalid_timezone", "tz"),
         ("date=2026-10-01&tz=5", "invalid_timezone", "tz"),

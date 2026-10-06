@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -106,7 +108,8 @@ async def test_day_boundaries_in_database_query(client: AsyncClient) -> None:
         "next-000000": "2026-10-02T00:00:00+05:00",
     }
     for trip_id, start in starts.items():
-        payload = trip_payload(id=trip_id, start=start, end="2026-10-02T03:00:00+05:00")
+        end = datetime.fromisoformat(start) + timedelta(minutes=30)
+        payload = trip_payload(id=trip_id, start=start, end=end.isoformat())
         assert (await client.post("/trips", json=payload)).status_code == 201
 
     body = (await client.get("/trips", params={"date": "2026-10-01"})).json()
