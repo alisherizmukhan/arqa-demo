@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     seed_on_startup: bool = True
     seed_file: Path = _REPO_SEED_FILE
     log_level: str = "INFO"
+    # Browser origins allowed to call the API (Flutter web). JSON list in env,
+    # e.g. CORS_ORIGINS='["https://example.com"]'. Public, read-mostly API: "*".
+    cors_origins: list[str] = ["*"]
 
     @property
     def async_database_url(self) -> str:
