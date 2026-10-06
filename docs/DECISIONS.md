@@ -55,3 +55,5 @@ Short format: **decision** → why.
 - **Docker: multi-stage, uv pinned (0.12.23), `uv sync --locked --no-dev`, non-root user, build context = repo root (`-f backend/Dockerfile`) so the seed file is included; no BuildKit cache mounts.** → Railway rejects cache mounts without its service-specific ids.
 - **Local Postgres on host port 5433 (configurable via `POSTGRES_PORT`).** → 5432 is commonly taken by another local Postgres.
 - **Integration tests: real Postgres, schema reset via `alembic downgrade base && upgrade head` once per session (so the downgrade is tested too), `TRUNCATE` per test; skipped locally if the DB is unreachable, but a failure when `CI` is set.**
+- **Railway: `railway.json` (config as code) kept, although the CLI (5.52) now warns it is deprecated in favor of `.railway/railway.ts` and supported until 2026-12-01.** → The assignment asks for `railway.json`. Migration later is one command (`railway config migrate`).
+- **Railway services: `api` (Dockerfile) + `Postgres`; `DATABASE_URL=${{Postgres.DATABASE_URL}}` reference variable (private network); `.railwayignore` excludes the Flutter code from uploads.**

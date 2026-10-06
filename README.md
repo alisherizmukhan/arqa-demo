@@ -2,7 +2,9 @@
 
 Daily trips and payout summary for ride-hailing drivers: a Flutter app (`apps/mobile`), a design kit (`packages/design_kit`), and a FastAPI backend (`backend`).
 
-> Work in progress — full README (how to run, deployed API link, screenshots) comes in stage 6.
+> Work in progress — full README (screenshots, mobile app) comes in stage 6.
+
+**Deployed API:** https://api-production-6e8b.up.railway.app — Swagger UI at [`/docs`](https://api-production-6e8b.up.railway.app/docs), e.g. [`/summary?date=2026-10-01`](https://api-production-6e8b.up.railway.app/summary?date=2026-10-01).
 
 ## Layout
 
@@ -33,3 +35,35 @@ uv run pytest
 # Local Postgres
 docker compose up -d db
 ```
+
+## Backend locally
+
+```bash
+docker compose up -d db                       # Postgres 16 on localhost:5433 (+ driver_diary_test DB)
+cd backend
+uv sync
+uv run alembic upgrade head                   # create schema
+uv run python -m app                          # http://127.0.0.1:8000/docs  (seeds data/trips.json if empty)
+uv run pytest                                 # unit + integration (Windows: uv run python -m pytest)
+```
+
+Or the whole stack in Docker: `docker compose --profile full up --build` → http://localhost:8000/docs.
+
+Config (env): `DATABASE_URL` (`postgresql://…` is converted to `postgresql+asyncpg://`), `PORT`, `SEED_ON_STARTUP` (default `true`), `SEED_FILE`.
+
+## Deploy to Railway
+
+The image is built from the repo root with `backend/Dockerfile` (see `railway.json`, healthcheck `/health`). The container runs `alembic upgrade head` and then uvicorn on `$PORT`.
+
+```bash
+railway login
+railway init --name driver-shift-diary          # new project
+railway add --database postgres                 # managed Postgres
+railway add --service api                       # empty service for the API
+# Link the database: a reference variable, resolved by Railway to the private URL
+railway variable set 'DATABASE_URL=${{Postgres.DATABASE_URL}}' --service api
+railway up --service api                        # build & deploy from the repo root
+railway domain --service api                    # public https URL
+```
+
+`.railwayignore` keeps the Flutter code out of the upload.
