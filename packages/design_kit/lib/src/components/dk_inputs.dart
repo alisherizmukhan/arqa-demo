@@ -2,6 +2,7 @@ import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/format/dk_money.dart';
 import 'package:design_kit/src/format/dk_money_input.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
+import 'package:design_kit/src/tokens/dk_colors.dart';
 import 'package:design_kit/src/tokens/dk_dimensions.dart';
 import 'package:design_kit/src/tokens/dk_icons.dart';
 import 'package:design_kit/src/tokens/dk_typography.dart';
@@ -9,6 +10,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 enum _FieldState { normal, focused, error, disabled }
+
+/// Prefix icon: textTertiary; `error` with the border and label (mockup 08,
+/// DESIGN.md §4).
+Color _prefixColor(DkColors colors, _FieldState state) =>
+    state == _FieldState.error ? colors.error : colors.textTertiary;
 
 /// Label → field frame → helper or error row, DESIGN.md §4 (DkTextField).
 class _FieldShell extends StatelessWidget {
@@ -190,7 +196,7 @@ class DkTextField extends StatefulWidget {
   /// Error below the field; replaces [helper] and turns the field red.
   final String? errorText;
 
-  /// Leading icon (20, textTertiary).
+  /// Leading icon (20, textTertiary; `error` in the error state).
   final IconData? prefixIcon;
 
   /// Trailing unit, e.g. «₸» (20/700, textTertiary).
@@ -285,7 +291,11 @@ class _DkTextFieldState extends State<DkTextField> {
         child: Row(
           children: [
             if (widget.prefixIcon case final icon?) ...[
-              Icon(icon, size: sizes.iconField, color: colors.textTertiary),
+              Icon(
+                icon,
+                size: sizes.iconField,
+                color: _prefixColor(colors, state),
+              ),
               SizedBox(width: context.dkSpacing.s10),
             ],
             Expanded(
@@ -419,7 +429,7 @@ class DkTimeField extends StatelessWidget {
                 Icon(
                   DkIcons.time,
                   size: sizes.iconField,
-                  color: colors.textTertiary,
+                  color: _prefixColor(colors, state),
                 ),
                 SizedBox(width: spacing.s10),
               ],

@@ -437,6 +437,33 @@ void main() {
       });
     }
 
+    testWidgets('the clock turns error with the border (mockup 08)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          Column(
+            children: [
+              DkTimeField(label: 'Начало', value: '09:20', onTap: () {}),
+              DkTimeField(
+                label: 'Окончание',
+                value: '09:05',
+                invalid: true,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final colors = DkTheme.light().extension<DkColors>()!;
+      final clocks = tester
+          .widgetList<Icon>(find.byIcon(DkIcons.time))
+          .map((i) => i.color)
+          .toList();
+      expect(clocks, [colors.textTertiary, colors.error]);
+    });
+
     testWidgets('time field without a badge keeps the clock icon', (
       tester,
     ) async {

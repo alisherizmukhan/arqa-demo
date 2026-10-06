@@ -258,7 +258,7 @@ Payment card = DkCard(padding 16, gap 14): Row of two payment DkSummaryTiles (gr
 - label `label` style (textSecondary; `accent` when focused; `error` when error) → gap 8 → field → gap 6 → helper `caption` textTertiary or error row.
 - field: height 56, radius md, bg `surface`, border 1 `border`, padding h 15.
 - focused: border 2 `accent` + outer ring 4 `accentSoft`, padding h 14.
-- error: border 2 `error`; error row = icon `circle-alert` 16 + gap 6 + text `captionStrong` error. Semantics: `aria-invalid` equivalent, error read after label.
+- error: border 2 `error`, prefix icon `error` (as in mockup 08); error row = icon `circle-alert` 16 + gap 6 + text `captionStrong` error. Semantics: `aria-invalid` equivalent, error read after label.
 - disabled: bg `surfaceMuted`, border `divider`, text textSecondary.
 - variants: **time** (prefix clock 20 textTertiary, gap 10, style `fieldTime`, opens time picker), **money** (style `moneyL`, suffix `"₸"` 20/700 textTertiary, numeric keyboard, groups digits with U+202F while typing).
 - `trailing` slot used for `DkBadge('+1 день')`.

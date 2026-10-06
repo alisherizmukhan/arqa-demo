@@ -85,6 +85,23 @@ class _FieldsState extends State<_Fields> {
         controller: _error,
         errorText: 'Сумма должна быть больше 0',
       ),
+      // Mockup 08: the end field in error, clock included.
+      Row(
+        spacing: context.dkSpacing.s12,
+        children: [
+          Expanded(
+            child: DkTimeField(label: 'Начало', value: '09:20', onTap: () {}),
+          ),
+          Expanded(
+            child: DkTimeField(
+              label: 'Окончание',
+              value: '09:05',
+              invalid: true,
+              onTap: () {},
+            ),
+          ),
+        ],
+      ),
     ],
   );
 }
@@ -159,7 +176,7 @@ void main() {
     ('dark', DkTheme.dark()),
   ]) {
     goldenTest(
-      'DkTextField: default, focused, error ($name)',
+      'DkTextField: default, focused, error; time field error ($name)',
       fileName: 'text_fields_$name',
       pumpBeforeTest: (tester) async {
         await tester.pump();
