@@ -33,3 +33,25 @@ Short format: **decision** → why.
 - **`calculate_daily_summary` raises if given a trip from another day, instead of filtering it out.** → A trip from the wrong day there means a repository bug; failing loudly beats silently wrong money totals.
 - **Cash/card split uses an exhaustive `match` + `assert_never`.** → Adding a payment method becomes a type error instead of being silently counted as card.
 - **`hypothesis` for property tests (summary invariants, UTC window vs. local day).** → Example-based tests cover the named edge cases; properties cover the input space around them.
+
+## Backend persistence & API (stage 3)
+
+- **Idempotency = `INSERT … ON CONFLICT (id) DO NOTHING RETURNING id`, then read and compare the stored trip.** → The primary key decides atomically. A concurrent insert of the same id waits for the first transaction, inserts nothing, and then reads the winner. No check-then-insert anywhere.
+- **The repository commits right after the insert (one transaction per insert).** → The row is visible to concurrent requests as early as possible, and the use case stays free of transaction plumbing.
+- **Responses: 201 new / 200 same payload (returns the *stored* record) / 409 different payload.** → As specified. The 200 body is the stored trip, so a retry sees exactly what the first call created.
+- **Columns `start_at` / `end_at` (`TIMESTAMPTZ`), money `BIGINT`, `payment` as `VARCHAR` + `CHECK`; all domain rules repeated as DB `CHECK` constraints; index on `start_at`.** → `END` is a reserved SQL word. `CHECK` on a varchar is easier to evolve than a native PG enum. The constraints are defense-in-depth if someone writes to the DB directly.
+- **Day queries use the UTC half-open interval from `DayWindow` (`start_at >= :a AND start_at < :b`).** → Uses the index and never depends on the DB session timezone.
+- **The summary is computed in Python by the domain function, not with SQL `SUM`.** → One source of truth for the money rules (the same function is unit-tested). A day has tens of trips, so there's no performance concern.
+- **Pydantic checks types only (`StrictInt`, aware ISO-8601 strings, enum); the domain checks business rules.** → One place for the rules, and every error gets a stable domain `code`. Pydantic errors are mapped to the same `{error: {code, message, field}}` shape (only the first error is returned).
+- **Timestamps must be ISO strings; numbers are rejected (custom `BeforeValidator`).** → FastAPI validates decoded JSON in Python mode. `Strict()` would reject ISO strings there, and lax mode would accept unix timestamps.
+- **`GET` responses render times in the requested `tz`; the `POST` response uses the offset of the submitted `start`.** → The client receives times in the zone it works in. Instants are identical either way.
+- **`GET /trips` returns `{date, tz, trips: [...]}` rather than a bare list.** → It echoes the resolved day/offset and can grow (paging, totals) without a breaking change.
+- **Query `tz`: a leading space is treated as `+`.** → `?tz=+05:00` without URL encoding decodes to `" 05:00"`; drivers' clients and curl users would otherwise get a confusing 422. The domain parser itself stays strict.
+- **`date` must match `YYYY-MM-DD` exactly and be a real calendar date (custom parsing).** → Pydantic's lax `date` also accepts other formats and numbers.
+- **All errors — including 404/405/500 — use the error shape; the default `HTTPValidationError` schema is replaced in OpenAPI.**
+- **`/health` runs `SELECT 1` and returns 503 if the DB is down.** → The Railway healthcheck then fails a deploy that can't reach its database.
+- **Seed on startup only if the table is empty; each insert is idempotent.** → Safe on restarts and with several replicas starting at once.
+- **Settings via pydantic-settings: `DATABASE_URL` (`postgres://`/`postgresql://` → `postgresql+asyncpg://`, `sslmode` → `ssl`), `PORT`, `SEED_ON_STARTUP`, `SEED_FILE`.**
+- **Docker: multi-stage, uv pinned (0.12.23), `uv sync --locked --no-dev`, non-root user, build context = repo root (`-f backend/Dockerfile`) so the seed file is included; no BuildKit cache mounts.** → Railway rejects cache mounts without its service-specific ids.
+- **Local Postgres on host port 5433 (configurable via `POSTGRES_PORT`).** → 5432 is commonly taken by another local Postgres.
+- **Integration tests: real Postgres, schema reset via `alembic downgrade base && upgrade head` once per session (so the downgrade is tested too), `TRUNCATE` per test; skipped locally if the DB is unreachable, but a failure when `CI` is set.**
