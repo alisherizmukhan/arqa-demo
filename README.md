@@ -47,9 +47,16 @@ uv run python -m app                          # http://127.0.0.1:8000/docs  (see
 uv run pytest                                 # unit + integration (Windows: uv run python -m pytest)
 ```
 
+Demo data: `data/trips.json` (131 trips, 2026-09-21 .. 10-06) is seeded into an empty database on startup. To regenerate it or load it into an already running API (idempotent, through `POST /trips`):
+
+```bash
+uv run python scripts/generate_demo_trips.py
+uv run python scripts/load_trips.py https://api-production-6e8b.up.railway.app
+```
+
 Or the whole stack in Docker: `docker compose --profile full up --build` → http://localhost:8000/docs.
 
-Config (env): `DATABASE_URL` (`postgresql://…` is converted to `postgresql+asyncpg://`), `PORT`, `SEED_ON_STARTUP` (default `true`), `SEED_FILE`.
+Config (env): `DATABASE_URL` (`postgresql://…` is converted to `postgresql+asyncpg://`), `PORT`, `SEED_ON_STARTUP` (default `true`), `SEED_FILE`, `CORS_ORIGINS` (JSON list, default `["*"]`).
 
 ## Deploy to Railway
 

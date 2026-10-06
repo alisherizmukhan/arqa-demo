@@ -44,3 +44,11 @@ A running log of where the AI assistant was unsure, got something wrong first, a
 - **`textContrastGuideline` failure that wasn't a contrast problem.** The dark theme failed at 1.13:1 for the "Оплата" label. Two wrong guesses first: semantics merging, and off-screen widgets. Reading the flutter_test source showed it samples the `Text` widget's paint box plus 4px: the stretched label was 768px wide with a few glyphs, and the margin reached the neighbor's fill. I printed the real color (#F8FAFC, 19:1). The fix was layout, not color: size the label to its text.
 - **`SegmentedButton` ignores `minimumSize`.** My 56dp token was silently rendered as a 40dp box with 48dp tap padding. Found via a semantics dump, confirmed in the SDK source, and replaced with custom segments.
 - **Screenshot artifact:** at 412px, headless Edge cropped the right side. That looked like an overflow, but a 600px screenshot and a 360dp widget test showed the layout was correct; the cause is headless Edge's minimum window width.
+
+## Backend review (requested before stage 5)
+
+- **Found two 500s by probing edge cases by hand**, not via the test suite: `GET /summary?date=0001-01-01` and a POST with a year-1 timestamp both overflowed when converting to UTC. `date=9999-12-31` happened to work, which shows how easy this is to miss. Fixed with a supported 2000–2099 range; the four extreme dates are now regression tests.
+- **Missing CORS** would have broken the Flutter web demo in stage 5. Easy to forget when the target is "a mobile app".
+- **My own new rule broke an old test:** the day-boundary test used one shared end time, which made the first trip longer than 24h. The test data was wrong, not the rule.
+- **Coverage first reported 87% for `routes.py` with lines that obviously run.** The cause was coverage not tracing greenlets (SQLAlchemy async). With `concurrency = ["greenlet", "thread"]` the real number is 99%.
+- **Generated demo data must not break the reference case.** The generator never writes to 2026-09-30 .. 10-03 (days the tests pin down), and a check recomputes every day's summary from the file.

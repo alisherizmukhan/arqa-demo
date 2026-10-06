@@ -71,3 +71,11 @@ Short format: **decision** → why.
 - **Material outlined icons, no extra icon package.** → One consistent family; the skill's Phosphor default targets web/React.
 - **Accessibility enforced by tests**: Flutter's tap-target, labeled-target and text-contrast guidelines on a gallery of all interactive components in both themes, plus a 360dp no-overflow test of the showcase.
 - **No golden tests.** → Font rasterization differs between Windows and the Linux CI runner, so goldens would be flaky; screenshots come from the web build in headless Edge.
+
+## Backend hardening & demo data (before stage 5)
+
+- **Supported dates 2000-01-01 .. 2099-12-31** (trip timestamps → `datetime_out_of_range`; `date` query → `invalid_date`). → `date=0001-01-01` and year-1 trips crashed with a 500 (overflow converting to UTC). A bounded range removes the whole class of overflow bugs.
+- **A trip may last at most 24 hours (`trip_too_long`).** → A sanity cap like the amount cap: a 3-year trip was accepted before; longer than a day is a typo in the date.
+- **CORS enabled (`CORS_ORIGINS`, default `*`, GET/POST, `Content-Type` only, no credentials).** → Native apps don't need it, but the Flutter web build (demo, screenshots) can't call the API without it. The API is public and unauthenticated, so `*` exposes nothing extra.
+- **Coverage measured and enforced in CI (`--cov-fail-under=95`; currently 99%).** `concurrency = ["greenlet", "thread"]` is required, otherwise code run through SQLAlchemy's async greenlets shows up as uncovered.
+- **Demo data is generated, deterministic and loaded through the public API.** `backend/scripts/generate_demo_trips.py` keeps the hand-written edge-case trips (`t1`..`t10`, which own 2026-09-30 .. 10-03) and adds 121 realistic trips over 2026-09-21 .. 10-06 (day off 09-27; today's shift in progress; one trip crossing midnight). `scripts/load_trips.py` POSTs a file to any deployed API: it exercises the real validation and idempotency, and re-running is safe. → The startup seed only runs on an empty table (as specified), so an existing deployment gets new data via the API instead of a DB-level script.
