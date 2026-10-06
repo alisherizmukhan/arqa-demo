@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.6"
+
+jobs:
+  backend:
+    name: Backend (lint + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: driver_diary_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d driver_diary_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/driver_diary_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install dependencies
+        run: uv sync --locked
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Lint
+        run: uv run ruff check .
+      - name: Type check
+        run: uv run mypy
+      - name: Tests
+        run: uv run pytest
+
+  design_kit:
+    name: Design kit (analyze + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install dependencies (workspace)
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze
+        run: flutter analyze --fatal-infos packages/design_kit
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed packages/design_kit
+      - name: Tests
+        working-directory: packages/design_kit
+        run: flutter test
+
+  mobile:
+    name: Mobile app (analyze + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Install dependencies (workspace)
+        run: flutter pub get --enforce-lockfile
+      - name: Generated code is up to date
+        working-directory: apps/mobile
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- . || (echo "::error::Run build_runner and commit generated files" && exit 1)
+      - name: Analyze
+        run: flutter analyze --fatal-infos apps/mobile
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed apps/mobile/lib apps/mobile/test
+      - name: Tests
+        working-directory: apps/mobile
+        run: flutter test
