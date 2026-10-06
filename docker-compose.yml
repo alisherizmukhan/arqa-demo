@@ -1,0 +1,24 @@
+# Local Postgres for development and integration tests.
+#   docker compose up -d db
+# Dev DB:  postgresql://postgres:postgres@localhost:5432/driver_diary
+# Test DB: postgresql://postgres:postgres@localhost:5432/driver_diary_test
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: driver_diary
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d driver_diary"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
