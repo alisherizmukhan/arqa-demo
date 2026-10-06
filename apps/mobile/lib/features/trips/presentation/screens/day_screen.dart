@@ -30,7 +30,7 @@ class DayScreen extends ConsumerWidget {
         child: Column(
           children: [
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: spacing.xs),
+              padding: EdgeInsets.symmetric(horizontal: spacing.s8),
               child: DkDaySwitcher(
                 label: formatDayLabel(day, today: today),
                 onPrevious: selection.previous,
@@ -45,10 +45,10 @@ class DayScreen extends ConsumerWidget {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: EdgeInsets.fromLTRB(
-            spacing.md,
-            spacing.xs,
-            spacing.md,
-            spacing.md,
+            spacing.s16,
+            spacing.s8,
+            spacing.s16,
+            spacing.s16,
           ),
           child: DkButton(
             label: 'Добавить поездку',
@@ -126,7 +126,7 @@ class _DayContent extends ConsumerWidget {
       final list = trips.requireValue;
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: spacing.lg,
+        spacing: spacing.s24,
         children: [
           if (summary.value case final value?) SummaryCard(summary: value),
           if (list.isEmpty)
@@ -150,7 +150,7 @@ class _DayContent extends ConsumerWidget {
       child: ListView(
         // Pull-to-refresh must work in the empty and error states too.
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(spacing.md),
+        padding: EdgeInsets.all(spacing.s16),
         children: [content],
       ),
     );

@@ -50,12 +50,12 @@ class DkDaySwitcher extends StatelessWidget {
         onPressed: onPressed,
         tooltip: tooltip,
         icon: Icon(icon),
-        iconSize: sizes.iconMd,
+        iconSize: sizes.iconNav,
         color: colors.textPrimary,
-        disabledColor: colors.border,
+        disabledColor: colors.divider,
         constraints: BoxConstraints.tightFor(
-          width: sizes.minTouchTarget,
-          height: sizes.minTouchTarget,
+          width: sizes.tapTargetMin,
+          height: sizes.tapTargetMin,
         ),
       );
     }
@@ -63,7 +63,7 @@ class DkDaySwitcher extends StatelessWidget {
     return Row(
       children: [
         arrow(Icons.chevron_left, previousTooltip, onPrevious),
-        SizedBox(width: spacing.xs),
+        SizedBox(width: spacing.s8),
         Expanded(
           child: Semantics(
             hint: pickHint,
@@ -71,18 +71,18 @@ class DkDaySwitcher extends StatelessWidget {
               onPressed: onPick,
               style: TextButton.styleFrom(
                 foregroundColor: colors.textPrimary,
-                minimumSize: Size.fromHeight(sizes.minTouchTarget),
-                padding: EdgeInsets.symmetric(horizontal: spacing.sm),
+                minimumSize: Size.fromHeight(sizes.tapTargetMin),
+                padding: EdgeInsets.symmetric(horizontal: spacing.s12),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.calendar_today_outlined, size: sizes.iconSm),
-                  SizedBox(width: spacing.xs),
+                  Icon(Icons.calendar_today_outlined, size: sizes.iconField),
+                  SizedBox(width: spacing.s8),
                   Flexible(
                     child: Text(
                       label,
-                      style: context.dkText.titleSmall,
+                      style: context.dkText.titleM,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -91,7 +91,7 @@ class DkDaySwitcher extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(width: spacing.xs),
+        SizedBox(width: spacing.s8),
         arrow(Icons.chevron_right, nextTooltip, onNext),
       ],
     );

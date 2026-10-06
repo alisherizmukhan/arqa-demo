@@ -54,9 +54,9 @@ class DkButton extends StatelessWidget {
     final spacing = context.dkSpacing;
 
     final (background, foreground) = switch (variant) {
-      DkButtonVariant.primary => (colors.primary, colors.onPrimary),
+      DkButtonVariant.primary => (colors.accent, colors.onAccent),
       DkButtonVariant.secondary => (Colors.transparent, colors.textPrimary),
-      DkButtonVariant.text => (Colors.transparent, colors.primary),
+      DkButtonVariant.text => (Colors.transparent, colors.accent),
     };
     // Loading keeps the enabled look; a real disabled state is muted.
     final disabledBackground = isLoading
@@ -68,13 +68,10 @@ class DkButton extends StatelessWidget {
 
     final style = ButtonStyle(
       minimumSize: WidgetStatePropertyAll(
-        Size(
-          expand ? double.infinity : sizes.minTouchTarget,
-          sizes.controlHeight,
-        ),
+        Size(expand ? double.infinity : sizes.tapTargetMin, sizes.buttonHeight),
       ),
       padding: WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: spacing.lg),
+        EdgeInsets.symmetric(horizontal: spacing.s24),
       ),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(
@@ -96,9 +93,9 @@ class DkButton extends StatelessWidget {
           ? WidgetStateProperty.resolveWith(
               (states) => BorderSide(
                 color: states.contains(WidgetState.disabled)
-                    ? colors.border
-                    : colors.outline,
-                width: sizes.borderWidth,
+                    ? colors.divider
+                    : colors.border,
+                width: sizes.fieldBorder,
               ),
             )
           : null,
@@ -111,15 +108,15 @@ class DkButton extends StatelessWidget {
       children: [
         if (isLoading)
           SizedBox.square(
-            dimension: sizes.iconSm,
+            dimension: sizes.iconField,
             child: CircularProgressIndicator(
-              strokeWidth: sizes.focusWidth,
+              strokeWidth: sizes.fieldBorderFocused,
               color: foreground,
             ),
           )
         else if (icon != null)
-          Icon(icon, size: sizes.iconSm),
-        if (isLoading || icon != null) SizedBox(width: spacing.xs),
+          Icon(icon, size: sizes.iconField),
+        if (isLoading || icon != null) SizedBox(width: spacing.s8),
         Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
       ],
     );

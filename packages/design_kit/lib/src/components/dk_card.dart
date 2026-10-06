@@ -9,7 +9,7 @@ class DkCard extends StatelessWidget {
   /// Card content.
   final Widget child;
 
-  /// Inner padding; defaults to `spacing.md` on all sides.
+  /// Inner padding; defaults to `spacing.s16` on all sides.
   final EdgeInsetsGeometry? padding;
 
   /// Optional tap handler (adds ink feedback).
@@ -19,7 +19,7 @@ class DkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.dkColors;
     final content = Padding(
-      padding: padding ?? EdgeInsets.all(context.dkSpacing.md),
+      padding: padding ?? EdgeInsets.all(context.dkSpacing.s16),
       child: child,
     );
     return Material(
@@ -27,8 +27,8 @@ class DkCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(context.dkRadii.lg),
         side: BorderSide(
-          color: colors.border,
-          width: context.dkSizes.borderWidth,
+          color: colors.divider,
+          width: context.dkSizes.fieldBorder,
         ),
       ),
       clipBehavior: Clip.antiAlias,

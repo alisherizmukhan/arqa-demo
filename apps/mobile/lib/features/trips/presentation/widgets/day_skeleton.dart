@@ -14,28 +14,28 @@ class DaySkeleton extends StatelessWidget {
       container: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: spacing.lg,
+        spacing: spacing.s24,
         children: [
           DkCard(
-            padding: EdgeInsets.all(spacing.lg),
+            padding: EdgeInsets.all(spacing.s24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: spacing.sm,
+              spacing: spacing.s12,
               children: [
-                DkSkeleton(height: spacing.md, width: spacing.xxl * 2),
-                DkSkeleton(height: spacing.xxl, width: spacing.xxl * 4),
-                SizedBox(height: spacing.xs),
-                DkSkeleton(height: spacing.xl),
-                DkSkeleton(height: spacing.xl),
+                DkSkeleton(height: spacing.s16, width: spacing.s48 * 2),
+                DkSkeleton(height: spacing.s48, width: spacing.s48 * 4),
+                SizedBox(height: spacing.s8),
+                DkSkeleton(height: spacing.s32),
+                DkSkeleton(height: spacing.s32),
               ],
             ),
           ),
           DkCard(
             child: Column(
-              spacing: spacing.md,
+              spacing: spacing.s16,
               children: [
                 for (var i = 0; i < 3; i++)
-                  DkSkeleton(height: sizes.minTouchTarget),
+                  DkSkeleton(height: sizes.tapTargetMin),
               ],
             ),
           ),

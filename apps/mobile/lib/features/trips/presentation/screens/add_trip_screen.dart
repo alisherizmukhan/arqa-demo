@@ -182,7 +182,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       appBar: AppBar(title: const Text('Новая поездка')),
       body: SafeArea(
         child: ListView(
-          padding: EdgeInsets.all(spacing.md),
+          padding: EdgeInsets.all(spacing.s16),
           children: [
             DkTextField(
               label: 'Дата',
@@ -191,10 +191,10 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
               onTap: _pickDate,
               prefixIcon: Icons.calendar_today_outlined,
             ),
-            SizedBox(height: spacing.md),
+            SizedBox(height: spacing.s16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: spacing.sm,
+              spacing: spacing.s12,
               children: [
                 Expanded(
                   child: DkTextField(
@@ -221,7 +221,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                 ),
               ],
             ),
-            SizedBox(height: spacing.md),
+            SizedBox(height: spacing.s16),
             DkTextField(
               label: 'Сумма',
               controller: _amount,
@@ -233,7 +233,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
               onChanged: (_) => _onChanged(),
               errorText: _error(TripField.amount),
             ),
-            SizedBox(height: spacing.md),
+            SizedBox(height: spacing.s16),
             DkTextField(
               label: 'Комиссия',
               controller: _commission,
@@ -246,7 +246,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
               onChanged: (_) => _onChanged(),
               errorText: _error(TripField.commission),
             ),
-            SizedBox(height: spacing.md),
+            SizedBox(height: spacing.s16),
             DkSegmentedControl<PaymentMethod>(
               label: 'Оплата',
               segments: [
@@ -266,10 +266,10 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                     },
             ),
             if (_banner case final message?) ...[
-              SizedBox(height: spacing.md),
+              SizedBox(height: spacing.s16),
               _Banner(message: message),
             ],
-            SizedBox(height: spacing.lg),
+            SizedBox(height: spacing.s24),
             DkButton(label: 'Сохранить', isLoading: saving, onPressed: _save),
           ],
         ),
@@ -289,26 +289,24 @@ class _Banner extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       child: Container(
-        padding: EdgeInsets.all(context.dkSpacing.md),
+        padding: EdgeInsets.all(context.dkSpacing.s16),
         decoration: BoxDecoration(
-          color: colors.errorContainer,
+          color: colors.errorSoft,
           borderRadius: BorderRadius.circular(context.dkRadii.md),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: context.dkSpacing.sm,
+          spacing: context.dkSpacing.s12,
           children: [
             Icon(
               Icons.error_outline,
-              color: colors.onErrorContainer,
-              size: context.dkSizes.iconMd,
+              color: colors.error,
+              size: context.dkSizes.iconNav,
             ),
             Expanded(
               child: Text(
                 message,
-                style: context.dkText.body.copyWith(
-                  color: colors.onErrorContainer,
-                ),
+                style: context.dkText.body.copyWith(color: colors.error),
               ),
             ),
           ],

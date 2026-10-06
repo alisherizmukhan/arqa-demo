@@ -1,163 +1,280 @@
 import 'package:flutter/material.dart';
 
-/// Semantic color tokens. Components read colors only from here.
-///
-/// Every text/background pair meets WCAG AA (4.5:1) and every control outline
-/// meets 3:1 in both themes; see `DESIGN.md` and `test/contrast_test.dart`.
+/// Color tokens, DESIGN.md §2.1. Components read colors only from here.
 @immutable
 class DkColors extends ThemeExtension<DkColors> {
   /// Creates a color set. Prefer [DkColors.light] / [DkColors.dark].
   const new({
-    required this.background,
+    required this.bg,
     required this.surface,
     required this.surfaceMuted,
+    required this.segmentTrack,
+    required this.segmentThumb,
     required this.border,
-    required this.outline,
+    required this.divider,
     required this.textPrimary,
     required this.textSecondary,
-    required this.primary,
-    required this.onPrimary,
-    required this.positive,
-    required this.cash,
-    required this.card,
+    required this.textTertiary,
+    required this.textDisabled,
+    required this.iconDisabled,
+    required this.accent,
+    required this.onAccent,
+    required this.accentSoft,
+    required this.success,
+    required this.successSoft,
     required this.error,
-    required this.onError,
-    required this.errorContainer,
-    required this.onErrorContainer,
-    required this.focus,
+    required this.errorSoft,
+    required this.inverseSurface,
+    required this.onInverse,
+    required this.inverseAccent,
+    required this.inverseError,
+    required this.inverseSuccess,
+    required this.skeleton,
+    required this.splitNeutral,
+    required this.disabledFill,
+    required this.scrim,
   });
 
-  /// Daylight theme: high contrast against sun glare.
+  /// Light theme.
   static const DkColors light = DkColors(
-    background: Color(0xFFF8FAFC),
+    bg: Color(0xFFF4F5F7),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFF1F5F9),
-    border: Color(0xFFE2E8F0),
-    outline: Color(0xFF64748B),
-    textPrimary: Color(0xFF0F172A),
-    textSecondary: Color(0xFF475569),
-    primary: Color(0xFF15803D),
-    onPrimary: Color(0xFFFFFFFF),
-    positive: Color(0xFF15803D),
-    cash: Color(0xFFB45309),
-    card: Color(0xFF1D4ED8),
-    error: Color(0xFFB91C1C),
-    onError: Color(0xFFFFFFFF),
-    errorContainer: Color(0xFFFEE2E2),
-    onErrorContainer: Color(0xFF7F1D1D),
-    focus: Color(0xFF0F172A),
+    surfaceMuted: Color(0xFFEEF0F3),
+    segmentTrack: Color(0xFFE9ECF0),
+    segmentThumb: Color(0xFFFFFFFF),
+    border: Color(0xFFD5DAE1),
+    divider: Color(0xFFE6E9EE),
+    textPrimary: Color(0xFF0F1419),
+    textSecondary: Color(0xFF4A5260),
+    textTertiary: Color(0xFF5F6673),
+    textDisabled: Color(0xFF8A919C),
+    iconDisabled: Color(0xFFC3C8D0),
+    accent: Color(0xFF2450D8),
+    onAccent: Color(0xFFFFFFFF),
+    accentSoft: Color(0xFFE8EEFC),
+    success: Color(0xFF127A4B),
+    successSoft: Color(0xFFE3F4EB),
+    error: Color(0xFFC2261F),
+    errorSoft: Color(0xFFFCE9E8),
+    inverseSurface: Color(0xFF1A1F26),
+    onInverse: Color(0xFFF2F4F7),
+    inverseAccent: Color(0xFF9DB4FF),
+    inverseError: Color(0xFFFF8A80),
+    inverseSuccess: Color(0xFF6FD3A0),
+    skeleton: Color(0xFFE3E6EB),
+    splitNeutral: Color(0xFF9AA3AF),
+    disabledFill: Color(0xFFE1E4E9),
+    scrim: Color(0x7A0F1419),
   );
 
-  /// Night theme: near-black OLED background, low emission.
+  /// Dark theme.
   static const DkColors dark = DkColors(
-    background: Color(0xFF020617),
-    surface: Color(0xFF0F172A),
-    surfaceMuted: Color(0xFF1E293B),
-    border: Color(0xFF334155),
-    outline: Color(0xFF64748B),
-    textPrimary: Color(0xFFF8FAFC),
-    textSecondary: Color(0xFF94A3B8),
-    primary: Color(0xFF22C55E),
-    onPrimary: Color(0xFF052E16),
-    positive: Color(0xFF4ADE80),
-    cash: Color(0xFFFBBF24),
-    card: Color(0xFF60A5FA),
-    error: Color(0xFFF87171),
-    onError: Color(0xFF450A0A),
-    errorContainer: Color(0xFF450A0A),
-    onErrorContainer: Color(0xFFFECACA),
-    focus: Color(0xFFF8FAFC),
+    bg: Color(0xFF0B0D10),
+    surface: Color(0xFF16191E),
+    surfaceMuted: Color(0xFF22262D),
+    segmentTrack: Color(0xFF22262D),
+    segmentThumb: Color(0xFF343A43),
+    border: Color(0xFF343A43),
+    divider: Color(0xFF262B33),
+    textPrimary: Color(0xFFF2F4F7),
+    textSecondary: Color(0xFFB4BAC4),
+    textTertiary: Color(0xFF8B93A0),
+    textDisabled: Color(0xFF5B6370),
+    iconDisabled: Color(0xFF3F4550),
+    accent: Color(0xFF7B9BFF),
+    onAccent: Color(0xFF0B0D10),
+    accentSoft: Color(0xFF1C2645),
+    success: Color(0xFF4CC38A),
+    successSoft: Color(0xFF12301F),
+    error: Color(0xFFFF6B61),
+    errorSoft: Color(0xFF3A1716),
+    inverseSurface: Color(0xFFF2F4F7),
+    onInverse: Color(0xFF0F1419),
+    inverseAccent: Color(0xFF2450D8),
+    inverseError: Color(0xFFC2261F),
+    inverseSuccess: Color(0xFF127A4B),
+    skeleton: Color(0xFF262B33),
+    splitNeutral: Color(0xFF5B6370),
+    disabledFill: Color(0xFF2A2F37),
+    scrim: Color(0xA3000000),
   );
 
-  /// App background behind cards.
-  final Color background;
+  /// Screen background, bottom bar.
+  final Color bg;
 
-  /// Cards, sheets, inputs.
+  /// Cards, fields, day switcher, dialog.
   final Color surface;
 
-  /// Subtle fills: skeletons, chips, pressed rows.
+  /// Icon tiles, disabled fields.
   final Color surfaceMuted;
 
-  /// Decorative separators (not used as the only boundary of a control).
+  /// Segmented control track.
+  final Color segmentTrack;
+
+  /// Selected segment.
+  final Color segmentThumb;
+
+  /// Field border (default).
   final Color border;
 
-  /// Boundaries of interactive controls (>= 3:1 against [surface]).
-  final Color outline;
+  /// List dividers, card divider, bottom-bar top border.
+  final Color divider;
 
-  /// Main text and money figures.
+  /// Main text, amounts.
   final Color textPrimary;
 
-  /// Labels and supporting text (still >= 4.5:1).
+  /// Field labels, trip meta line, body.
   final Color textSecondary;
 
-  /// Primary actions.
-  final Color primary;
+  /// Helpers, «комиссия …», metric labels, weekday. ≥ 4.5:1 on [surface].
+  final Color textTertiary;
 
-  /// Content on [primary].
-  final Color onPrimary;
+  /// Disabled button text.
+  final Color textDisabled;
 
-  /// Earnings / net payout figures.
-  final Color positive;
+  /// Disabled «next day» chevron.
+  final Color iconDisabled;
 
-  /// Cash payment accent (always paired with an icon and a label).
-  final Color cash;
+  /// Primary button, FAB, «На руки», focus, card segment.
+  final Color accent;
 
-  /// Card payment accent (always paired with an icon and a label).
-  final Color card;
+  /// Text/icon on [accent].
+  final Color onAccent;
 
-  /// Errors and destructive actions.
+  /// Focus ring, empty-state tile, «+1 день» badge, new-row highlight.
+  final Color accentSoft;
+
+  /// Reserved.
+  final Color success;
+
+  /// Reserved.
+  final Color successSoft;
+
+  /// Field errors, error icons.
   final Color error;
 
-  /// Content on [error].
-  final Color onError;
+  /// Error-state / dialog icon tile.
+  final Color errorSoft;
 
-  /// Background of error banners.
-  final Color errorContainer;
+  /// Snackbar.
+  final Color inverseSurface;
 
-  /// Text on [errorContainer].
-  final Color onErrorContainer;
+  /// Snackbar text.
+  final Color onInverse;
 
-  /// Keyboard/accessibility focus ring.
-  final Color focus;
+  /// Snackbar action.
+  final Color inverseAccent;
+
+  /// «Нет связи» icon in the snackbar.
+  final Color inverseError;
+
+  /// «Поездка добавлена» icon.
+  final Color inverseSuccess;
+
+  /// DkSkeleton.
+  final Color skeleton;
+
+  /// Cash segment of DkSplitBar.
+  final Color splitNeutral;
+
+  /// Disabled button background.
+  final Color disabledFill;
+
+  /// Behind DkDialog.
+  final Color scrim;
+
+  /// Every token by its DESIGN.md name, for tests and the showcase.
+  Map<String, Color> get all => {
+    'bg': bg,
+    'surface': surface,
+    'surfaceMuted': surfaceMuted,
+    'segmentTrack': segmentTrack,
+    'segmentThumb': segmentThumb,
+    'border': border,
+    'divider': divider,
+    'textPrimary': textPrimary,
+    'textSecondary': textSecondary,
+    'textTertiary': textTertiary,
+    'textDisabled': textDisabled,
+    'iconDisabled': iconDisabled,
+    'accent': accent,
+    'onAccent': onAccent,
+    'accentSoft': accentSoft,
+    'success': success,
+    'successSoft': successSoft,
+    'error': error,
+    'errorSoft': errorSoft,
+    'inverseSurface': inverseSurface,
+    'onInverse': onInverse,
+    'inverseAccent': inverseAccent,
+    'inverseError': inverseError,
+    'inverseSuccess': inverseSuccess,
+    'skeleton': skeleton,
+    'splitNeutral': splitNeutral,
+    'disabledFill': disabledFill,
+    'scrim': scrim,
+  };
 
   @override
   DkColors copyWith({
-    Color? background,
+    Color? bg,
     Color? surface,
     Color? surfaceMuted,
+    Color? segmentTrack,
+    Color? segmentThumb,
     Color? border,
-    Color? outline,
+    Color? divider,
     Color? textPrimary,
     Color? textSecondary,
-    Color? primary,
-    Color? onPrimary,
-    Color? positive,
-    Color? cash,
-    Color? card,
+    Color? textTertiary,
+    Color? textDisabled,
+    Color? iconDisabled,
+    Color? accent,
+    Color? onAccent,
+    Color? accentSoft,
+    Color? success,
+    Color? successSoft,
     Color? error,
-    Color? onError,
-    Color? errorContainer,
-    Color? onErrorContainer,
-    Color? focus,
+    Color? errorSoft,
+    Color? inverseSurface,
+    Color? onInverse,
+    Color? inverseAccent,
+    Color? inverseError,
+    Color? inverseSuccess,
+    Color? skeleton,
+    Color? splitNeutral,
+    Color? disabledFill,
+    Color? scrim,
   }) {
     return DkColors(
-      background: background ?? this.background,
+      bg: bg ?? this.bg,
       surface: surface ?? this.surface,
       surfaceMuted: surfaceMuted ?? this.surfaceMuted,
+      segmentTrack: segmentTrack ?? this.segmentTrack,
+      segmentThumb: segmentThumb ?? this.segmentThumb,
       border: border ?? this.border,
-      outline: outline ?? this.outline,
+      divider: divider ?? this.divider,
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
-      primary: primary ?? this.primary,
-      onPrimary: onPrimary ?? this.onPrimary,
-      positive: positive ?? this.positive,
-      cash: cash ?? this.cash,
-      card: card ?? this.card,
+      textTertiary: textTertiary ?? this.textTertiary,
+      textDisabled: textDisabled ?? this.textDisabled,
+      iconDisabled: iconDisabled ?? this.iconDisabled,
+      accent: accent ?? this.accent,
+      onAccent: onAccent ?? this.onAccent,
+      accentSoft: accentSoft ?? this.accentSoft,
+      success: success ?? this.success,
+      successSoft: successSoft ?? this.successSoft,
       error: error ?? this.error,
-      onError: onError ?? this.onError,
-      errorContainer: errorContainer ?? this.errorContainer,
-      onErrorContainer: onErrorContainer ?? this.onErrorContainer,
-      focus: focus ?? this.focus,
+      errorSoft: errorSoft ?? this.errorSoft,
+      inverseSurface: inverseSurface ?? this.inverseSurface,
+      onInverse: onInverse ?? this.onInverse,
+      inverseAccent: inverseAccent ?? this.inverseAccent,
+      inverseError: inverseError ?? this.inverseError,
+      inverseSuccess: inverseSuccess ?? this.inverseSuccess,
+      skeleton: skeleton ?? this.skeleton,
+      splitNeutral: splitNeutral ?? this.splitNeutral,
+      disabledFill: disabledFill ?? this.disabledFill,
+      scrim: scrim ?? this.scrim,
     );
   }
 
@@ -166,23 +283,34 @@ class DkColors extends ThemeExtension<DkColors> {
     if (other == null) return this;
     Color l(Color a, Color b) => Color.lerp(a, b, t)!;
     return DkColors(
-      background: l(background, other.background),
+      bg: l(bg, other.bg),
       surface: l(surface, other.surface),
       surfaceMuted: l(surfaceMuted, other.surfaceMuted),
+      segmentTrack: l(segmentTrack, other.segmentTrack),
+      segmentThumb: l(segmentThumb, other.segmentThumb),
       border: l(border, other.border),
-      outline: l(outline, other.outline),
+      divider: l(divider, other.divider),
       textPrimary: l(textPrimary, other.textPrimary),
       textSecondary: l(textSecondary, other.textSecondary),
-      primary: l(primary, other.primary),
-      onPrimary: l(onPrimary, other.onPrimary),
-      positive: l(positive, other.positive),
-      cash: l(cash, other.cash),
-      card: l(card, other.card),
+      textTertiary: l(textTertiary, other.textTertiary),
+      textDisabled: l(textDisabled, other.textDisabled),
+      iconDisabled: l(iconDisabled, other.iconDisabled),
+      accent: l(accent, other.accent),
+      onAccent: l(onAccent, other.onAccent),
+      accentSoft: l(accentSoft, other.accentSoft),
+      success: l(success, other.success),
+      successSoft: l(successSoft, other.successSoft),
       error: l(error, other.error),
-      onError: l(onError, other.onError),
-      errorContainer: l(errorContainer, other.errorContainer),
-      onErrorContainer: l(onErrorContainer, other.onErrorContainer),
-      focus: l(focus, other.focus),
+      errorSoft: l(errorSoft, other.errorSoft),
+      inverseSurface: l(inverseSurface, other.inverseSurface),
+      onInverse: l(onInverse, other.onInverse),
+      inverseAccent: l(inverseAccent, other.inverseAccent),
+      inverseError: l(inverseError, other.inverseError),
+      inverseSuccess: l(inverseSuccess, other.inverseSuccess),
+      skeleton: l(skeleton, other.skeleton),
+      splitNeutral: l(splitNeutral, other.splitNeutral),
+      disabledFill: l(disabledFill, other.disabledFill),
+      scrim: l(scrim, other.scrim),
     );
   }
 }

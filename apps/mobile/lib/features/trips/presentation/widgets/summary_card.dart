@@ -12,10 +12,10 @@ class SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
     return DkCard(
-      padding: EdgeInsets.all(spacing.lg),
+      padding: EdgeInsets.all(spacing.s24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: spacing.lg,
+        spacing: spacing.s24,
         children: [
           DkSummaryTile.money(
             label: 'Чистыми',
@@ -70,7 +70,7 @@ class _Pair extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: context.dkSpacing.md,
+      spacing: context.dkSpacing.s16,
       children: [
         Expanded(child: left),
         Expanded(child: right),

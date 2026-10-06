@@ -87,7 +87,7 @@ class DkTextField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: text.label.copyWith(color: colors.textPrimary)),
-          SizedBox(height: context.dkSpacing.xs),
+          SizedBox(height: context.dkSpacing.s8),
           TextField(
             controller: controller,
             focusNode: focusNode,
@@ -99,7 +99,7 @@ class DkTextField extends StatelessWidget {
             readOnly: readOnly,
             enabled: enabled,
             style: text.body.copyWith(color: colors.textPrimary),
-            cursorColor: colors.primary,
+            cursorColor: colors.accent,
             decoration: InputDecoration(
               hintText: hint,
               helperText: helperText,
@@ -109,25 +109,28 @@ class DkTextField extends StatelessWidget {
               suffixText: suffixText,
               prefixIcon: prefixIcon == null
                   ? null
-                  : Icon(prefixIcon, size: sizes.iconMd),
+                  : Icon(prefixIcon, size: sizes.iconNav),
               filled: true,
               fillColor: enabled ? colors.surface : colors.surfaceMuted,
-              constraints: BoxConstraints(minHeight: sizes.controlHeight),
+              constraints: BoxConstraints(minHeight: sizes.buttonHeight),
               contentPadding: EdgeInsets.symmetric(
-                horizontal: context.dkSpacing.md,
-                vertical: context.dkSpacing.md,
+                horizontal: context.dkSpacing.s16,
+                vertical: context.dkSpacing.s16,
               ),
               hintStyle: text.body.copyWith(color: colors.textSecondary),
               helperStyle: text.label.copyWith(color: colors.textSecondary),
               errorStyle: text.label.copyWith(color: colors.error),
               suffixStyle: text.body.copyWith(color: colors.textSecondary),
               prefixIconColor: colors.textSecondary,
-              border: border(colors.outline, sizes.borderWidth),
-              enabledBorder: border(colors.outline, sizes.borderWidth),
-              disabledBorder: border(colors.border, sizes.borderWidth),
-              focusedBorder: border(colors.primary, sizes.focusWidth),
-              errorBorder: border(colors.error, sizes.focusWidth),
-              focusedErrorBorder: border(colors.error, sizes.focusWidth),
+              border: border(colors.border, sizes.fieldBorder),
+              enabledBorder: border(colors.border, sizes.fieldBorder),
+              disabledBorder: border(colors.divider, sizes.fieldBorder),
+              focusedBorder: border(colors.accent, sizes.fieldBorderFocused),
+              errorBorder: border(colors.error, sizes.fieldBorderFocused),
+              focusedErrorBorder: border(
+                colors.error,
+                sizes.fieldBorderFocused,
+              ),
             ),
           ),
         ],
@@ -196,9 +199,9 @@ class DkSegmentedControl<T> extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(height: spacing.xs),
+        SizedBox(height: spacing.s8),
         Row(
-          spacing: spacing.xs,
+          spacing: spacing.s8,
           children: [
             for (final segment in segments)
               Expanded(
@@ -236,10 +239,10 @@ class _SegmentButton<T> extends StatelessWidget {
     final foreground = !enabled
         ? colors.textSecondary
         : isSelected
-        ? colors.onPrimary
+        ? colors.onAccent
         : colors.textPrimary;
     final background = isSelected
-        ? (enabled ? colors.primary : colors.surfaceMuted)
+        ? (enabled ? colors.accent : colors.surfaceMuted)
         : colors.surface;
 
     return MergeSemantics(
@@ -253,23 +256,29 @@ class _SegmentButton<T> extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(context.dkRadii.md),
             side: BorderSide(
-              color: isSelected && enabled ? colors.primary : colors.outline,
-              width: sizes.borderWidth,
+              color: isSelected && enabled ? colors.accent : colors.border,
+              width: sizes.fieldBorder,
             ),
           ),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
             child: SizedBox(
-              height: sizes.controlHeight,
+              height: sizes.buttonHeight,
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.sm),
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.dkSpacing.s12,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (segment.icon != null) ...[
-                      Icon(segment.icon, size: sizes.iconSm, color: foreground),
-                      SizedBox(width: context.dkSpacing.xs),
+                      Icon(
+                        segment.icon,
+                        size: sizes.iconField,
+                        color: foreground,
+                      ),
+                      SizedBox(width: context.dkSpacing.s8),
                     ],
                     Flexible(
                       child: Text(

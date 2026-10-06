@@ -3,7 +3,7 @@ import 'package:design_kit/src/tokens/dk_dimensions.dart';
 import 'package:design_kit/src/tokens/dk_typography.dart';
 import 'package:flutter/material.dart';
 
-/// Token accessors: `context.dkColors.primary`, `context.dkSpacing.md`, ...
+/// Token accessors: `context.dkColors.accent`, `context.dkSpacing.s16`, ...
 extension DkThemeContext on BuildContext {
   /// Color tokens of the current theme.
   DkColors get dkColors => _extension<DkColors>();
@@ -16,6 +16,9 @@ extension DkThemeContext on BuildContext {
 
   /// Corner radii of the current theme.
   DkRadii get dkRadii => _extension<DkRadii>();
+
+  /// Shadows of the current theme (empty lists in dark).
+  DkElevation get dkElevation => _extension<DkElevation>();
 
   /// Component sizes of the current theme.
   DkSizes get dkSizes => _extension<DkSizes>();

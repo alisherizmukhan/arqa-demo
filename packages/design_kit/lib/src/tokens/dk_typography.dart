@@ -1,106 +1,231 @@
-import 'dart:ui' show FontVariation, lerpDouble;
+import 'dart:ui' show FontFeature, FontVariation, lerpDouble;
 
 import 'package:flutter/material.dart';
 
-/// Font family shipped with the kit (IBM Plex Sans, variable `wght` axis).
-///
-/// Plex digits are tabular by default, so money figures never change width
-/// while they update.
-const String dkFontFamily = 'IBMPlexSans';
+/// Main font (DESIGN.md §2.2), bundled as static 500/600/700/800 instances.
+const String dkFontFamily = 'Manrope';
 
-/// Package that owns [dkFontFamily].
+/// Glyph fallback for the two characters Manrope lacks: `₸` (U+20B8) and the
+/// narrow no-break space (U+202F). Bundled, so it never depends on the device.
+const String dkFallbackFontFamily = 'IBMPlexSans';
+
+/// Package that owns both fonts.
 const String dkFontPackage = 'design_kit';
 
-/// Builds a kit text style. Sets both `fontWeight` and the `wght` axis so the
-/// variable font renders the real weight instead of a synthetic bold.
+/// Builds a kit text style: Manrope, tabular figures, `height` from the line
+/// height. `fontVariations` sets the weight of the (variable) fallback font so
+/// a fallback `₸` matches the weight of the surrounding text.
 TextStyle dkTextStyle({
   required double size,
+  required double lineHeight,
   required FontWeight weight,
-  double height = 1.3,
   double letterSpacing = 0,
 }) {
   return TextStyle(
     fontFamily: dkFontFamily,
     package: dkFontPackage,
+    fontFamilyFallback: const [dkFallbackFontFamily],
     fontSize: size,
+    height: lineHeight / size,
     fontWeight: weight,
     fontVariations: [FontVariation.weight(weight.value.toDouble())],
-    height: height,
     letterSpacing: letterSpacing,
+    fontFeatures: const [FontFeature.tabularFigures()],
   );
 }
 
-/// Type scale. Colors are applied by components from `DkColors`.
+/// Type scale, DESIGN.md §2.2. Colors are applied by components.
 @immutable
 class DkTypography extends ThemeExtension<DkTypography> {
   /// Creates a type scale. Prefer [DkTypography.standard].
   const new({
     required this.moneyHero,
-    required this.moneyLarge,
-    required this.moneyMedium,
-    required this.title,
-    required this.titleSmall,
-    required this.body,
+    required this.moneyHeroSuffix,
+    required this.titleL,
+    required this.moneyL,
+    required this.wordmark,
+    required this.titleDialog,
+    required this.fieldTime,
+    required this.titleM,
+    required this.moneyM,
     required this.bodyStrong,
+    required this.body,
+    required this.bodyMd,
+    required this.bodyS,
     required this.label,
+    required this.captionStrong,
+    required this.caption,
+    required this.badge,
+    required this.superscript,
   });
 
-  /// The default scale: body 16, nothing below 14, one hero figure.
+  /// The scale from DESIGN.md §2.2 (−0.02em at 44 px = −0.88 px, etc.).
   static final DkTypography standard = DkTypography(
-    moneyHero: dkTextStyle(size: 44, weight: FontWeight.w700, height: 1.1),
-    moneyLarge: dkTextStyle(size: 26, weight: FontWeight.w600, height: 1.15),
-    moneyMedium: dkTextStyle(size: 20, weight: FontWeight.w600, height: 1.2),
-    title: dkTextStyle(size: 20, weight: FontWeight.w600),
-    titleSmall: dkTextStyle(size: 17, weight: FontWeight.w600),
-    body: dkTextStyle(size: 16, weight: FontWeight.w400, height: 1.5),
-    bodyStrong: dkTextStyle(size: 16, weight: FontWeight.w500, height: 1.5),
-    label: dkTextStyle(size: 14, weight: FontWeight.w500, height: 1.4),
+    moneyHero: dkTextStyle(
+      size: 44,
+      lineHeight: 48,
+      weight: FontWeight.w800,
+      letterSpacing: -0.88,
+    ),
+    moneyHeroSuffix: dkTextStyle(
+      size: 32,
+      lineHeight: 48,
+      weight: FontWeight.w700,
+      letterSpacing: -0.64,
+    ),
+    titleL: dkTextStyle(
+      size: 22,
+      lineHeight: 28,
+      weight: FontWeight.w800,
+      letterSpacing: -0.22,
+    ),
+    moneyL: dkTextStyle(size: 22, lineHeight: 28, weight: FontWeight.w700),
+    wordmark: dkTextStyle(
+      size: 20,
+      lineHeight: 28,
+      weight: FontWeight.w800,
+      letterSpacing: -0.4,
+    ),
+    titleDialog: dkTextStyle(
+      size: 20,
+      lineHeight: 28,
+      weight: FontWeight.w800,
+      letterSpacing: -0.2,
+    ),
+    fieldTime: dkTextStyle(size: 18, lineHeight: 24, weight: FontWeight.w700),
+    titleM: dkTextStyle(size: 17, lineHeight: 24, weight: FontWeight.w700),
+    moneyM: dkTextStyle(size: 17, lineHeight: 24, weight: FontWeight.w700),
+    bodyStrong: dkTextStyle(size: 16, lineHeight: 24, weight: FontWeight.w700),
+    body: dkTextStyle(size: 16, lineHeight: 24, weight: FontWeight.w500),
+    bodyMd: dkTextStyle(size: 15, lineHeight: 22, weight: FontWeight.w500),
+    bodyS: dkTextStyle(size: 14, lineHeight: 20, weight: FontWeight.w500),
+    label: dkTextStyle(size: 14, lineHeight: 20, weight: FontWeight.w600),
+    captionStrong: dkTextStyle(
+      size: 13,
+      lineHeight: 16,
+      weight: FontWeight.w600,
+    ),
+    caption: dkTextStyle(size: 13, lineHeight: 16, weight: FontWeight.w500),
+    badge: dkTextStyle(size: 12, lineHeight: 24, weight: FontWeight.w700),
+    superscript: dkTextStyle(size: 11, lineHeight: 14, weight: FontWeight.w800),
   );
 
-  /// The one figure a driver reads at a glance (net payout).
+  /// «На руки» amount (color accent). 44/48 · 800 · −0.88.
   final TextStyle moneyHero;
 
-  /// Secondary totals (revenue, commission, cash/card).
-  final TextStyle moneyLarge;
+  /// «₸» after the hero amount. 32/48 · 700 · −0.64.
+  final TextStyle moneyHeroSuffix;
 
-  /// Amounts in lists.
-  final TextStyle moneyMedium;
+  /// Empty/Error state title. 22/28 · 800 · −0.22.
+  final TextStyle titleL;
 
-  /// Screen and section titles.
-  final TextStyle title;
+  /// Amount/commission inside text fields. 22/28 · 700.
+  final TextStyle moneyL;
 
-  /// Card titles, emphasized list text.
-  final TextStyle titleSmall;
+  /// «Дневник смен». 20/28 · 800 · −0.4.
+  final TextStyle wordmark;
 
-  /// Running text.
-  final TextStyle body;
+  /// Dialog title. 20/28 · 800 · −0.2.
+  final TextStyle titleDialog;
 
-  /// Emphasized running text, button labels.
+  /// Time inside time fields. 18/24 · 700.
+  final TextStyle fieldTime;
+
+  /// Day label, section title «Поездки», form app-bar title. 17/24 · 700.
+  final TextStyle titleM;
+
+  /// Summary metric values, payment tile values. 17/24 · 700.
+  final TextStyle moneyM;
+
+  /// Trip time range, trip amount, button labels. 16/24 · 700.
   final TextStyle bodyStrong;
 
-  /// Field labels, captions (smallest size in the kit).
+  /// Empty/Error message. 16/24 · 500.
+  final TextStyle body;
+
+  /// Dialog message. 15/22 · 500.
+  final TextStyle bodyMd;
+
+  /// Trip meta («22 мин · Карта»), snackbar text. 14/20 · 500.
+  final TextStyle bodyS;
+
+  /// Field labels, «На руки» label. 14/20 · 600.
   final TextStyle label;
+
+  /// Metric labels, error text, list header count. 13/16 · 600.
+  final TextStyle captionStrong;
+
+  /// Helpers, «комиссия 360 ₸», weekday, app-bar subtitle. 13/16 · 500.
+  final TextStyle caption;
+
+  /// «+1 день» badge. 12/24 · 700.
+  final TextStyle badge;
+
+  /// «+1» after the end time in a trip row (color accent). 11/14 · 800.
+  final TextStyle superscript;
+
+  /// Every style, for tests and the showcase.
+  Map<String, TextStyle> get all => {
+    'moneyHero': moneyHero,
+    'moneyHeroSuffix': moneyHeroSuffix,
+    'titleL': titleL,
+    'moneyL': moneyL,
+    'wordmark': wordmark,
+    'titleDialog': titleDialog,
+    'fieldTime': fieldTime,
+    'titleM': titleM,
+    'moneyM': moneyM,
+    'bodyStrong': bodyStrong,
+    'body': body,
+    'bodyMd': bodyMd,
+    'bodyS': bodyS,
+    'label': label,
+    'captionStrong': captionStrong,
+    'caption': caption,
+    'badge': badge,
+    'superscript': superscript,
+  };
 
   @override
   DkTypography copyWith({
     TextStyle? moneyHero,
-    TextStyle? moneyLarge,
-    TextStyle? moneyMedium,
-    TextStyle? title,
-    TextStyle? titleSmall,
-    TextStyle? body,
+    TextStyle? moneyHeroSuffix,
+    TextStyle? titleL,
+    TextStyle? moneyL,
+    TextStyle? wordmark,
+    TextStyle? titleDialog,
+    TextStyle? fieldTime,
+    TextStyle? titleM,
+    TextStyle? moneyM,
     TextStyle? bodyStrong,
+    TextStyle? body,
+    TextStyle? bodyMd,
+    TextStyle? bodyS,
     TextStyle? label,
+    TextStyle? captionStrong,
+    TextStyle? caption,
+    TextStyle? badge,
+    TextStyle? superscript,
   }) {
     return DkTypography(
       moneyHero: moneyHero ?? this.moneyHero,
-      moneyLarge: moneyLarge ?? this.moneyLarge,
-      moneyMedium: moneyMedium ?? this.moneyMedium,
-      title: title ?? this.title,
-      titleSmall: titleSmall ?? this.titleSmall,
-      body: body ?? this.body,
+      moneyHeroSuffix: moneyHeroSuffix ?? this.moneyHeroSuffix,
+      titleL: titleL ?? this.titleL,
+      moneyL: moneyL ?? this.moneyL,
+      wordmark: wordmark ?? this.wordmark,
+      titleDialog: titleDialog ?? this.titleDialog,
+      fieldTime: fieldTime ?? this.fieldTime,
+      titleM: titleM ?? this.titleM,
+      moneyM: moneyM ?? this.moneyM,
       bodyStrong: bodyStrong ?? this.bodyStrong,
+      body: body ?? this.body,
+      bodyMd: bodyMd ?? this.bodyMd,
+      bodyS: bodyS ?? this.bodyS,
       label: label ?? this.label,
+      captionStrong: captionStrong ?? this.captionStrong,
+      caption: caption ?? this.caption,
+      badge: badge ?? this.badge,
+      superscript: superscript ?? this.superscript,
     );
   }
 
@@ -110,13 +235,23 @@ class DkTypography extends ThemeExtension<DkTypography> {
     TextStyle l(TextStyle a, TextStyle b) => TextStyle.lerp(a, b, t)!;
     return DkTypography(
       moneyHero: l(moneyHero, other.moneyHero),
-      moneyLarge: l(moneyLarge, other.moneyLarge),
-      moneyMedium: l(moneyMedium, other.moneyMedium),
-      title: l(title, other.title),
-      titleSmall: l(titleSmall, other.titleSmall),
-      body: l(body, other.body),
+      moneyHeroSuffix: l(moneyHeroSuffix, other.moneyHeroSuffix),
+      titleL: l(titleL, other.titleL),
+      moneyL: l(moneyL, other.moneyL),
+      wordmark: l(wordmark, other.wordmark),
+      titleDialog: l(titleDialog, other.titleDialog),
+      fieldTime: l(fieldTime, other.fieldTime),
+      titleM: l(titleM, other.titleM),
+      moneyM: l(moneyM, other.moneyM),
       bodyStrong: l(bodyStrong, other.bodyStrong),
+      body: l(body, other.body),
+      bodyMd: l(bodyMd, other.bodyMd),
+      bodyS: l(bodyS, other.bodyS),
       label: l(label, other.label),
+      captionStrong: l(captionStrong, other.captionStrong),
+      caption: l(caption, other.caption),
+      badge: l(badge, other.badge),
+      superscript: l(superscript, other.superscript),
     );
   }
 }

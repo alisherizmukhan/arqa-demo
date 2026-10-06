@@ -17,4 +17,9 @@ export 'src/theme/dk_theme.dart';
 export 'src/tokens/dk_colors.dart';
 export 'src/tokens/dk_dimensions.dart';
 export 'src/tokens/dk_typography.dart'
-    show DkTypography, dkFontFamily, dkFontPackage, dkTextStyle;
+    show
+        DkTypography,
+        dkFallbackFontFamily,
+        dkFontFamily,
+        dkFontPackage,
+        dkTextStyle;

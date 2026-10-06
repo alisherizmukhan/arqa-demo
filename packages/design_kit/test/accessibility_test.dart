@@ -11,44 +11,47 @@ class _Gallery extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: ListView(
-          padding: EdgeInsets.all(context.dkSpacing.md),
-          children: <Widget>[
-            DkDaySwitcher(
-              label: '1 октября',
-              onPrevious: () {},
-              onNext: () {},
-              onPick: () {},
-            ),
-            const DkSummaryTile.money(
-              label: 'Чистыми',
-              amount: 3315,
-              tone: DkTone.positive,
-              emphasis: DkSummaryEmphasis.hero,
-            ),
-            DkTripTile(
-              timeRange: '08:10 – 08:32',
-              amount: 2400,
-              payment: DkPaymentKind.card,
-              onTap: () {},
-            ),
-            DkButton(label: 'Добавить поездку', onPressed: () {}),
-            DkButton(
-              label: 'Отмена',
-              onPressed: () {},
-              variant: DkButtonVariant.secondary,
-            ),
-            const DkTextField(label: 'Сумма', suffixText: '₸'),
-            DkSegmentedControl<DkPaymentKind>(
-              label: 'Оплата',
-              segments: [
-                for (final kind in DkPaymentKind.values)
-                  DkSegment(value: kind, label: kind.label),
-              ],
-              selected: DkPaymentKind.cash,
-              onChanged: (_) {},
-            ),
-            DkErrorState(onRetry: () {}),
-          ].expand((w) => [w, SizedBox(height: context.dkSpacing.md)]).toList(),
+          padding: EdgeInsets.all(context.dkSpacing.s16),
+          children:
+              <Widget>[
+                    DkDaySwitcher(
+                      label: '1 октября',
+                      onPrevious: () {},
+                      onNext: () {},
+                      onPick: () {},
+                    ),
+                    const DkSummaryTile.money(
+                      label: 'Чистыми',
+                      amount: 3315,
+                      tone: DkTone.positive,
+                      emphasis: DkSummaryEmphasis.hero,
+                    ),
+                    DkTripTile(
+                      timeRange: '08:10 – 08:32',
+                      amount: 2400,
+                      payment: DkPaymentKind.card,
+                      onTap: () {},
+                    ),
+                    DkButton(label: 'Добавить поездку', onPressed: () {}),
+                    DkButton(
+                      label: 'Отмена',
+                      onPressed: () {},
+                      variant: DkButtonVariant.secondary,
+                    ),
+                    const DkTextField(label: 'Сумма', suffixText: '₸'),
+                    DkSegmentedControl<DkPaymentKind>(
+                      label: 'Оплата',
+                      segments: [
+                        for (final kind in DkPaymentKind.values)
+                          DkSegment(value: kind, label: kind.label),
+                      ],
+                      selected: DkPaymentKind.cash,
+                      onChanged: (_) {},
+                    ),
+                    DkErrorState(onRetry: () {}),
+                  ]
+                  .expand((w) => [w, SizedBox(height: context.dkSpacing.s16)])
+                  .toList(),
         ),
       ),
     );

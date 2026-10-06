@@ -58,30 +58,32 @@ class DkTripTile extends StatelessWidget {
     final text = context.dkText;
     final spacing = context.dkSpacing;
     final sizes = context.dkSizes;
-    final accent = payment == DkPaymentKind.cash ? colors.cash : colors.card;
+    final accent = payment == DkPaymentKind.cash
+        ? colors.textPrimary
+        : colors.accent;
     final secondLine = [payment.label, ?details].join(' · ');
 
     final row = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: sizes.listRowMinHeight),
+      constraints: BoxConstraints(minHeight: sizes.tripTileMinHeight),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: spacing.md,
-          vertical: spacing.sm,
+          horizontal: spacing.s16,
+          vertical: spacing.s12,
         ),
         child: Row(
           children: [
             ExcludeSemantics(
               child: Container(
-                width: sizes.minTouchTarget,
-                height: sizes.minTouchTarget,
+                width: sizes.tapTargetMin,
+                height: sizes.tapTargetMin,
                 decoration: BoxDecoration(
                   color: colors.surfaceMuted,
                   borderRadius: BorderRadius.circular(context.dkRadii.md),
                 ),
-                child: Icon(payment.icon, color: accent, size: sizes.iconMd),
+                child: Icon(payment.icon, color: accent, size: sizes.iconNav),
               ),
             ),
-            SizedBox(width: spacing.sm),
+            SizedBox(width: spacing.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,10 +99,10 @@ class DkTripTile extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(width: spacing.sm),
+            SizedBox(width: spacing.s12),
             Text(
               DkMoney.format(amount),
-              style: text.moneyMedium.copyWith(color: colors.textPrimary),
+              style: text.bodyStrong.copyWith(color: colors.textPrimary),
             ),
           ],
         ),

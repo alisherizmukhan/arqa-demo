@@ -86,10 +86,10 @@ class DkSummaryTile extends StatelessWidget {
     final text = context.dkText;
     final accent = _accent(colors);
     final figureStyle =
-        (emphasis == DkSummaryEmphasis.hero ? text.moneyHero : text.moneyLarge)
+        (emphasis == DkSummaryEmphasis.hero ? text.moneyHero : text.moneyM)
             .copyWith(
               color: tone == DkTone.positive
-                  ? colors.positive
+                  ? colors.accent
                   : colors.textPrimary,
             );
 
@@ -104,11 +104,11 @@ class DkSummaryTile extends StatelessWidget {
                 ExcludeSemantics(
                   child: Icon(
                     icon,
-                    size: context.dkSizes.iconSm,
+                    size: context.dkSizes.iconField,
                     color: accent,
                   ),
                 ),
-                SizedBox(width: context.dkSpacing.xxs),
+                SizedBox(width: context.dkSpacing.s4),
               ],
               Flexible(
                 child: Text(
@@ -118,7 +118,7 @@ class DkSummaryTile extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: context.dkSpacing.xxs),
+          SizedBox(height: context.dkSpacing.s4),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
@@ -131,8 +131,8 @@ class DkSummaryTile extends StatelessWidget {
 
   Color _accent(DkColors colors) => switch (tone) {
     DkTone.neutral => colors.textSecondary,
-    DkTone.positive => colors.positive,
-    DkTone.cash => colors.cash,
-    DkTone.card => colors.card,
+    DkTone.positive => colors.accent,
+    DkTone.cash => colors.textPrimary,
+    DkTone.card => colors.accent,
   };
 }

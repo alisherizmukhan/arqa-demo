@@ -122,30 +122,34 @@ class _StateLayout extends StatelessWidget {
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: spacing.lg,
-          vertical: spacing.xxl,
+          horizontal: spacing.s24,
+          vertical: spacing.s48,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ExcludeSemantics(
-              child: Icon(icon, size: context.dkSizes.iconLg, color: iconColor),
+              child: Icon(
+                icon,
+                size: context.dkSizes.stateIcon,
+                color: iconColor,
+              ),
             ),
-            SizedBox(height: spacing.md),
+            SizedBox(height: spacing.s16),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: text.titleSmall.copyWith(color: colors.textPrimary),
+              style: text.titleM.copyWith(color: colors.textPrimary),
             ),
             if (message != null) ...[
-              SizedBox(height: spacing.xs),
+              SizedBox(height: spacing.s8),
               Text(
                 message!,
                 textAlign: TextAlign.center,
                 style: text.body.copyWith(color: colors.textSecondary),
               ),
             ],
-            if (action != null) ...[SizedBox(height: spacing.lg), action!],
+            if (action != null) ...[SizedBox(height: spacing.s24), action!],
           ],
         ),
       ),
