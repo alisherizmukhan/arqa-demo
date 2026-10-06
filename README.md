@@ -53,7 +53,9 @@ Config (env): `DATABASE_URL` (`postgresql://…` is converted to `postgresql+asy
 
 ## Deploy to Railway
 
-The image is built from the repo root with `backend/Dockerfile` (see `railway.json`, healthcheck `/health`). The container runs `alembic upgrade head` and then uvicorn on `$PORT`.
+The image is built from the repo root with `backend/Dockerfile`; healthcheck `/health`. The container runs `alembic upgrade head` and then uvicorn on `$PORT`.
+
+> `railway.json` documents the build/deploy config, but Railway (CLI 5.52, Oct 2026) has deprecated config-as-code and no longer applies it to **new** services. Set the same values once on the service (step marked ⚙ below — dashboard → Settings works too).
 
 ```bash
 railway login
@@ -62,6 +64,8 @@ railway add --database postgres                 # managed Postgres
 railway add --service api                       # empty service for the API
 # Link the database: a reference variable, resolved by Railway to the private URL
 railway variable set 'DATABASE_URL=${{Postgres.DATABASE_URL}}' --service api
+# ⚙ Builder = Dockerfile at backend/Dockerfile, healthcheck /health (dashboard → api → Settings,
+#   or Railway MCP `update-service` with dockerfilePath/healthcheckPath)
 railway up --service api                        # build & deploy from the repo root
 railway domain --service api                    # public https URL
 ```
