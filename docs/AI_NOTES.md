@@ -93,3 +93,12 @@ A running log of where the AI assistant was unsure, got something wrong first, a
 - **A screen test caught a real form gap:** «Сумма должна быть больше 0» was only checked once the commission was filled too, so it never appeared on blur. The amount rule now runs on its own.
 - **Item 4 measured, not assumed:** «Сохранить как новую поездку» fits at 390 dp, but not at 360 dp (216 dp available vs ~240 needed). The fallback (two centred lines, button grows) also showed the label touching the button edges at text scale 1.3, which led to `DkButton` keeping the spec-derived 16 dp insets.
 - **Commit hygiene slip, fixed before anything was pushed:** a staged `git rm` was swept twice into an unrelated commit (`git commit` takes everything staged). Both times the local history was repaired: the files were restored in that commit with a scripted rebase, or the two newest commits were redone, and each commit's file list was checked before committing.
+
+## Redesign — stage R5 (UI behaviour)
+
+- **A behaviour test found an overlay bug no screenshot could show.** "Close the form while resending" failed because the tap on «Закрыть» landed on the offline snackbar: it is an overlay entry above routes pushed later, so it sat over the dialog. The same would have hidden the time picker's buttons. The fix is in the kit (a snackbar draws only while its screen is current) and has its own test.
+- **The first R5 screenshot of a failed refresh showed the error snackbar over the FAB**, the same overlap rule 2 had settled for the success snackbar. It is now placed above the FAB, and the screen test checks the gap.
+- **`Scaffold.bottomNavigationBar` stays behind the keyboard,** so the pinned Save of §5.6 would have been hidden while typing. A test with a keyboard inset pins it down now.
+- **Retry timing is tested with fake time** at each step (just before and just after 2/4/8/30/30 s), including that «Повторить» restarts the schedule and that an edit stops it, so the schedule cannot drift silently.
+- **No copy for the discard dialog exists in DESIGN.md §6.** The text is proposed and flagged in DECISIONS.md rather than presented as spec.
+

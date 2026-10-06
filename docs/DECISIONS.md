@@ -85,7 +85,7 @@ Short format: **decision** → why.
 - **The client computes the summary from the trips it displays** (`calculateDailySummary` in the domain; `daySummaryProvider` derives from `dayTripsProvider`). → One request per day, and the card and the list can never disagree. `GET /summary` stays part of the API contract (tested on the backend). Both implementations are checked against the same reference case (3900 / 585 / 3315, cash 1500 / card 2400).
 - **Driver time zone is explicit (`DriverZone`, fixed offset from `--dart-define=DRIVER_TZ`, default `+05:00`), not the phone's zone.** Instants are kept in UTC; `CalendarDay` is a date-only value. → Dart's `DateTime` is UTC-or-device-local only; using the device zone would put trips on the wrong day for a phone set to another zone. A test pins "now" at 20:00Z, which is already the next day in +05:00.
 - **Idempotency key lifecycle:** the form makes a UUID v4 per save; `AddTripController` reuses the previous attempt's id when the payload is unchanged *and* the previous outcome was unknown (network error / 5xx). After a 409, a 422 or a changed payload, the new id is used. → A retry can never create a duplicate, and an edited trip is never silently swallowed as "already saved".
-- **Retries happen in exactly one place: a dio `RetryInterceptor`** (2 retries at 0.5 s / 2 s for connection errors, timeouts and 502/503/504, POST included — safe because the body, and so the trip id, is identical). Riverpod 3's automatic provider retry is turned off (`ProviderScope(retry: … => null)`); the UI offers "Повторить".
+- *(Superseded for POST in stage R5, see below.)* **Retries happen in exactly one place: a dio `RetryInterceptor`** (2 retries at 0.5 s / 2 s for connection errors, timeouts and 502/503/504, POST included — safe because the body, and so the trip id, is identical). Riverpod 3's automatic provider retry is turned off (`ProviderScope(retry: … => null)`); the UI offers "Повторить".
 - **Use cases return a sealed `Result<T>` (`Ok`/`Err`) with a sealed `Failure`** (Network / Validation / Conflict / Server / Unexpected). No FP package: Dart 3 sealed classes and pattern matching give exhaustive handling. `Failure implements Exception`, so providers throw it into `AsyncError`.
 - **Validation mirrors the server and shares its codes** (`trip_rules.dart`). Client-side errors and server 422s use one Russian message table; a 422 is shown under the field it names, 409/network/server errors in a banner above "Сохранить". Money rules and time rules run independently, so each error shows as soon as its fields are filled in.
 - **A trip crossing midnight is entered naturally:** an end time earlier than the start time means the next day (helper text "На следующий день"); equal times are an error.
@@ -156,4 +156,29 @@ Mockup PNG vs `DESIGN.md`: where they disagree, **DESIGN.md wins** (details and 
   - `stage4_rules_test.dart`: the badge, snackbar and dialog rules above.
   - The Day goldens, light and dark (alchemist, CI goldens from Linux).
   - `screenshots_test.dart`, which renders the PNGs in `docs/design/audit/stage4/` (390×844 @2x, real fonts and shadows) when `SCREENSHOTS_DIR` is set.
+
+## Redesign — stage R5 (UI behaviour)
+
+- **Stage 4 approvals recorded:**
+  - 409 dialog: the title plus «Обновите день, чтобы увидеть сохранённую версию.»
+  - Helpers stay visible while saving and offline: DESIGN.md wins over mockups 09–11.
+  - The empty/error block stays centred within the safe area.
+  - The time-field clock stays at 20 dp.
+- **The field prefix icon (the clock) turns `error` with the border and label** (mockup 08, approved). DESIGN.md §4 is updated in both copies, and the `text_fields` golden now includes the 08 time row.
+- **Sending a trip (§5.9, approved):**
+  - dio no longer retries `POST /trips`: the request opts out with `RetryInterceptor.disabled`. GET keeps the interceptor's retries.
+  - On a network or server failure, the snackbar «Нет связи. Повторим отправку — поездка не задвоится.» appears right after the first failure. The form then resends the **same trip (same id)** after 2 s, 4 s and 8 s, then every 30 s while it stays open.
+  - «Повторить» resends at once and restarts the schedule from 2 s. Success closes the snackbar and the form.
+  - Background resends are quiet: the form stays editable and Save keeps its label (as in mockup 10). A manual send shows «Сохраняем…».
+  - Only one request runs at a time.
+  - Editing any field after a failure stops the resends and closes the snackbar. The next Save is a different payload and so gets a new id. Closing the form also stops the resends.
+- **Closing with unsaved input (§5.6) asks first:** this applies to ✕ and to system back, via `PopScope`. A form counts as unsaved once any time or sum is entered, or the payment method has changed. §6 has no copy for this dialog, so it uses **proposed** text, kept in `strings_ru.dart`:
+  - title: «Закрыть без сохранения?»
+  - message: «Введённые данные поездки не сохранятся.»
+  - buttons: «Продолжить ввод» and «Закрыть».
+  
+  It is a `DkDialog` (the kit's standard dialog). *Pending your approval of the wording.*
+- **Save stays right above the keyboard** (§5.6): the bottom bar moved from `Scaffold.bottomNavigationBar`, which stays behind the keyboard, into the body, which shrinks above it. Tested with a 300 dp keyboard inset.
+- **Snackbars never cover dialogs or pickers (kit fix):** a snackbar is an `Overlay` entry above every route pushed later, and the offline snackbar covered the discard dialog and caught its taps. It now draws only while its own screen is the current route, and comes back when the dialog closes. On the Day screen the refresh-failure snackbar sits 12 dp above the FAB, never over it.
+- **Accessibility checked on the real screens:** every mockup state and every R5 state, in light and dark, meets Flutter's tap-target (48 dp), labelled-tap-target and text-contrast guidelines. The §4 spoken names («Предыдущий день», «Выбрать дату, 1 октября 2026», «Наличные 38%, карта 62%») are tested.
 
