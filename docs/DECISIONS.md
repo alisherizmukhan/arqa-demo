@@ -57,3 +57,17 @@ Short format: **decision** → why.
 - **Integration tests: real Postgres, schema reset via `alembic downgrade base && upgrade head` once per session (so the downgrade is tested too), `TRUNCATE` per test; skipped locally if the DB is unreachable, but a failure when `CI` is set.**
 - **Railway: `railway.json` (config as code) kept, although the CLI (5.52) now warns it is deprecated in favor of `.railway/railway.ts` and supported until 2026-12-01.** → The assignment asks for `railway.json`. **However, Railway refuses to attach a config file to a new service** ("Config as Code is deprecated"), so the live `api` service has the same values set as service settings (builder Dockerfile at `backend/Dockerfile`, healthcheck `/health` with a 120 s timeout, restart ON_FAILURE ×5). `railway.json` stays as the documented source of those values. Moving to `.railway/railway.ts` IaC is the long-term fix.
 - **Railway services: `api` (Dockerfile) + `Postgres`; `DATABASE_URL=${{Postgres.DATABASE_URL}}` reference variable (private network); `.railwayignore` excludes the Flutter code from uploads.**
+
+## Design kit (stage 4)
+
+- **Design direction from ui-ux-pro-max, filtered** (full trace in `packages/design_kit/DESIGN.md`): OLED dark style + green-for-earnings and slate neutrals kept; "light mode not recommended", the landing-page pattern and the serif body font rejected. → Drivers work in sunlight *and* at night, so both themes are needed; the skill's output was a recommendation, not a spec.
+- **IBM Plex Sans, bundled unmodified (variable font, 537 KB).** → Cyrillic + `₸` + tabular digits by default, checked with fontTools. Bundled rather than `google_fonts` (no runtime download on a flaky mobile connection). Unmodified because the OFL reserves the name "Plex" for modified versions, so subsetting would have forced a rename. Weights are set via the `wght` axis (`FontVariation`) as well as `fontWeight`.
+- **Light green is darkened to `#15803D`; every color pair is unit-tested against WCAG AA in both themes.**
+- **Money formatting lives in the kit (`DkMoney.format`, pure Dart, no `intl`); components take `int` tenge.** → One implementation of `3 315 ₸` (no-break spaces, real minus sign) for the app and the showcase; components cannot be given an unformatted or float amount.
+- **The kit has Russian default strings, all overridable.** → The product is Russian-only; parameters keep the kit reusable.
+- **Components are dumb: `DkDaySwitcher` takes a formatted label and callbacks; date pickers and date formatting stay in the app.** → Locale/intl setup belongs to the app.
+- **`DkSegmentedControl` added (not in the required list), built from custom 56dp segments rather than Flutter's `SegmentedButton`.** → The add-trip form needs a payment choice from the kit, and `SegmentedButton` draws a fixed ~40dp box regardless of `minimumSize` (read in the SDK source).
+- **`DkPaymentKind` is a kit enum, mapped from the app's domain `PaymentMethod`.** → The kit must not depend on the app.
+- **Material outlined icons, no extra icon package.** → One consistent family; the skill's Phosphor default targets web/React.
+- **Accessibility enforced by tests**: Flutter's tap-target, labeled-target and text-contrast guidelines on a gallery of all interactive components in both themes, plus a 360dp no-overflow test of the showcase.
+- **No golden tests.** → Font rasterization differs between Windows and the Linux CI runner, so goldens would be flaky; screenshots come from the web build in headless Edge.
