@@ -71,6 +71,9 @@ jobs:
       - name: Tests
         working-directory: packages/design_kit
         run: flutter test
+      - name: Showcase tests
+        working-directory: packages/design_kit/example
+        run: flutter test
 
   mobile:
     name: Mobile app (analyze + tests)
