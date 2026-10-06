@@ -96,6 +96,12 @@ jobs:
             echo "::error::Generated code is stale: run build_runner and commit the result"
             exit 1
           fi
+      - name: No raw colors or text styles in the app (DESIGN.md §7)
+        run: |
+          if grep -RnE 'Color\(0x|Colors\.|TextStyle\(' apps/mobile/lib; then
+            echo "::error::Use design kit tokens (context.dkColors / context.dkText) in apps/mobile"
+            exit 1
+          fi
       - name: Analyze
         run: flutter analyze --fatal-infos apps/mobile
       - name: Format
