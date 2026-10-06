@@ -1,139 +1,473 @@
+import 'package:design_kit/src/format/dk_grouped_text.dart';
+import 'package:design_kit/src/format/dk_money.dart';
+import 'package:design_kit/src/format/dk_money_input.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
+import 'package:design_kit/src/tokens/dk_dimensions.dart';
+import 'package:design_kit/src/tokens/dk_icons.dart';
+import 'package:design_kit/src/tokens/dk_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Text field with a visible label above it, helper text and an error line
-/// below. 56dp tall. For pickers, set [readOnly] and handle [onTap].
-class DkTextField extends StatelessWidget {
-  /// Creates a text field.
+enum _FieldState { normal, focused, error, disabled }
+
+/// Label → field frame → helper or error row, DESIGN.md §4 (DkTextField).
+class _FieldShell extends StatelessWidget {
   const new({
     required this.label,
-    this.controller,
-    this.hint,
-    this.helperText,
+    required this.state,
+    required this.child,
+    this.helper,
     this.errorText,
-    this.suffixText,
-    this.prefixIcon,
-    this.keyboardType,
-    this.textInputAction,
-    this.inputFormatters,
-    this.onChanged,
-    this.onTap,
-    this.readOnly = false,
-    this.enabled = true,
-    this.focusNode,
-    super.key,
   });
 
-  /// Visible label; also the accessible name.
   final String label;
-
-  /// Text controller.
-  final TextEditingController? controller;
-
-  /// Placeholder (never a substitute for [label]).
-  final String? hint;
-
-  /// Persistent helper text below the field.
-  final String? helperText;
-
-  /// Error shown below the field; replaces [helperText].
+  final _FieldState state;
+  final Widget child;
+  final String? helper;
   final String? errorText;
-
-  /// Trailing unit, e.g. `₸`.
-  final String? suffixText;
-
-  /// Leading icon.
-  final IconData? prefixIcon;
-
-  /// Keyboard type, e.g. `TextInputType.number`.
-  final TextInputType? keyboardType;
-
-  /// Keyboard action button.
-  final TextInputAction? textInputAction;
-
-  /// Input formatters, e.g. digits only.
-  final List<TextInputFormatter>? inputFormatters;
-
-  /// Change handler.
-  final ValueChanged<String>? onChanged;
-
-  /// Tap handler (for read-only picker fields).
-  final VoidCallback? onTap;
-
-  /// Disallow typing (value set via [onTap]).
-  final bool readOnly;
-
-  /// Whether the field is interactive.
-  final bool enabled;
-
-  /// Focus node.
-  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
     final text = context.dkText;
     final sizes = context.dkSizes;
-    final radius = BorderRadius.circular(context.dkRadii.md);
+    final spacing = context.dkSpacing;
 
-    OutlineInputBorder border(Color color, double width) => OutlineInputBorder(
-      borderRadius: radius,
-      borderSide: BorderSide(color: color, width: width),
+    final (borderColor, borderWidth) = switch (state) {
+      _FieldState.normal => (colors.border, sizes.fieldBorder),
+      _FieldState.focused => (colors.accent, sizes.fieldBorderFocused),
+      _FieldState.error => (colors.error, sizes.fieldBorderFocused),
+      _FieldState.disabled => (colors.divider, sizes.fieldBorder),
+    };
+    final labelColor = switch (state) {
+      _FieldState.focused => colors.accent,
+      _FieldState.error => colors.error,
+      _ => colors.textSecondary,
+    };
+    final message = errorText;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: text.label.copyWith(color: labelColor)),
+        SizedBox(height: spacing.s8),
+        Container(
+          constraints: BoxConstraints(minHeight: sizes.fieldHeight),
+          // 16 minus the border: 15 at 1 px, 14 at 2 px, so text never jumps.
+          padding: EdgeInsets.symmetric(horizontal: spacing.s16 - borderWidth),
+          alignment: AlignmentDirectional.centerStart,
+          decoration: BoxDecoration(
+            color: state == _FieldState.disabled
+                ? colors.surfaceMuted
+                : colors.surface,
+            borderRadius: BorderRadius.circular(context.dkRadii.md),
+            border: Border.all(color: borderColor, width: borderWidth),
+            boxShadow: state == _FieldState.focused
+                ? [
+                    BoxShadow(
+                      color: colors.accentSoft,
+                      spreadRadius: sizes.focusRing,
+                    ),
+                  ]
+                : null,
+          ),
+          child: child,
+        ),
+        if (message != null || helper != null) ...[
+          SizedBox(height: spacing.s6),
+          DkFieldMessage(text: message ?? helper!, isError: message != null),
+        ],
+      ],
     );
+  }
+}
+
+/// The line under a field (or under a row of fields): a `caption` helper in
+/// textTertiary, or an error with the circle-alert icon (`captionStrong`,
+/// error), DESIGN.md §4. Money inside renders with the wide group gaps.
+class DkFieldMessage extends StatelessWidget {
+  /// Creates a helper (or, with [isError], an error) line.
+  const new({required this.text, this.isError = false, super.key});
+
+  /// The message.
+  final String text;
+
+  /// Error styling with the icon.
+  final bool isError;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final textTheme = context.dkText;
+    final spacing = context.dkSpacing;
+    return Padding(
+      padding: EdgeInsetsDirectional.only(start: spacing.s4),
+      child: isError
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  DkIcons.alert,
+                  size: context.dkSizes.iconInline,
+                  color: colors.error,
+                ),
+                SizedBox(width: spacing.s6),
+                Expanded(
+                  child: DkGroupedText(
+                    text,
+                    style: textTheme.captionStrong.copyWith(
+                      color: colors.error,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : DkGroupedText(
+              text,
+              style: textTheme.caption.copyWith(color: colors.textTertiary),
+            ),
+    );
+  }
+}
+
+/// Text field, DESIGN.md §4: default / focused (2 px accent + 4 px
+/// accentSoft ring) / error (2 px error + icon row) / disabled. Min height 56.
+///
+/// [DkTextField.money] is the money variant (`moneyL`, «₸» suffix, digits
+/// grouped with U+202F while typing). The time variant is [DkTimeField].
+class DkTextField extends StatefulWidget {
+  /// Creates a text field.
+  const new({
+    required this.label,
+    required this.controller,
+    this.helper,
+    this.errorText,
+    this.prefixIcon,
+    this.suffix,
+    this.trailing,
+    this.style,
+    this.hint,
+    this.keyboardType,
+    this.inputFormatters,
+    this.textInputAction,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusNode,
+    this.onChanged,
+    super.key,
+  });
+
+  /// Money variant. Pair it with a [DkMoneyEditingController].
+  const new money({
+    required this.label,
+    required DkMoneyEditingController this.controller,
+    this.helper,
+    this.errorText,
+    this.trailing,
+    this.hint,
+    this.textInputAction,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusNode,
+    this.onChanged,
+    super.key,
+  }) : prefixIcon = null,
+       suffix = DkMoney.currency,
+       style = null,
+       keyboardType = TextInputType.number,
+       inputFormatters = const [DkMoneyInputFormatter()];
+
+  /// Visible label; also the accessible name.
+  final String label;
+
+  /// Text controller.
+  final TextEditingController controller;
+
+  /// Helper below the field (`caption`, textTertiary).
+  final String? helper;
+
+  /// Error below the field; replaces [helper] and turns the field red.
+  final String? errorText;
+
+  /// Leading icon (20, textTertiary).
+  final IconData? prefixIcon;
+
+  /// Trailing unit, e.g. «₸» (20/700, textTertiary).
+  final String? suffix;
+
+  /// Trailing widget, e.g. `DkBadge('+1 день')`.
+  final Widget? trailing;
+
+  /// Input text style (default `body`; money: `moneyL`).
+  final TextStyle? style;
+
+  /// Placeholder.
+  final String? hint;
+
+  /// Keyboard type.
+  final TextInputType? keyboardType;
+
+  /// Input formatters.
+  final List<TextInputFormatter>? inputFormatters;
+
+  /// Keyboard action.
+  final TextInputAction? textInputAction;
+
+  /// Whether the field is interactive.
+  final bool enabled;
+
+  /// Focus on first build.
+  final bool autofocus;
+
+  /// External focus node (e.g. for "validate on blur").
+  final FocusNode? focusNode;
+
+  /// Change handler.
+  final ValueChanged<String>? onChanged;
+
+  @override
+  State<DkTextField> createState() => _DkTextFieldState();
+}
+
+class _DkTextFieldState extends State<DkTextField> {
+  FocusNode? _ownFocusNode;
+
+  FocusNode get _focusNode =>
+      widget.focusNode ?? (_ownFocusNode ??= FocusNode());
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(DkTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      (oldWidget.focusNode ?? _ownFocusNode)?.removeListener(_onFocusChange);
+      _focusNode.addListener(_onFocusChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _ownFocusNode?.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final text = context.dkText;
+    final sizes = context.dkSizes;
+    final isMoney =
+        widget.inputFormatters?.any((f) => f is DkMoneyInputFormatter) ?? false;
+    final state = !widget.enabled
+        ? _FieldState.disabled
+        : widget.errorText != null
+        ? _FieldState.error
+        : _focusNode.hasFocus
+        ? _FieldState.focused
+        : _FieldState.normal;
+    final base = widget.style ?? (isMoney ? text.moneyL : text.body);
 
     return MergeSemantics(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: text.label.copyWith(color: colors.textPrimary)),
-          SizedBox(height: context.dkSpacing.s8),
-          TextField(
-            controller: controller,
-            focusNode: focusNode,
-            keyboardType: keyboardType,
-            textInputAction: textInputAction,
-            inputFormatters: inputFormatters,
-            onChanged: onChanged,
-            onTap: onTap,
-            readOnly: readOnly,
-            enabled: enabled,
-            style: text.body.copyWith(color: colors.textPrimary),
-            cursorColor: colors.accent,
-            decoration: InputDecoration(
-              hintText: hint,
-              helperText: helperText,
-              errorText: errorText,
-              errorMaxLines: 3,
-              helperMaxLines: 3,
-              suffixText: suffixText,
-              prefixIcon: prefixIcon == null
-                  ? null
-                  : Icon(prefixIcon, size: sizes.iconNav),
-              filled: true,
-              fillColor: enabled ? colors.surface : colors.surfaceMuted,
-              constraints: BoxConstraints(minHeight: sizes.buttonHeight),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: context.dkSpacing.s16,
-                vertical: context.dkSpacing.s16,
-              ),
-              hintStyle: text.body.copyWith(color: colors.textSecondary),
-              helperStyle: text.label.copyWith(color: colors.textSecondary),
-              errorStyle: text.label.copyWith(color: colors.error),
-              suffixStyle: text.body.copyWith(color: colors.textSecondary),
-              prefixIconColor: colors.textSecondary,
-              border: border(colors.border, sizes.fieldBorder),
-              enabledBorder: border(colors.border, sizes.fieldBorder),
-              disabledBorder: border(colors.divider, sizes.fieldBorder),
-              focusedBorder: border(colors.accent, sizes.fieldBorderFocused),
-              errorBorder: border(colors.error, sizes.fieldBorderFocused),
-              focusedErrorBorder: border(
-                colors.error,
-                sizes.fieldBorderFocused,
+      child: _FieldShell(
+        label: widget.label,
+        state: state,
+        helper: widget.helper,
+        errorText: widget.errorText,
+        child: Row(
+          children: [
+            if (widget.prefixIcon case final icon?) ...[
+              Icon(icon, size: sizes.iconField, color: colors.textTertiary),
+              SizedBox(width: context.dkSpacing.s10),
+            ],
+            Expanded(
+              child: TextField(
+                controller: widget.controller,
+                focusNode: _focusNode,
+                enabled: widget.enabled,
+                autofocus: widget.autofocus,
+                keyboardType: widget.keyboardType,
+                textInputAction: widget.textInputAction,
+                inputFormatters: widget.inputFormatters,
+                onChanged: widget.onChanged,
+                cursorColor: colors.accent,
+                style: base.copyWith(
+                  color: widget.enabled
+                      ? colors.textPrimary
+                      : colors.textSecondary,
+                ),
+                decoration: InputDecoration.collapsed(
+                  hintText: widget.hint,
+                  hintStyle: base.copyWith(color: colors.textTertiary),
+                ),
               ),
             ),
+            if (widget.suffix case final suffix?)
+              Text(
+                suffix,
+                style: _suffixStyle.copyWith(color: colors.textTertiary),
+              ),
+            if (widget.trailing case final trailing?) ...[
+              SizedBox(width: context.dkSpacing.s8),
+              trailing,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// «₸» suffix of money fields: 20/700 (DESIGN.md §4).
+final TextStyle _suffixStyle = dkTextStyle(
+  size: 20,
+  lineHeight: 28,
+  weight: FontWeight.w700,
+);
+
+/// Time field (the DkTextField time variant, DESIGN.md §4): clock prefix,
+/// `fieldTime` style, opens a picker via [onTap]. The value and an optional
+/// [trailing] badge wrap onto two lines rather than clipping.
+class DkTimeField extends StatelessWidget {
+  /// Creates a time field.
+  const new({
+    required this.label,
+    required this.value,
+    required this.onTap,
+    this.helper,
+    this.errorText,
+    this.trailing,
+    this.enabled = true,
+    this.invalid = false,
+    this.placeholder = '––:––',
+    this.emptyValueLabel = 'не выбрано',
+    super.key,
+  });
+
+  /// Visible label.
+  final String label;
+
+  /// `08:10`, or null when not picked yet.
+  final String? value;
+
+  /// Opens the time picker.
+  final VoidCallback onTap;
+
+  /// Helper below the field.
+  final String? helper;
+
+  /// Error below the field.
+  final String? errorText;
+
+  /// Trailing widget, e.g. `DkBadge('+1 день')`.
+  final Widget? trailing;
+
+  /// Whether the field is interactive.
+  final bool enabled;
+
+  /// Error styling without a message under this field: for a row of fields
+  /// that shares one `DkFieldMessage` (DESIGN.md §5.7, time row).
+  final bool invalid;
+
+  /// Shown when [value] is null.
+  final String placeholder;
+
+  /// Accessible reading of an empty value.
+  final String emptyValueLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final sizes = context.dkSizes;
+    final spacing = context.dkSpacing;
+    final state = !enabled
+        ? _FieldState.disabled
+        : errorText != null || invalid
+        ? _FieldState.error
+        : _FieldState.normal;
+    final shown = value;
+
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label:
+          '$label, ${shown ?? emptyValueLabel}'
+          '${errorText == null ? '' : ', $errorText'}',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(context.dkRadii.md),
+        child: _FieldShell(
+          label: label,
+          state: state,
+          helper: helper,
+          errorText: errorText,
+          child: Row(
+            children: [
+              Icon(
+                DkIcons.time,
+                size: sizes.iconField,
+                color: colors.textTertiary,
+              ),
+              SizedBox(width: spacing.s10),
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: spacing.s8,
+                  runSpacing: spacing.s4,
+                  children: [
+                    Text(
+                      shown ?? placeholder,
+                      style: context.dkText.fieldTime.copyWith(
+                        color: shown == null
+                            ? colors.textTertiary
+                            : enabled
+                            ? colors.textPrimary
+                            : colors.textSecondary,
+                      ),
+                    ),
+                    ?trailing,
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Small accent label, e.g. «+1 день». DESIGN.md §4: min 24 high, radius sm.
+class DkBadge extends StatelessWidget {
+  /// Creates a badge.
+  const new(this.text, {super.key});
+
+  /// Badge text.
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    return Container(
+      constraints: BoxConstraints(minHeight: context.dkSpacing.s24),
+      padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s8),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: colors.accentSoft,
+        borderRadius: BorderRadius.circular(context.dkRadii.sm),
+      ),
+      child: Text(
+        text,
+        style: context.dkText.badge.copyWith(color: colors.accent),
       ),
     );
   }
@@ -148,73 +482,112 @@ class DkSegment<T> {
   /// Value reported when selected.
   final T value;
 
-  /// Visible label (always shown, icons are supplementary).
+  /// Visible label.
   final String label;
 
-  /// Optional icon.
+  /// Optional icon (20).
   final IconData? icon;
 }
 
-/// Single-choice selector, e.g. payment method `Наличные | Карта`.
-///
-/// Segments are full 56dp buttons with an 8dp gap (Flutter's `SegmentedButton`
-/// draws a 40dp box regardless of `minimumSize`).
+/// Segmented control, DESIGN.md §4: track `segmentTrack` (r14, padding 4),
+/// thumb `segmentThumb` (r10, shadow `thumb`) sliding in 200 ms ease-out.
+/// A null [onChanged] disables it.
 class DkSegmentedControl<T> extends StatelessWidget {
   /// Creates a segmented control.
   const new({
-    required this.label,
     required this.segments,
     required this.selected,
     required this.onChanged,
+    this.label,
     super.key,
   });
-
-  /// Visible group label.
-  final String label;
 
   /// Options.
   final List<DkSegment<T>> segments;
 
-  /// Currently selected value.
+  /// Selected value.
   final T selected;
 
   /// Selection handler; null disables the control.
   final ValueChanged<T>? onChanged;
 
+  /// Optional label above, styled like a field label.
+  final String? label;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
     final spacing = context.dkSpacing;
+    final sizes = context.dkSizes;
+    final gap = spacing.s4;
+    final index = segments.indexWhere((s) => s.value == selected);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+
+    final track = Container(
+      constraints: BoxConstraints(minHeight: sizes.segmentedHeight),
+      padding: EdgeInsets.all(spacing.s4),
+      decoration: BoxDecoration(
+        color: colors.segmentTrack,
+        borderRadius: BorderRadius.circular(context.dkRadii.segmentTrack),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width =
+              (constraints.maxWidth - gap * (segments.length - 1)) /
+              segments.length;
+          return Stack(
+            children: [
+              if (index >= 0)
+                AnimatedPositioned(
+                  duration: reduceMotion ? Duration.zero : DkMotion.segment,
+                  curve: DkMotion.segmentCurve,
+                  left: index * (width + gap),
+                  width: width,
+                  top: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.segmentThumb,
+                      borderRadius: BorderRadius.circular(
+                        context.dkRadii.segment,
+                      ),
+                      boxShadow: context.dkElevation.thumb,
+                    ),
+                  ),
+                ),
+              Row(
+                spacing: gap,
+                children: [
+                  for (final segment in segments)
+                    Expanded(
+                      child: _SegmentButton<T>(
+                        segment: segment,
+                        isSelected: segment.value == selected,
+                        onTap: onChanged == null
+                            ? null
+                            : () => onChanged!(segment.value),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    final caption = label;
+    if (caption == null) return track;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Own node, sized to the text: read as the group's caption.
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: Semantics(
-            container: true,
-            child: Text(
-              label,
-              style: context.dkText.label.copyWith(color: colors.textPrimary),
-            ),
-          ),
+        Text(
+          caption,
+          style: context.dkText.label.copyWith(color: colors.textSecondary),
         ),
         SizedBox(height: spacing.s8),
-        Row(
-          spacing: spacing.s8,
-          children: [
-            for (final segment in segments)
-              Expanded(
-                child: _SegmentButton(
-                  segment: segment,
-                  isSelected: segment.value == selected,
-                  onTap: onChanged == null
-                      ? null
-                      : () => onChanged!(segment.value),
-                ),
-              ),
-          ],
-        ),
+        track,
       ],
     );
   }
@@ -234,65 +607,49 @@ class _SegmentButton<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
-    final sizes = context.dkSizes;
+    final text = context.dkText;
     final enabled = onTap != null;
-    final foreground = !enabled
-        ? colors.textSecondary
-        : isSelected
-        ? colors.onAccent
-        : colors.textPrimary;
-    final background = isSelected
-        ? (enabled ? colors.accent : colors.surfaceMuted)
-        : colors.surface;
+    final color = isSelected && enabled
+        ? colors.textPrimary
+        : colors.textSecondary;
+    // Unselected: 16/600 (DESIGN.md §4) = bodyStrong at weight 600.
+    final style = isSelected
+        ? text.bodyStrong
+        : text.bodyStrong.copyWith(
+            fontWeight: FontWeight.w600,
+            fontVariations: const [FontVariation.weight(600)],
+          );
 
-    return MergeSemantics(
-      child: Semantics(
-        button: true,
-        selected: isSelected,
-        inMutuallyExclusiveGroup: true,
-        enabled: enabled,
-        child: Material(
-          color: background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(context.dkRadii.md),
-            side: BorderSide(
-              color: isSelected && enabled ? colors.accent : colors.border,
-              width: sizes.fieldBorder,
-            ),
+    return Semantics(
+      button: true,
+      inMutuallyExclusiveGroup: true,
+      selected: isSelected,
+      enabled: enabled,
+      label: segment.label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(context.dkRadii.segment),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight:
+                context.dkSizes.segmentedHeight - context.dkSpacing.s4 * 2,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: SizedBox(
-              height: sizes.buttonHeight,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: context.dkSpacing.s12,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (segment.icon != null) ...[
-                      Icon(
-                        segment.icon,
-                        size: sizes.iconField,
-                        color: foreground,
-                      ),
-                      SizedBox(width: context.dkSpacing.s8),
-                    ],
-                    Flexible(
-                      child: Text(
-                        segment.label,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.dkText.bodyStrong.copyWith(
-                          color: foreground,
-                        ),
-                      ),
-                    ),
-                  ],
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (segment.icon case final icon?) ...[
+                Icon(icon, size: context.dkSizes.iconField, color: color),
+                SizedBox(width: context.dkSpacing.s8),
+              ],
+              Flexible(
+                child: Text(
+                  segment.label,
+                  textAlign: TextAlign.center,
+                  style: style.copyWith(color: color),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),

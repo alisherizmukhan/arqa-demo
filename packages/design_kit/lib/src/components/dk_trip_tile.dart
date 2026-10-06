@@ -1,9 +1,12 @@
-import 'package:design_kit/src/format/dk_money.dart';
+import 'package:design_kit/src/components/dk_card.dart';
+import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
+import 'package:design_kit/src/tokens/dk_dimensions.dart';
+import 'package:design_kit/src/tokens/dk_icons.dart';
 import 'package:flutter/material.dart';
 
-/// How a trip was paid. Shown as icon + label, never by color alone.
-enum DkPaymentKind {
+/// How a trip was paid (the kit's own enum; the app maps its domain enum).
+enum DkPaymentMethod {
   /// Cash.
   cash,
 
@@ -12,107 +15,207 @@ enum DkPaymentKind {
 
   /// Default Russian label.
   String get label => switch (this) {
-    DkPaymentKind.cash => 'Наличные',
-    DkPaymentKind.card => 'Карта',
+    DkPaymentMethod.cash => 'Наличные',
+    DkPaymentMethod.card => 'Карта',
   };
 
-  /// Icon for this payment kind.
+  /// Lucide icon.
   IconData get icon => switch (this) {
-    DkPaymentKind.cash => Icons.payments_outlined,
-    DkPaymentKind.card => Icons.credit_card,
+    DkPaymentMethod.cash => DkIcons.cash,
+    DkPaymentMethod.card => DkIcons.card,
   };
 }
 
-/// One trip in the day's list: time range, payment method and fare.
+/// One trip row, DESIGN.md §4 (read-only, no tap). Strings come formatted:
+/// `08:10 – 08:32`, `22 мин · Карта`, `2 400 ₸`, `комиссия 360 ₸`.
 class DkTripTile extends StatelessWidget {
   /// Creates a trip row.
-  ///
-  /// [timeRange] is already formatted, e.g. `08:10 – 08:32`.
   const new({
     required this.timeRange,
+    required this.endsNextDay,
+    required this.meta,
     required this.amount,
-    required this.payment,
-    this.details,
-    this.onTap,
+    required this.commission,
+    required this.method,
+    this.highlighted = false,
+    this.nextDayLabel = 'следующий день',
     super.key,
   });
 
-  /// Formatted start–end time.
+  /// `08:10 – 08:32`.
   final String timeRange;
 
-  /// Fare in integer tenge.
-  final int amount;
+  /// Adds the accent «+1» superscript after the end time.
+  final bool endsNextDay;
 
-  /// Payment method.
-  final DkPaymentKind payment;
+  /// `22 мин · Карта`.
+  final String meta;
 
-  /// Optional extra line after the payment label (e.g. `комиссия 360 ₸`).
-  final String? details;
+  /// `2 400 ₸`.
+  final String amount;
 
-  /// Optional tap handler.
-  final VoidCallback? onTap;
+  /// `комиссия 360 ₸`.
+  final String commission;
+
+  /// Payment method (icon).
+  final DkPaymentMethod method;
+
+  /// `accentSoft` background, for ~2 s after the trip was added.
+  final bool highlighted;
+
+  /// Accessible reading of «+1».
+  final String nextDayLabel;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
     final text = context.dkText;
     final spacing = context.dkSpacing;
-    final sizes = context.dkSizes;
-    final accent = payment == DkPaymentKind.cash
-        ? colors.textPrimary
-        : colors.accent;
-    final secondLine = [payment.label, ?details].join(' · ');
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
-    final row = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: sizes.tripTileMinHeight),
-      child: Padding(
+    return MergeSemantics(
+      child: AnimatedContainer(
+        duration: reduceMotion ? Duration.zero : DkMotion.segment,
+        color: highlighted ? colors.accentSoft : colors.surface,
+        constraints: BoxConstraints(
+          minHeight: context.dkSizes.tripTileMinHeight,
+        ),
         padding: EdgeInsets.symmetric(
           horizontal: spacing.s16,
           vertical: spacing.s12,
         ),
         child: Row(
+          spacing: spacing.s12,
           children: [
-            ExcludeSemantics(
-              child: Container(
-                width: sizes.tapTargetMin,
-                height: sizes.tapTargetMin,
-                decoration: BoxDecoration(
-                  color: colors.surfaceMuted,
-                  borderRadius: BorderRadius.circular(context.dkRadii.md),
-                ),
-                child: Icon(payment.icon, color: accent, size: sizes.iconNav),
-              ),
+            DkIconTile(
+              icon: method.icon,
+              background: highlighted ? colors.surface : null,
             ),
-            SizedBox(width: spacing.s12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    timeRange,
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: timeRange),
+                        if (endsNextDay)
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.top,
+                            child: Padding(
+                              padding: EdgeInsetsDirectional.only(
+                                start: spacing.s2,
+                              ),
+                              child: Text(
+                                '+1',
+                                semanticsLabel: nextDayLabel,
+                                style: text.superscript.copyWith(
+                                  color: colors.accent,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                     style: text.bodyStrong.copyWith(color: colors.textPrimary),
                   ),
                   Text(
-                    secondLine,
-                    style: text.label.copyWith(color: colors.textSecondary),
+                    meta,
+                    style: text.bodyS.copyWith(color: colors.textSecondary),
                   ),
                 ],
               ),
             ),
-            SizedBox(width: spacing.s12),
-            Text(
-              DkMoney.format(amount),
-              style: text.bodyStrong.copyWith(color: colors.textPrimary),
+            // Flexible: natural width normally; with huge amounts or a large
+            // text scale it shrinks and «комиссия …» wraps instead of
+            // overflowing the row.
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  DkGroupedText(
+                    amount,
+                    textAlign: TextAlign.end,
+                    style: text.bodyStrong.copyWith(color: colors.textPrimary),
+                  ),
+                  DkGroupedText(
+                    commission,
+                    textAlign: TextAlign.end,
+                    style: text.caption.copyWith(color: colors.textTertiary),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
+  }
+}
 
-    return MergeSemantics(
-      child: Material(
-        type: MaterialType.transparency,
-        child: onTap == null ? row : InkWell(onTap: onTap, child: row),
+/// Trip rows in one card (padding 0, clipped), dividers inset 68.
+class DkTripList extends StatelessWidget {
+  /// Creates the list card.
+  const new({required this.children, super.key});
+
+  /// Usually [DkTripTile]s.
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.dkSpacing;
+    // Inset = row padding + icon tile + gap (16 + 40 + 12 = 68).
+    final inset = spacing.s16 + context.dkSizes.iconTile + spacing.s12;
+    return DkCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          for (final (i, child) in children.indexed) ...[
+            if (i > 0)
+              Divider(height: context.dkSizes.fieldBorder, indent: inset),
+            child,
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Section header above a list: «Поездки» + «2 поездки · 37 мин».
+class DkListHeader extends StatelessWidget {
+  /// Creates a header.
+  const new({required this.title, this.trailing, super.key});
+
+  /// `titleM` title.
+  final String title;
+
+  /// `captionStrong` summary on the right.
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final text = context.dkText;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s4),
+      child: Row(
+        spacing: context.dkSpacing.s8,
+        children: [
+          Expanded(
+            child: Semantics(
+              header: true,
+              child: Text(
+                title,
+                style: text.titleM.copyWith(color: colors.textPrimary),
+              ),
+            ),
+          ),
+          if (trailing case final value?)
+            Text(
+              value,
+              style: text.captionStrong.copyWith(color: colors.textTertiary),
+            ),
+        ],
       ),
     );
   }

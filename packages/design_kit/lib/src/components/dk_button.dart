@@ -1,31 +1,31 @@
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:flutter/material.dart';
 
-/// Visual weight of a [DkButton]. Use one [primary] button per screen.
+/// Visual weight of a [DkButton].
 enum DkButtonVariant {
-  /// Filled, the main action.
+  /// Accent fill: the main action.
   primary,
 
-  /// Outlined, an alternative action.
+  /// Accent-soft fill: an alternative action.
   secondary,
 
-  /// Text only, a low-emphasis action.
+  /// Text only, 48 high.
   text,
 }
 
-/// Button with a 56dp height, optional leading icon and a loading state.
+/// Button, DESIGN.md §4. Min height 56 (text: 48); grows with text scale.
 ///
-/// While [isLoading] the button keeps its colors, shows a spinner and ignores
-/// taps, so a slow request cannot be submitted twice.
+/// `onPressed == null` → disabled (`disabledFill` / `textDisabled`).
+/// [isLoading] → spinner + [label] (pass e.g. «Сохраняем…»), not tappable.
 class DkButton extends StatelessWidget {
-  /// Creates a button. A null [onPressed] disables it.
+  /// Creates a button.
   const new({
     required this.label,
-    required this.onPressed,
-    this.icon,
+    this.onPressed,
     this.variant = DkButtonVariant.primary,
     this.isLoading = false,
-    this.expand = true,
+    this.icon,
+    this.expand = false,
     super.key,
   });
 
@@ -35,14 +35,14 @@ class DkButton extends StatelessWidget {
   /// Tap handler; null disables the button.
   final VoidCallback? onPressed;
 
-  /// Optional leading icon.
-  final IconData? icon;
-
   /// Visual weight.
   final DkButtonVariant variant;
 
   /// Shows a spinner and ignores taps.
   final bool isLoading;
+
+  /// Optional leading icon (22).
+  final IconData? icon;
 
   /// Stretch to the available width.
   final bool expand;
@@ -52,97 +52,152 @@ class DkButton extends StatelessWidget {
     final colors = context.dkColors;
     final sizes = context.dkSizes;
     final spacing = context.dkSpacing;
+    final radii = context.dkRadii;
+    final isText = variant == DkButtonVariant.text;
+    final disabled = onPressed == null && !isLoading;
 
     final (background, foreground) = switch (variant) {
+      _ when disabled && isText => (Colors.transparent, colors.textDisabled),
+      _ when disabled => (colors.disabledFill, colors.textDisabled),
       DkButtonVariant.primary => (colors.accent, colors.onAccent),
-      DkButtonVariant.secondary => (Colors.transparent, colors.textPrimary),
+      DkButtonVariant.secondary => (colors.accentSoft, colors.accent),
       DkButtonVariant.text => (Colors.transparent, colors.accent),
     };
-    // Loading keeps the enabled look; a real disabled state is muted.
-    final disabledBackground = isLoading
-        ? background
-        : variant == DkButtonVariant.primary
-        ? colors.surfaceMuted
-        : Colors.transparent;
-    final disabledForeground = isLoading ? foreground : colors.textSecondary;
-
-    final style = ButtonStyle(
-      minimumSize: WidgetStatePropertyAll(
-        Size(expand ? double.infinity : sizes.tapTargetMin, sizes.buttonHeight),
-      ),
-      padding: WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: spacing.s24),
-      ),
-      shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(context.dkRadii.md),
-        ),
-      ),
-      textStyle: WidgetStatePropertyAll(context.dkText.bodyStrong),
-      backgroundColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.disabled)
-            ? disabledBackground
-            : background,
-      ),
-      foregroundColor: WidgetStateProperty.resolveWith(
-        (states) => states.contains(WidgetState.disabled)
-            ? disabledForeground
-            : foreground,
-      ),
-      side: variant == DkButtonVariant.secondary
-          ? WidgetStateProperty.resolveWith(
-              (states) => BorderSide(
-                color: states.contains(WidgetState.disabled)
-                    ? colors.divider
-                    : colors.border,
-                width: sizes.fieldBorder,
-              ),
-            )
-          : null,
-      elevation: const WidgetStatePropertyAll(0),
-    );
+    final radius = BorderRadius.circular(isText ? radii.md : radii.lg);
+    final leading = isLoading || icon != null;
 
     final content = Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (isLoading)
+        if (isLoading) ...[
           SizedBox.square(
             dimension: sizes.iconField,
             child: CircularProgressIndicator(
-              strokeWidth: sizes.fieldBorderFocused,
+              strokeWidth: sizes.spinnerStroke,
               color: foreground,
             ),
-          )
-        else if (icon != null)
-          Icon(icon, size: sizes.iconField),
-        if (isLoading || icon != null) SizedBox(width: spacing.s8),
-        Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+          ),
+          SizedBox(width: spacing.s10),
+        ] else if (icon != null) ...[
+          Icon(icon, size: sizes.iconAction, color: foreground),
+          SizedBox(width: spacing.s8),
+        ],
+        Flexible(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: context.dkText.bodyStrong.copyWith(color: foreground),
+          ),
+        ),
       ],
     );
 
-    final onTap = isLoading ? null : onPressed;
-    final button = switch (variant) {
-      DkButtonVariant.primary => FilledButton(
-        onPressed: onTap,
-        style: style,
-        child: content,
+    return Semantics(
+      button: true,
+      enabled: !disabled && !isLoading,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: background,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: disabled || isLoading ? null : onPressed,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: isText ? sizes.textButtonHeight : sizes.buttonHeight,
+              minWidth: expand ? double.infinity : sizes.tapTargetMin,
+            ),
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(
+                // 20 on the icon side, 24 otherwise (DESIGN.md §4).
+                start: leading ? spacing.s20 : spacing.s24,
+                end: spacing.s24,
+              ),
+              // Both factors: without heightFactor a Center fills all the
+              // height it is offered (e.g. a Scaffold bottom bar).
+              child: Center(widthFactor: 1, heightFactor: 1, child: content),
+            ),
+          ),
+        ),
       ),
-      DkButtonVariant.secondary => OutlinedButton(
-        onPressed: onTap,
-        style: style,
-        child: content,
-      ),
-      DkButtonVariant.text => TextButton(
-        onPressed: onTap,
-        style: style,
-        child: content,
-      ),
-    };
+    );
+  }
+}
 
-    // Merge so the busy state is announced with the button's own label.
-    return MergeSemantics(
-      child: Semantics(value: isLoading ? 'Загрузка' : null, child: button),
+/// Floating action button «+ Поездка», DESIGN.md §4: pill, min 56, `e2Fab`
+/// shadow (none in dark). Place it with `Scaffold.floatingActionButton`
+/// (right 16, bottom safe area + 16).
+class DkFab extends StatelessWidget {
+  /// Creates the FAB.
+  const new({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    super.key,
+  });
+
+  /// Visible text and accessible name.
+  final String label;
+
+  /// Leading icon (22).
+  final IconData icon;
+
+  /// Tap handler.
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final spacing = context.dkSpacing;
+    final shape = BorderRadius.circular(context.dkRadii.pill);
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: shape,
+          boxShadow: context.dkElevation.e2Fab,
+        ),
+        child: Material(
+          color: colors.accent,
+          borderRadius: shape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onPressed,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: context.dkSizes.buttonHeight,
+              ),
+              child: Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: spacing.s20,
+                  end: spacing.s24,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      size: context.dkSizes.iconAction,
+                      color: colors.onAccent,
+                    ),
+                    SizedBox(width: spacing.s8),
+                    Text(
+                      label,
+                      style: context.dkText.bodyStrong.copyWith(
+                        color: colors.onAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
