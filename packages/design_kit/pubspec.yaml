@@ -12,13 +12,27 @@ dependencies:
   flutter:
     sdk: flutter
 dev_dependencies:
+  alchemist: ^0.14.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^11.0.0
 
 flutter:
   fonts:
-    # IBM Plex Sans, unmodified variable font (wght 100-700), SIL OFL 1.1 — see fonts/OFL.txt.
+    # Manrope (DESIGN.md §2.2): static 500/600/700/800 instances of the
+    # variable font, SIL OFL 1.1 (no Reserved Font Name) — fonts/Manrope-OFL.txt.
+    - family: Manrope
+      fonts:
+        - asset: fonts/Manrope-Medium.ttf
+          weight: 500
+        - asset: fonts/Manrope-SemiBold.ttf
+          weight: 600
+        - asset: fonts/Manrope-Bold.ttf
+          weight: 700
+        - asset: fonts/Manrope-ExtraBold.ttf
+          weight: 800
+    # IBM Plex Sans, unmodified, SIL OFL 1.1 — fonts/IBMPlexSans-OFL.txt.
+    # Glyph fallback only: Manrope has no `₸` (U+20B8) and no U+202F.
     - family: IBMPlexSans
       fonts:
         - asset: fonts/IBMPlexSans-Variable.ttf
