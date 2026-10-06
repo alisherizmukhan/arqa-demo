@@ -15,35 +15,61 @@ void main() {
     ('light', DkColors.light),
     ('dark', DkColors.dark),
   ]) {
-    group('$name theme meets WCAG AA', () {
-      final textPairs = <String, (Color, Color)>{
-        'text on surface': (c.textPrimary, c.surface),
-        'text on background': (c.textPrimary, c.background),
-        'secondary text on surface': (c.textSecondary, c.surface),
-        'secondary text on background': (c.textSecondary, c.background),
-        'secondary text on muted': (c.textSecondary, c.surfaceMuted),
-        'on primary': (c.onPrimary, c.primary),
-        'primary text on background': (c.primary, c.background),
-        'positive figure': (c.positive, c.surface),
-        'cash accent': (c.cash, c.surface),
-        'card accent': (c.card, c.surface),
-        'error text': (c.error, c.surface),
-        'on error': (c.onError, c.error),
-        'error banner text': (c.onErrorContainer, c.errorContainer),
+    group('$name: text pairs used by the spec meet WCAG AA (4.5:1)', () {
+      final pairs = <String, (Color, Color)>{
+        'textPrimary on surface': (c.textPrimary, c.surface),
+        'textPrimary on bg': (c.textPrimary, c.bg),
+        'textSecondary on surface': (c.textSecondary, c.surface),
+        'textSecondary on bg': (c.textSecondary, c.bg),
+        // DESIGN.md §2.1: "textTertiary ≥ 4.5:1 on surface in both themes".
+        'textTertiary on surface': (c.textTertiary, c.surface),
+        'textSecondary on surfaceMuted (disabled field)': (
+          c.textSecondary,
+          c.surfaceMuted,
+        ),
+        'textSecondary on segmentTrack': (c.textSecondary, c.segmentTrack),
+        'textPrimary on segmentThumb': (c.textPrimary, c.segmentThumb),
+        'accent (hero, links) on surface': (c.accent, c.surface),
+        'onAccent on accent (buttons, FAB)': (c.onAccent, c.accent),
+        'accent on accentSoft (secondary button, badge)': (
+          c.accent,
+          c.accentSoft,
+        ),
+        'textPrimary on accentSoft (highlighted row)': (
+          c.textPrimary,
+          c.accentSoft,
+        ),
+        'error on surface (field errors)': (c.error, c.surface),
+        'error on bg (error rows below fields)': (c.error, c.bg),
+        'onInverse on inverseSurface (snackbar)': (
+          c.onInverse,
+          c.inverseSurface,
+        ),
+        'inverseAccent on inverseSurface (snackbar action)': (
+          c.inverseAccent,
+          c.inverseSurface,
+        ),
       };
-      for (final MapEntry(key: label, value: (fg, bg)) in textPairs.entries) {
-        test('$label >= 4.5:1', () {
-          expect(contrast(fg, bg), greaterThanOrEqualTo(4.5));
-        });
+      for (final MapEntry(key: label, value: (fg, bg)) in pairs.entries) {
+        test(label, () => expect(contrast(fg, bg), greaterThanOrEqualTo(4.5)));
       }
+    });
 
-      test('control outline >= 3:1 against surface', () {
-        expect(contrast(c.outline, c.surface), greaterThanOrEqualTo(3));
-      });
-
-      test('focus ring >= 3:1 against surface', () {
-        expect(contrast(c.focus, c.surface), greaterThanOrEqualTo(3));
-      });
+    group('$name: meaningful icons meet 3:1', () {
+      final pairs = <String, (Color, Color)>{
+        'error icon on errorSoft tile': (c.error, c.errorSoft),
+        'accent icon on accentSoft tile': (c.accent, c.accentSoft),
+        'inverseError icon on snackbar': (c.inverseError, c.inverseSurface),
+        'inverseSuccess icon on snackbar': (c.inverseSuccess, c.inverseSurface),
+      };
+      for (final MapEntry(key: label, value: (fg, bg)) in pairs.entries) {
+        test(label, () => expect(contrast(fg, bg), greaterThanOrEqualTo(3)));
+      }
     });
   }
+
+  // Not asserted: `border` on `surface` is 1.41 (light) / 1.54 (dark), below
+  // WCAG 1.4.11's 3:1 for control boundaries. It is a spec value and is not
+  // changed; fields are identified by their visible labels. See DECISIONS.md.
+  // Disabled text (`textDisabled` on `disabledFill`) is exempt from WCAG.
 }
