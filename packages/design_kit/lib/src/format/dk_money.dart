@@ -1,28 +1,46 @@
-/// Money formatting for display: integer tenge only, e.g. `3 315 ₸`.
+/// Money formatting, DESIGN.md §3: integer tenge, digit groups and the
+/// currency separated by U+202F (narrow no-break space), negatives with the
+/// real minus U+2212. `3315 → "3 315 ₸"`, `-585 → "−585 ₸"`.
 ///
-/// Groups are separated by a no-break space (U+00A0), as in the Russian
-/// locale, and the sign is a no-break space away from the number, so a figure
-/// never wraps across lines. Negative values use the minus sign (U+2212).
+/// Rendering widens every U+202F to ~0.25 em (`DkGroupedText`), so the gaps
+/// look like the mockups while the string itself stays U+202F.
 abstract final class DkMoney {
-  /// No-break space used between digit groups and before the currency sign.
-  static const String nbsp = ' ';
+  /// Narrow no-break space (U+202F): digit groups and before `₸`.
+  static const String separator = ' ';
 
   /// Tenge sign.
   static const String currency = '₸';
 
-  static const String _minus = '−';
+  /// Minus sign (U+2212) for negative amounts (commission in the summary).
+  static const String minus = '−';
 
-  /// Formats [amount] (whole tenge) as `3 315 ₸`.
-  static String format(int amount) => '${formatNumber(amount)}$nbsp$currency';
+  /// `3 315 ₸`.
+  static String format(int amount) =>
+      '${formatNumber(amount)}$separator$currency';
 
-  /// Formats [amount] with digit grouping but without the currency sign.
+  /// `3 315` (no currency).
   static String formatNumber(int amount) {
     final digits = amount.abs().toString();
-    final buffer = StringBuffer(amount < 0 ? _minus : '');
+    return (amount < 0 ? minus : '') + groupDigits(digits);
+  }
+
+  /// Groups a string of ASCII digits in threes: `"2400" → "2 400"`.
+  static String groupDigits(String digits) {
+    final buffer = StringBuffer();
     for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(nbsp);
+      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(separator);
       buffer.write(digits[i]);
     }
     return buffer.toString();
+  }
+
+  /// The ASCII digits of [text] (drops separators, spaces, `₸`, …).
+  static String digitsOf(String text) =>
+      String.fromCharCodes(text.codeUnits.where((c) => c >= 48 && c <= 57));
+
+  /// Parses user input (`"2 400"`, `"2400 ₸"`) to an int; null when empty.
+  static int? parse(String text) {
+    final digits = digitsOf(text);
+    return digits.isEmpty ? null : int.parse(digits);
   }
 }

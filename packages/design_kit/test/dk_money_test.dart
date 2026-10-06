@@ -1,32 +1,35 @@
 import 'package:design_kit/design_kit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _nbsp = ' ';
+const _nnbsp = ' ';
+const _minus = '−';
 
 void main() {
-  group('DkMoney.format', () {
+  group('DkMoney.format (U+202F groups, U+2212 minus)', () {
     final cases = <int, String>{
-      0: '0$_nbsp₸',
-      7: '7$_nbsp₸',
-      999: '999$_nbsp₸',
-      1000: '1${_nbsp}000$_nbsp₸',
-      3315: '3${_nbsp}315$_nbsp₸',
-      3900: '3${_nbsp}900$_nbsp₸',
-      100000: '100${_nbsp}000$_nbsp₸',
-      1250000: '1${_nbsp}250${_nbsp}000$_nbsp₸',
-      -585: '−585$_nbsp₸',
-      -1500: '−1${_nbsp}500$_nbsp₸',
+      0: '0$_nnbsp₸',
+      585: '585$_nnbsp₸',
+      1000: '1${_nnbsp}000$_nnbsp₸',
+      3315: '3${_nnbsp}315$_nnbsp₸',
+      1250000: '1${_nnbsp}250${_nnbsp}000$_nnbsp₸',
+      -585: '${_minus}585$_nnbsp₸',
+      -1500: '${_minus}1${_nnbsp}500$_nnbsp₸',
     };
     for (final MapEntry(key: amount, value: expected) in cases.entries) {
       test('$amount', () => expect(DkMoney.format(amount), expected));
     }
   });
 
-  test('reads as "3 315 ₸" with ordinary spaces', () {
-    expect(DkMoney.format(3315).replaceAll(_nbsp, ' '), '3 315 ₸');
+  test('never uses U+00A0 or an ASCII space', () {
+    final formatted = DkMoney.format(1234567);
+    expect(formatted, isNot(contains(' ')));
+    expect(formatted, isNot(contains(' ')));
   });
 
-  test('formatNumber omits the currency', () {
-    expect(DkMoney.formatNumber(3315), '3${_nbsp}315');
+  test('groupDigits / digitsOf / parse', () {
+    expect(DkMoney.groupDigits('2400'), '2${_nnbsp}400');
+    expect(DkMoney.digitsOf('2${_nnbsp}400 ₸'), '2400');
+    expect(DkMoney.parse('12 345 ₸'), 12345);
+    expect(DkMoney.parse(''), isNull);
   });
 }
