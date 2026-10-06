@@ -15,10 +15,10 @@ async def test_seed_is_idempotent(sessionmaker: async_sessionmaker[AsyncSession]
 
     async with sessionmaker() as session:
         repo = SqlTripRepository(session)
-        assert await seed_trips(repo, trips) == len(trips) == 10
+        assert await seed_trips(repo, trips) == len(trips)
         assert await seed_trips(repo, trips) == 0
 
-    assert await count_trips(sessionmaker) == 10
+    assert await count_trips(sessionmaker) == len(trips)
 
 
 async def test_seed_skipped_when_table_has_data(
@@ -43,4 +43,4 @@ async def test_app_startup_seeds_empty_table(
     async with LifespanManager(seeded_app):  # restart: must not duplicate
         pass
 
-    assert await count_trips(sessionmaker) == 10
+    assert await count_trips(sessionmaker) == len(load_trips_from_json(SEED_FILE))
