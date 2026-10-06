@@ -1,39 +1,15 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# design_kit
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
-
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
-
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+Design tokens, light/dark themes and components for Driver Shift Diary. Independent of the app (`apps/mobile` depends on it, never the reverse).
 
 ```dart
-const like = 'sample';
+MaterialApp(theme: DkTheme.light(), darkTheme: DkTheme.dark(), ...);
+
+DkSummaryTile.money(label: 'Чистыми', amount: 3315, tone: DkTone.positive,
+    emphasis: DkSummaryEmphasis.hero);           // 3 315 ₸
+Padding(padding: EdgeInsets.all(context.dkSpacing.md), ...);
 ```
 
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+- Design rationale, tokens and the accessibility checklist: [DESIGN.md](DESIGN.md)
+- Showcase of every component: `example/` (`flutter run -d chrome`, add `?theme=dark` for the dark theme)
+- Font: IBM Plex Sans, unmodified, SIL Open Font License 1.1 (`fonts/OFL.txt`)
