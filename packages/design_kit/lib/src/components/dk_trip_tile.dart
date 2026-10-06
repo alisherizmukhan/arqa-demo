@@ -92,56 +92,73 @@ class DkTripTile extends StatelessWidget {
               background: highlighted ? colors.surface : null,
             ),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // Both columns keep their natural width (at most half each):
+              // the amount sits at the right padding, and with huge amounts
+              // or a large text scale «комиссия …» wraps instead of
+              // overflowing. No LayoutBuilder, so intrinsic layouts work.
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                spacing: spacing.s12,
                 children: [
-                  Text.rich(
-                    TextSpan(
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextSpan(text: timeRange),
-                        if (endsNextDay)
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.top,
-                            child: Padding(
-                              padding: EdgeInsetsDirectional.only(
-                                start: spacing.s2,
-                              ),
-                              child: Text(
-                                '+1',
-                                semanticsLabel: nextDayLabel,
-                                style: text.superscript.copyWith(
-                                  color: colors.accent,
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(text: timeRange),
+                              if (endsNextDay)
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.top,
+                                  child: Padding(
+                                    padding: EdgeInsetsDirectional.only(
+                                      start: spacing.s2,
+                                    ),
+                                    child: Text(
+                                      '+1',
+                                      semanticsLabel: nextDayLabel,
+                                      style: text.superscript.copyWith(
+                                        color: colors.accent,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                            ],
                           ),
+                          style: text.bodyStrong.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        Text(
+                          meta,
+                          style: text.bodyS.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
-                    style: text.bodyStrong.copyWith(color: colors.textPrimary),
                   ),
-                  Text(
-                    meta,
-                    style: text.bodyS.copyWith(color: colors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            // Flexible: natural width normally; with huge amounts or a large
-            // text scale it shrinks and «комиссия …» wraps instead of
-            // overflowing the row.
-            Flexible(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  DkGroupedText(
-                    amount,
-                    textAlign: TextAlign.end,
-                    style: text.bodyStrong.copyWith(color: colors.textPrimary),
-                  ),
-                  DkGroupedText(
-                    commission,
-                    textAlign: TextAlign.end,
-                    style: text.caption.copyWith(color: colors.textTertiary),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        DkGroupedText(
+                          amount,
+                          textAlign: TextAlign.end,
+                          style: text.bodyStrong.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        DkGroupedText(
+                          commission,
+                          textAlign: TextAlign.end,
+                          style: text.caption.copyWith(
+                            color: colors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
