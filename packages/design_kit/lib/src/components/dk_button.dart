@@ -65,6 +65,13 @@ class DkButton extends StatelessWidget {
     };
     final radius = BorderRadius.circular(isText ? radii.md : radii.lg);
     final leading = isLoading || icon != null;
+    final labelStyle = context.dkText.bodyStrong;
+    final minHeight = isText ? sizes.textButtonHeight : sizes.buttonHeight;
+    // The spec's height is one label line plus equal insets (56 = 24 + 2·16;
+    // text: 48 = 24 + 2·12). Keeping those insets means a label that grows
+    // (text scale, a narrow dialog) never touches the button's edges.
+    final verticalInset =
+        (minHeight - labelStyle.fontSize! * labelStyle.height!) / 2;
 
     final content = Row(
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
@@ -87,7 +94,7 @@ class DkButton extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: context.dkText.bodyStrong.copyWith(color: foreground),
+            style: labelStyle.copyWith(color: foreground),
           ),
         ),
       ],
@@ -106,7 +113,7 @@ class DkButton extends StatelessWidget {
           onTap: disabled || isLoading ? null : onPressed,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: isText ? sizes.textButtonHeight : sizes.buttonHeight,
+              minHeight: minHeight,
               minWidth: expand ? double.infinity : sizes.tapTargetMin,
             ),
             child: Padding(
@@ -114,6 +121,8 @@ class DkButton extends StatelessWidget {
                 // 20 on the icon side, 24 otherwise (DESIGN.md §4).
                 start: leading ? spacing.s20 : spacing.s24,
                 end: spacing.s24,
+                top: verticalInset,
+                bottom: verticalInset,
               ),
               // Both factors: without heightFactor a Center fills all the
               // height it is offered (e.g. a Scaffold bottom bar).

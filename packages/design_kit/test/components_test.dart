@@ -78,6 +78,36 @@ void main() {
       expect(tester.getSize(find.byType(Placeholder)).height, greaterThan(0));
     });
 
+    testWidgets('a wrapped label keeps the 16 dp insets; the button grows', (
+      tester,
+    ) async {
+      await tester.runAsync(loadKitFonts);
+      await tester.pumpWidget(
+        wrap(
+          // The 409 dialog's content width on a 360 dp phone.
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: 264,
+              child: DkButton(
+                label: 'Сохранить как новую поездку',
+                variant: DkButtonVariant.secondary,
+                expand: true,
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final label = tester.getRect(find.text('Сохранить как новую поездку'));
+      final button = tester.getRect(find.byType(DkButton));
+      expect(label.height, 48, reason: 'two 24 px lines');
+      expect(label.top - button.top, 16);
+      expect(button.bottom - label.bottom, 16);
+      expect(button.height, 80);
+    });
+
     testWidgets('loading shows a spinner and ignores taps', (tester) async {
       var taps = 0;
       await tester.pumpWidget(
