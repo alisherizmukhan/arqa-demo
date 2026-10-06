@@ -102,3 +102,22 @@ A running log of where the AI assistant was unsure, got something wrong first, a
 - **Retry timing is tested with fake time** at each step (just before and just after 2/4/8/30/30 s), including that «Повторить» restarts the schedule and that an edit stops it, so the schedule cannot drift silently.
 - **No copy for the discard dialog exists in DESIGN.md §6.** The text is proposed and flagged in DECISIONS.md rather than presented as spec.
 
+
+## Redesign — where the AI deviated from the mockup or spec, and how it was caught
+
+Short summary of the R1–R6 notes above.
+
+- **Manrope has no `₸` and no U+202F.** fontTools was run on the bundled font before writing any styles. Fixed with IBM Plex Sans as the fallback (approved), and a golden of «3 315 ₸» in both themes.
+- **U+202F is too narrow next to the mockups (~0.1 em vs ~0.25 em).** `TextPainter` widths were measured after the first money golden looked like «3315». The string keeps U+202F, and rendering widens it, in one place shared by display and the money input (approved option 2).
+- **The spec's field border failed WCAG 3:1** (1.41:1 / 1.54:1). Caught by the contrast unit test. The border is now `#8F95A0` / `#5F6571`, exactly 3.01:1. The suggested `#959CA7` was measured at 2.77:1 and rejected.
+- **Goldens differ between Windows and Linux,** even with text drawn as blocks. Caught by running `CI=true` in a Linux container before the first push. CI goldens are generated on Linux by `tool/update_ci_goldens.sh`; real-font goldens stay local.
+- **`DkButton` filled the whole screen** in the app's bottom bar (a `Center` without `heightFactor`). Every kit test placed it in a scroll view, so the app's widget tests caught it. Fixed, with a bounded-height regression test.
+- **The split bar was never drawn** (empty segments 0 px high). No kit test or golden covered it; the first real-font app screenshot showed it. Fixed, with a test of the segment size; the Day golden covers it now.
+- **The «+1 день» badge always wrapped below the time.** R3 wrongly blamed "~1 px too narrow"; measuring the badge in R4 showed it filled its line (`Container.alignment`). Fixed in the kit, the R3 note corrected, and the end field drops its clock while the badge shows (approved).
+- **Trip amounts stopped short of the right edge.** Seen in the screenshots. The first fix used `LayoutBuilder`, which alchemist's table layout then showed breaks intrinsic sizing, so it was reworked.
+- **Snackbars were drawn above dialogs and pickers.** A behaviour test's tap landed on the offline snackbar instead of the discard dialog. Fixed in the kit: a snackbar shows only while its own screen is current.
+- **Snackbars over the FAB:** the success snackbar beside the FAB was planned; the refresh-failure snackbar overlapped it in an R5 screenshot. Both now go above the FAB when they don't fit beside it (tested).
+- **Save hidden behind the keyboard** (`Scaffold.bottomNavigationBar`). Found while implementing §5.6, then pinned by a test with a keyboard inset.
+- **400/401 were treated as "no connection"** and would have been resent forever. Caught in the pre-R6 check you asked for. Only connection errors, timeouts and 5xx are resent now (tested for each status).
+- **Widget tests measure with the Ahem font,** where every glyph is a full em wide. Placement tests first "passed" for the wrong reason. All geometry tests now load the real fonts.
+- **Commit hygiene:** a staged `git rm` was swept twice into an unrelated commit. Both times it was repaired before pushing, and each commit's file list is now checked before committing.
