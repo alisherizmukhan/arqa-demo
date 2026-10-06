@@ -94,6 +94,41 @@ void main() {
       });
     });
 
+    test('a network failure is retried, then succeeds', () async {
+      final (repo, adapter) = build([
+        connectionError(),
+        connectionError(),
+        json({
+          'date': '2026-10-01',
+          'tz': '+05:00',
+          'trips': [t1Json],
+        }),
+      ]);
+
+      expect(await repo.tripsForDay(referenceDay, kz), isA<Ok<List<Trip>>>());
+      expect(adapter.requests, hasLength(3));
+    });
+
+    test('gives up after the retries with a NetworkFailure', () async {
+      final (repo, adapter) = build([connectionError()]);
+
+      final result = await repo.tripsForDay(referenceDay, kz);
+
+      expect((result as Err).failure, isA<NetworkFailure>());
+      expect(adapter.requests, hasLength(3));
+    });
+
+    test('503 is retried, then reported as a ServerFailure', () async {
+      final (repo, adapter) = build([
+        json({'detail': 'unavailable'}, status: 503),
+      ]);
+
+      final result = await repo.tripsForDay(referenceDay, kz);
+
+      expect((result as Err).failure, isA<ServerFailure>());
+      expect(adapter.requests, hasLength(3));
+    });
+
     test('an unknown payment method is an unexpected failure', () async {
       final (repo, _) = build([
         json({
@@ -144,30 +179,14 @@ void main() {
       expect(await repo.createTrip(t1, kz), isA<Ok<Trip>>());
     });
 
-    test('retries a network failure with the SAME trip id', () async {
-      final (repo, adapter) = build([
-        connectionError(),
-        connectionError(),
-        json(t1Json),
-      ]);
-
-      final result = await repo.createTrip(t1, kz);
-
-      expect(result, isA<Ok<Trip>>());
-      expect(adapter.requests, hasLength(3));
-      final ids = adapter.requests.map(
-        (r) => (r.data as Map<String, Object?>)['id'],
-      );
-      expect(ids.toSet(), {'t1'});
-    });
-
-    test('gives up after the retries with a NetworkFailure', () async {
-      final (repo, adapter) = build([connectionError()]);
+    test('a network failure is reported at once (no dio retries)', () async {
+      // The form retries on its own schedule with the same id.
+      final (repo, adapter) = build([connectionError(), json(t1Json)]);
 
       final result = await repo.createTrip(t1, kz);
 
       expect((result as Err).failure, isA<NetworkFailure>());
-      expect(adapter.requests, hasLength(3));
+      expect(adapter.requests, hasLength(1));
     });
 
     test('422 maps to a ValidationFailure with code and field', () async {
@@ -209,7 +228,7 @@ void main() {
       );
     });
 
-    test('503 is retried, then reported as a ServerFailure', () async {
+    test('503 is reported at once as a ServerFailure', () async {
       final (repo, adapter) = build([
         json({'detail': 'unavailable'}, status: 503),
       ]);
@@ -220,7 +239,7 @@ void main() {
         (result as Err).failure,
         isA<ServerFailure>().having((f) => f.statusCode, 'status', 503),
       );
-      expect(adapter.requests, hasLength(3));
+      expect(adapter.requests, hasLength(1));
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:driver_diary/core/network/retry_interceptor.dart';
 import 'package:driver_diary/features/trips/data/dto/trip_dtos.dart';
 
 /// HTTP calls to the trips API. Throws `DioException`/`FormatException`;
@@ -19,10 +20,12 @@ class TripsRemoteDataSource {
     return DayTripsDto.fromJson(_body(response));
   }
 
+  /// Not retried by dio: the form retries on a visible schedule instead.
   Future<TripDto> createTrip(CreateTripRequestDto request) async {
     final response = await _dio.post<Map<String, Object?>>(
       '/trips',
       data: request.toJson(),
+      options: Options(extra: RetryInterceptor.disabled),
     );
     return TripDto.fromJson(_body(response));
   }

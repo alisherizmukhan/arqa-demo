@@ -3,10 +3,10 @@ import 'package:dio/dio.dart';
 /// Retries requests that failed for transient reasons: no connection,
 /// timeouts, and 502/503/504.
 ///
-/// POST is retried too. That is safe only because trip creation is
-/// idempotent: the retry re-sends the *same* request body, so the same trip
-/// id, and the server answers 200 with the stored trip instead of creating a
-/// duplicate.
+/// A request opts out with `Options(extra: RetryInterceptor.disabled)`.
+/// Trip creation does: the add-trip form runs its own visible schedule
+/// (2/4/8/30 s, DESIGN.md §5.9) with the same trip id, and silent retries
+/// here would only delay the «Нет связи» snackbar.
 class RetryInterceptor extends Interceptor {
   new(
     this._dio, {
@@ -19,6 +19,10 @@ class RetryInterceptor extends Interceptor {
   final List<Duration> delays;
 
   static const _attemptKey = 'retry_attempt';
+  static const _disabledKey = 'retry_disabled';
+
+  /// `Options.extra` for a request that must not be retried here.
+  static const Map<String, Object?> disabled = {_disabledKey: true};
   static const _retryableStatuses = {502, 503, 504};
 
   @override
@@ -28,7 +32,9 @@ class RetryInterceptor extends Interceptor {
   ) async {
     final options = err.requestOptions;
     final attempt = (options.extra[_attemptKey] as int?) ?? 0;
-    if (!_isTransient(err) || attempt >= delays.length) {
+    if (options.extra[_disabledKey] == true ||
+        !_isTransient(err) ||
+        attempt >= delays.length) {
       handler.next(err);
       return;
     }
