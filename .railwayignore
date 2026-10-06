@@ -1,0 +1,29 @@
+# `railway up` uploads from the repo root; the API image only needs backend/, data/ and railway.json.
+apps/
+packages/
+docs/
+docker/
+.github/
+pubspec.yaml
+pubspec.lock
+.dart_tool/
+backend/.venv/
+backend/tests/
+# Local AI-tool skill installs
+.agents/
+.augment/
+.claude/
+.codebuddy/
+.codewhale/
+.continue/
+.cursor/
+.factory/
+.gemini/
+.kilocode/
+.kiro/
+.opencode/
+.qoder/
+.roo/
+.trae/
+.warp/
+.windsurf/
