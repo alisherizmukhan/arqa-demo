@@ -58,6 +58,19 @@ Or the whole stack in Docker: `docker compose --profile full up --build` → htt
 
 Config (env): `DATABASE_URL` (`postgresql://…` is converted to `postgresql+asyncpg://`), `PORT`, `SEED_ON_STARTUP` (default `true`), `SEED_FILE`, `CORS_ORIGINS` (JSON list, default `["*"]`).
 
+## Mobile app
+
+```bash
+cd apps/mobile
+flutter run -d chrome                                    # uses the deployed API
+flutter run --dart-define=API_URL=http://10.0.2.2:8000   # Android emulator -> local backend
+flutter test                                             # unit, provider and widget tests
+LIVE_API_URL=http://127.0.0.1:8000 flutter test test/live   # contract tests against a running backend
+dart run build_runner build                              # after changing DTOs or providers
+```
+
+Config: `--dart-define=API_URL=...` (default: the Railway URL), `--dart-define=DRIVER_TZ=+05:00`.
+
 ## Deploy to Railway
 
 The image is built from the repo root with `backend/Dockerfile`; healthcheck `/health`. The container runs `alembic upgrade head` and then uvicorn on `$PORT`.

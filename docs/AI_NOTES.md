@@ -52,3 +52,14 @@ A running log of where the AI assistant was unsure, got something wrong first, a
 - **My own new rule broke an old test:** the day-boundary test used one shared end time, which made the first trip longer than 24h. The test data was wrong, not the rule.
 - **Coverage first reported 87% for `routes.py` with lines that obviously run.** The cause was coverage not tracing greenlets (SQLAlchemy async). With `concurrency = ["greenlet", "thread"]` the real number is 99%.
 - **Generated demo data must not break the reference case.** The generator never writes to 2026-09-30 .. 10-03 (days the tests pin down), and a check recomputes every day's summary from the file.
+
+## Stage 5 — mobile app
+
+- **Dart 3.13 constructor syntax, again, but harder.** `dart fix --apply` hung for minutes (killed). The analyzer rejects `factory new(...)` but flags `factory ClassName(...)`. Instead of guessing, I wrote a probe file with three variants and let the analyzer pick: unnamed factory `factory (...)`, private named `const new _(...)`.
+- **freezed 4 + primary constructors produce no JSON.** The first DTOs (primary-constructor style, as freezed's README now recommends) generated `*.freezed.dart` but no `*.g.dart`. A one-class probe confirmed the classic factory form works with the new syntax.
+- **`build_runner` removed `--delete-conflicting-outputs`.** The CI step from stage 1 used it, so CI would have failed on the mobile job. The CI stale-code check also used `git diff`, which misses *new* generated files; it now uses `git status --porcelain`.
+- **New enum value caught by the compiler:** dio 5.11 added `DioExceptionType.transformTimeout`; the exhaustive `switch` in the failure mapper refused to compile until it was handled.
+- **A UX bug found by a widget test:** the form validator returned early when times were missing, so "commission larger than amount" stayed hidden until both times were picked. Split the rules into `validateMoney` / `validateTimes`.
+- **A test name that claimed too much:** "client-side errors, then a server conflict" never reached the conflict (that needs time pickers). Renamed it to what it checks; the conflict/id-reuse logic is covered by provider tests.
+- **Time zone trap avoided on purpose:** "today" and day boundaries use the driver's offset, not `DateTime.now()`'s device zone. A provider test fixes "now" at 20:00Z, which is already the next day in +05:00.
+- **Verified against reality, not just mocks:** the web build ran against the deployed API (today's total matched the API's `/summary` exactly), and the live contract tests ran the real dio/DTO/repository stack against a local backend (create → 200 on retry → 409 → listing by local day, and a server 422 mapped to a field error).
