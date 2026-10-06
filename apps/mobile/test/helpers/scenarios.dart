@@ -188,6 +188,7 @@ final scenarios = <Scenario>[
 
 /// Mockup 02 is 01 in the dark theme; 07 and 12 have no dark mockup.
 const darkScenarioIds = {
+  'r5_discard_confirm',
   '01_day_light',
   '07_add_trip',
   '12_add_trip_conflict_409',
@@ -222,6 +223,52 @@ final stressScenarios = <Scenario>[
         FakeTripsRepository(),
         _input(referenceDay, amount: '99999999', commission: '99999999'),
       );
+    },
+  ),
+];
+
+/// Stage R5 states without a mockup (screenshots, layout matrix, a11y).
+final behaviourScenarios = <Scenario>[
+  (
+    id: 'r5_discard_confirm',
+    run: (tester) async {
+      await pumpFormOverHost(
+        tester,
+        FakeTripsRepository(),
+        input: _input(referenceDay),
+      );
+      await tester.tap(find.bySemanticsLabel('Закрыть'));
+      await tester.pumpAndSettle();
+    },
+  ),
+  (
+    id: 'r5_offline_resending',
+    run: (tester) async {
+      var calls = 0;
+      final repository = FakeTripsRepository()
+        ..onCreate = (_) {
+          calls++;
+          return calls == 1
+              ? Future.value(const Err(NetworkFailure()))
+              : pending();
+        };
+      await _form(tester, repository, _input(referenceDay));
+      await _tapSave(tester);
+      // The first automatic resend (after 2 s) is in flight.
+      await tester.pump(const Duration(seconds: 2));
+    },
+  ),
+  (
+    id: 'r5_day_refresh_failed',
+    run: (tester) async {
+      final repository = FakeTripsRepository([t1, t2]);
+      await pumpDiary(tester, repository);
+      await selectDay(tester, referenceDay);
+      repository.onLoad = (_) async => const Err(NetworkFailure());
+      await tester.fling(find.text('Поездки'), const Offset(0, 300), 1000);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
     },
   ),
 ];

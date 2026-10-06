@@ -13,7 +13,11 @@ void main() {
   const sizes = [Size(390, 844), Size(360, 780)];
   const scales = [1.0, 1.3];
 
-  for (final scenario in [...scenarios, ...stressScenarios]) {
+  for (final scenario in [
+    ...scenarios,
+    ...stressScenarios,
+    ...behaviourScenarios,
+  ]) {
     for (final size in sizes) {
       for (final scale in scales) {
         final name =

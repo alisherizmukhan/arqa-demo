@@ -21,7 +21,7 @@ void main() {
 
   setUpAll(loadAppFonts);
 
-  for (final scenario in scenarios) {
+  for (final scenario in [...scenarios, ...behaviourScenarios]) {
     for (final brightness in [
       Brightness.light,
       if (darkScenarioIds.contains(scenario.id)) Brightness.dark,
