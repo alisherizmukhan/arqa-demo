@@ -44,8 +44,11 @@ DkSnackbarHandle? _current;
 /// Shows a snackbar, DESIGN.md §4 (one at a time; a new one replaces it).
 ///
 /// error/info: full width (16 from both edges) at [bottom] (default: safe
-/// area + 16; the form passes "12 above the bottom bar"). success: compact,
-/// bottom-left, at most [maxWidth] wide so it sits **beside** the FAB.
+/// area + 16; the form passes "12 above the bottom bar").
+///
+/// success: compact, bottom-left. With [fabSize] (the FAB at the bottom
+/// right) it sits **beside** the FAB when it fits (12 dp gap), otherwise —
+/// narrow screens, large text — full width **above** the FAB. Never overlaps.
 DkSnackbarHandle showDkSnackbar(
   BuildContext context, {
   required String message,
@@ -53,7 +56,7 @@ DkSnackbarHandle showDkSnackbar(
   String? actionLabel,
   VoidCallback? onAction,
   double? bottom,
-  double? maxWidth,
+  Size? fabSize,
   Duration? duration,
 }) {
   _current?.close();
@@ -62,15 +65,28 @@ DkSnackbarHandle showDkSnackbar(
   final entry = OverlayEntry(
     builder: (context) {
       final spacing = context.dkSpacing;
-      final offset =
-          bottom ?? MediaQuery.paddingOf(context).bottom + spacing.s16;
+      final safeBottom = MediaQuery.paddingOf(context).bottom;
       final compact = tone == DkSnackTone.success;
+      var offset = bottom ?? safeBottom + spacing.s16;
+      var right = compact ? null : spacing.s16;
+      var maxWidth = double.infinity;
+      if (compact && fabSize != null) {
+        final width = MediaQuery.sizeOf(context).width;
+        final beside =
+            width - spacing.s16 - spacing.s12 - fabSize.width - spacing.s16;
+        if (dkSuccessSnackbarWidth(context, message) <= beside) {
+          maxWidth = beside;
+        } else {
+          right = spacing.s16;
+          offset = safeBottom + spacing.s16 + fabSize.height + spacing.s12;
+        }
+      }
       return Positioned(
         left: spacing.s16,
-        right: compact ? null : spacing.s16,
+        right: right,
         bottom: offset,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth ?? double.infinity),
+          constraints: BoxConstraints(maxWidth: maxWidth),
           child: _FadeIn(
             child: Semantics(
               liveRegion: true,
@@ -96,6 +112,25 @@ DkSnackbarHandle showDkSnackbar(
       duration ?? (tone == DkSnackTone.success ? DkMotion.successSnack : null);
   if (lifetime != null) handle._timer = Timer(lifetime, handle.close);
   return handle;
+}
+
+/// Natural width of the compact success snackbar for [message] (paddings +
+/// icon + gap + text at the current text scale).
+double dkSuccessSnackbarWidth(BuildContext context, String message) {
+  final spacing = context.dkSpacing;
+  final painter = TextPainter(
+    text: TextSpan(text: message, style: context.dkText.label),
+    textDirection: TextDirection.ltr,
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return spacing.s14 +
+      context.dkSizes.iconAction +
+      spacing.s8 +
+      width +
+      spacing.s16;
 }
 
 /// The snackbar's visual (no positioning or lifetime): used by

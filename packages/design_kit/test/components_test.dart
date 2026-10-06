@@ -4,6 +4,7 @@ import 'package:design_kit/design_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'golden_helpers.dart';
 import 'helpers.dart';
 
 /// Pumps an empty kit screen and returns a context under its Overlay.
@@ -304,6 +305,62 @@ void main() {
       expect(find.text('+1 день'), findsOneWidget);
     });
 
+    // The end field on a 360 dp screen: (360 − 2·16 − 12) / 2 = 158.
+    for (final scale in [1.0, 1.3]) {
+      testWidgets('+1 day badge: no clock icon, time never wraps, badge on '
+          'the time line at scale 1.0 (158 dp, text scale $scale)', (
+        tester,
+      ) async {
+        await tester.runAsync(loadKitFonts);
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: wrap(
+              Center(
+                child: SizedBox(
+                  width: 158,
+                  child: DkTimeField(
+                    label: 'Окончание',
+                    value: '00:20',
+                    onTap: () {},
+                    trailing: const DkBadge('+1 день'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byIcon(DkIcons.time), findsNothing);
+        final time = tester.getRect(find.text('00:20'));
+        final badge = tester.getRect(find.text('+1 день'));
+        final lineHeight =
+            tester.widget<Text>(find.text('00:20')).style!.fontSize! *
+            scale *
+            1.6;
+        expect(time.height, lessThan(lineHeight), reason: 'one line of time');
+        if (scale == 1.0) {
+          expect(badge.center.dy, closeTo(time.center.dy, 2));
+          expect(badge.left, greaterThan(time.right));
+        }
+        // The badge hugs its text (never stretched to the line width).
+        expect(
+          tester.getSize(find.byType(DkBadge)).width,
+          closeTo(badge.width + 16, 1),
+        );
+      });
+    }
+
+    testWidgets('time field without a badge keeps the clock icon', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(DkTimeField(label: 'Начало', value: '23:40', onTap: () {})),
+      );
+      expect(find.byIcon(DkIcons.time), findsOneWidget);
+    });
+
     testWidgets('segmented control reports the tapped value', (tester) async {
       DkPaymentMethod? picked;
       await tester.pumpWidget(
@@ -352,6 +409,69 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
       expect(success.isOpen, isFalse);
     });
+
+    for (final (width, scale, beside) in [
+      (390.0, 1.0, true),
+      (360.0, 1.0, false),
+      (390.0, 1.3, false),
+    ]) {
+      testWidgets('success snackbar ${beside ? 'beside' : 'above'} the FAB at '
+          '$width dp, text scale $scale', (tester) async {
+        // Real fonts: placement depends on the measured message width.
+        await tester.runAsync(loadKitFonts);
+        tester.view
+          ..physicalSize = Size(width, 844)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        final fabKey = GlobalKey();
+        late BuildContext ctx;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: DkTheme.light(),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: Scaffold(
+              floatingActionButton: DkFab(
+                key: fabKey,
+                label: 'Поездка',
+                icon: DkIcons.add,
+                onPressed: () {},
+              ),
+              body: Builder(
+                builder: (context) {
+                  ctx = context;
+                  return const SizedBox.expand();
+                },
+              ),
+            ),
+          ),
+        );
+
+        showDkSnackbar(
+          ctx,
+          message: 'Поездка добавлена',
+          tone: DkSnackTone.success,
+          fabSize: tester.getSize(find.byKey(fabKey)),
+        );
+        await tester.pump();
+
+        final snack = tester.getRect(find.byType(DkSnackbarView));
+        final fab = tester.getRect(find.byKey(fabKey));
+        expect(snack.overlaps(fab), isFalse, reason: 'never overlap');
+        expect(tester.takeException(), isNull);
+        if (beside) {
+          expect(snack.right, lessThanOrEqualTo(fab.left - 12));
+          expect(snack.bottom, closeTo(fab.bottom, 1));
+        } else {
+          expect(snack.bottom, lessThanOrEqualTo(fab.top - 12));
+          expect(snack.width, closeTo(width - 32, 1));
+        }
+        await tester.pump(DkMotion.successSnack);
+      });
+    }
 
     testWidgets('dialog runs the chosen action and closes', (tester) async {
       final context = await pumpContext(tester);
