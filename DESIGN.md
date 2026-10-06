@@ -414,9 +414,9 @@ Keep copy in one file (`core/l10n/strings_ru.dart` or ARB). No English strings i
 
 ## 7. Acceptance checklist (screenshots must match the mockups)
 
-- [ ] Example app (`packages/design_kit/example`) shows every component in every state, light + dark.
-- [ ] Golden tests for: DkSummaryCard, DkTripTile (card, cash, +1, highlighted), DkTextField (default/focused/error), DkButton matrix, DkDaySwitcher (date / Сегодня), Day screen light + dark with sample data.
-- [ ] `grep -R "Color(0x" apps/mobile` → 0 results; no literal sizes for spacing/radii in `apps/mobile`.
-- [ ] Money formatting tests assert U+202F and U+2212.
-- [ ] All tap targets ≥ 48; Semantics labels as listed.
-- [ ] Text scale 1.3: no clipping on Day and Add trip screens.
+- [x] Example app (`packages/design_kit/example`) shows every component in every state, light + dark. *(`example/test`: every component type, both themes, no overflow at 360 dp)*
+- [x] Golden tests for: DkSummaryCard, DkTripTile (card, cash, +1, highlighted), DkTextField (default/focused/error), DkButton matrix, DkDaySwitcher (date / Сегодня), Day screen light + dark with sample data. *(`packages/design_kit/test/goldens`, `apps/mobile/test/screens/goldens`)*
+- [x] `grep -R "Color(0x" apps/mobile` → 0 results; no literal sizes for spacing/radii in `apps/mobile`. *(CI step also rejects `Colors.` and `TextStyle(`)*
+- [x] Money formatting tests assert U+202F and U+2212. *(`dk_money_test.dart`)*
+- [x] All tap targets ≥ 48; Semantics labels as listed. *(`apps/mobile/test/screens/accessibility_test.dart`, every state, light + dark)*
+- [x] Text scale 1.3: no clipping on Day and Add trip screens. *(`layout_matrix_test.dart`: 390×844 and 360×780, 1.0 and 1.3, real fonts; no overflow, no truncated text)*
