@@ -195,10 +195,17 @@ class _DayScreenState extends ConsumerState<DayScreen> {
       // No data yet: the error state explains. With data: keep it (§5.4).
       final shown = ref.read(daySummaryProvider).value?.day;
       if (!mounted || shown != ref.read(selectedDayProvider)) return;
+      // Full width, 12 above the FAB: never over it.
+      final fab = _fabKey.currentContext?.size?.height ?? 0;
       _snack = showDkSnackbar(
         context,
         message: S.errorTitle,
         tone: DkSnackTone.error,
+        bottom:
+            MediaQuery.paddingOf(context).bottom +
+            context.dkSpacing.s16 +
+            fab +
+            context.dkSpacing.s12,
         actionLabel: S.retry,
         onAction: () {
           _snack?.close();

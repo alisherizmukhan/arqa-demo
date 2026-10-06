@@ -103,6 +103,9 @@ void main() {
 
       expect(texts(tester), contains(money(3315)));
       expect(find.byType(DkSnackbarView), findsOneWidget);
+      final snack = tester.getRect(find.byType(DkSnackbarView));
+      final fab = tester.getRect(find.byType(DkFab));
+      expect(snack.bottom, closeTo(fab.top - 12, 0.5), reason: 'above FAB');
       expect(find.text('Не удалось загрузить данные'), findsOneWidget);
       await disposeApp(tester);
     });
