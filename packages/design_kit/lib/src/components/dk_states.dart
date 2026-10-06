@@ -162,7 +162,7 @@ class _StateLayout extends StatelessWidget {
   }
 }
 
-enum _SkeletonKind { line, box, summaryCard, paymentCard, tripTile }
+enum _SkeletonKind { line, box, summaryCard, paymentCard, listHeader, tripTile }
 
 /// Loading placeholders, DESIGN.md §4. Color `skeleton`, pulse
 /// 1 → 0.55 → 1 in 1.4 s, still under reduced motion. Composites replicate
@@ -195,6 +195,13 @@ class DkSkeleton extends StatelessWidget {
       height = null,
       radius = null,
       _kind = _SkeletonKind.paymentCard;
+
+  /// The list header's shape (§5.3: 88×18, with `DkListHeader`'s padding).
+  const new listHeader({super.key})
+    : width = null,
+      height = null,
+      radius = null,
+      _kind = _SkeletonKind.listHeader;
 
   /// One trip row's shape (put several in a `DkTripList`).
   const new tripTile({super.key})
@@ -236,6 +243,17 @@ class DkSkeleton extends StatelessWidget {
           ),
           _SkeletonKind.summaryCard => const _SummaryCardShape(),
           _SkeletonKind.paymentCard => const _PaymentCardShape(),
+          _SkeletonKind.listHeader => Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s4),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _line(
+                context,
+                context.dkSpacing.s64 + context.dkSpacing.s24,
+                context.dkSpacing.s16 + context.dkSpacing.s2,
+              ),
+            ),
+          ),
           _SkeletonKind.tripTile => const _TripTileShape(),
         },
       ),

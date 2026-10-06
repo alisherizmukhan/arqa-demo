@@ -538,5 +538,21 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(DkSkeleton), findsOneWidget);
     });
+
+    testWidgets('list header skeleton is 88×18 at the header padding', (
+      tester,
+    ) async {
+      await tester.pumpWidget(wrap(const DkSkeleton.listHeader()));
+      final line = find.descendant(
+        of: find.byType(DkSkeleton),
+        matching: find.byType(Container),
+      );
+      expect(tester.getSize(line), const Size(88, 18));
+      expect(
+        tester.getTopLeft(line).dx -
+            tester.getTopLeft(find.byType(DkSkeleton)).dx,
+        4,
+      );
+    });
   });
 }

@@ -396,6 +396,7 @@ class _Skeletons extends StatelessWidget {
         ),
         const DkSkeleton.summaryCard(),
         const DkSkeleton.paymentCard(),
+        const DkSkeleton.listHeader(),
         const DkTripList(
           children: [DkSkeleton.tripTile(), DkSkeleton.tripTile()],
         ),
