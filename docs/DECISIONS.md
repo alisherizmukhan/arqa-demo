@@ -96,3 +96,14 @@ Short format: **decision** → why.
 - **Navigation is a plain `Navigator.push` for one sub-screen.** → A router package would be unjustified for two screens.
 - **Contract tests (`test/live`, tag `live`) run the real client stack against a running backend** and are skipped unless `LIVE_API_URL` is set. → They catch client/server format drift that mocks cannot.
 - **Known limit:** "today" is computed when the screen builds; an app left open across midnight shows yesterday as today until the next rebuild or restart.
+
+## Redesign to DESIGN.md variant A (stage R1 — audit)
+
+Mockup PNG vs `DESIGN.md`: where they disagree, **DESIGN.md wins** (details and open points in `docs/DESIGN_AUDIT.md`):
+
+- `11_add_trip_midnight` clips the end time behind the «+1 день» badge → no clipping (also required at text scale 1.3).
+- `12_add_trip_conflict_409` shows time fields without the clock prefix → the time variant always has the prefix.
+- `09_add_trip_saving` drops the amount helper while saving → helpers stay (DESIGN.md does not hide them; avoids a layout jump).
+- `13_kit_tokens` draws `e1` as two shadows, names spacing `space4…`, omits xs/segment/segmentTrack radii → DESIGN.md values and names.
+- `14_kit_components` shows other constructor APIs (`DkButton.fab`, `DkSplitBar(parts:)`, `DkTripTile(start, end, duration…)`, `DkSummaryTile(emphasis:)`) and a shorter empty-state message → DESIGN.md §4 APIs and §6 copy.
+- `09` disabled segmented thumb uses a tone with no token → closest tokens (`segmentThumb`, labels `textSecondary`), per DESIGN.md's "closest existing token" rule.
