@@ -282,6 +282,8 @@ class DkSplitBar extends StatelessWidget {
       child: SizedBox(
         height: sizes.splitBarHeight,
         child: Row(
+          // Stretch: the empty segments would otherwise be 0 px high.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: cash > 0 && card > 0 ? sizes.splitBarGap : 0,
           children: [
             if (cash > 0) segment(cash, context.dkColors.splitNeutral),

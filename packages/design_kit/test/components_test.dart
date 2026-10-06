@@ -137,6 +137,34 @@ void main() {
       expect(find.bySemanticsLabel('Наличные 38%, карта 62%'), findsOneWidget);
     });
 
+    testWidgets('split bar segments are 8 high, widths follow the amounts', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: SizedBox(
+              width: 403,
+              child: DkSplitBar(cash: 1500, card: 2400),
+            ),
+          ),
+        ),
+      );
+
+      final segments = find.descendant(
+        of: find.byType(DkSplitBar),
+        matching: find.byType(DecoratedBox),
+      );
+      final cash = tester.getSize(segments.at(0));
+      final card = tester.getSize(segments.at(1));
+      expect(cash.height, 8);
+      expect(card.height, 8);
+      // 403 − gap 3 = 400 → 1500 : 2400.
+      expect(cash.width, closeTo(400 * 1500 / 3900, 0.5));
+      expect(card.width, closeTo(400 * 2400 / 3900, 0.5));
+    });
+
     testWidgets('no split and no percentages at zero revenue', (tester) async {
       await tester.pumpWidget(wrap(const DkPaymentCard(cash: 0, card: 0)));
 
@@ -194,6 +222,33 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
+
+    testWidgets('amounts are right-aligned at the row padding', (tester) async {
+      await tester.runAsync(loadKitFonts);
+      await tester.pumpWidget(
+        wrap(
+          const SizedBox(
+            width: 358,
+            child: DkTripTile(
+              timeRange: '08:10 – 08:32',
+              endsNextDay: false,
+              meta: '22 мин · Карта',
+              amount: '2 400 ₸',
+              commission: 'комиссия 360 ₸',
+              method: DkPaymentMethod.card,
+            ),
+          ),
+        ),
+      );
+
+      final tile = tester.getRect(find.byType(DkTripTile));
+      for (final text in ['2 400 ₸', 'комиссия 360 ₸']) {
+        final line = find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText() == text,
+        );
+        expect(tester.getRect(line).right, closeTo(tile.right - 16, 0.5));
+      }
+    });
 
     testWidgets('highlighted row uses accentSoft', (tester) async {
       await tester.pumpWidget(
