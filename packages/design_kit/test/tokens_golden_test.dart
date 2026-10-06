@@ -22,25 +22,26 @@ class _MoneySamples extends StatelessWidget {
           'На руки',
           style: text.label.copyWith(color: colors.textSecondary),
         ),
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: '3 315 ',
-                style: text.moneyHero.copyWith(color: colors.accent),
-              ),
-              TextSpan(
-                text: '₸',
-                style: text.moneyHeroSuffix.copyWith(color: colors.accent),
-              ),
-            ],
-          ),
+        DkMoneyText(
+          3315,
+          style: text.moneyHero.copyWith(color: colors.accent),
+          suffixStyle: text.moneyHeroSuffix.copyWith(color: colors.accent),
         ),
-        Text(
-          '3 900 ₸   −585 ₸',
-          style: text.moneyM.copyWith(color: colors.textPrimary),
+        Row(
+          spacing: context.dkSpacing.s16,
+          children: [
+            DkMoneyText(
+              3900,
+              style: text.moneyM.copyWith(color: colors.textPrimary),
+            ),
+            DkMoneyText(
+              585,
+              negative: true,
+              style: text.moneyM.copyWith(color: colors.textPrimary),
+            ),
+          ],
         ),
-        Text(
+        DkGroupedText(
           'комиссия 360 ₸',
           style: text.caption.copyWith(color: colors.textTertiary),
         ),
