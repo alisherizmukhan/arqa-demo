@@ -73,10 +73,25 @@ class _ShowcasePageState extends State<ShowcasePage> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: EdgeInsets.all(spacing.md),
+          padding: EdgeInsets.all(spacing.s16),
           children: [
-            const _Section(title: 'Цвета', child: _Palette()),
-            const _Section(title: 'Типографика', child: _TypeScale()),
+            const _Section(
+              title: '«На руки» · Manrope + fallback ₸ / U+202F',
+              child: HeroMoneySample(),
+            ),
+            const _Section(title: 'Цвета · DkColors', child: _Palette()),
+            const _Section(
+              title: 'Типографика · DkTypography',
+              child: _TypeScale(),
+            ),
+            const _Section(
+              title: 'Отступы · DkSpacing',
+              child: _SpacingScale(),
+            ),
+            const _Section(
+              title: 'Скругления и тени · DkRadii · DkElevation',
+              child: _RadiiAndShadows(),
+            ),
             _Section(
               title: 'DkDaySwitcher',
               child: DkDaySwitcher(
@@ -93,7 +108,7 @@ class _ShowcasePageState extends State<ShowcasePage> {
             _Section(
               title: 'DkButton',
               child: Column(
-                spacing: spacing.sm,
+                spacing: spacing.s12,
                 children: [
                   DkButton(
                     label: 'Добавить поездку',
@@ -126,7 +141,7 @@ class _ShowcasePageState extends State<ShowcasePage> {
             _Section(
               title: 'DkTextField · DkSegmentedControl',
               child: Column(
-                spacing: spacing.md,
+                spacing: spacing.s16,
                 children: [
                   const DkTextField(
                     label: 'Начало',
@@ -209,7 +224,7 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: context.dkSpacing.xl),
+      padding: EdgeInsets.only(bottom: context.dkSpacing.s32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -219,7 +234,7 @@ class _Section extends StatelessWidget {
               color: context.dkColors.textSecondary,
             ),
           ),
-          SizedBox(height: context.dkSpacing.sm),
+          SizedBox(height: context.dkSpacing.s12),
           child,
         ],
       ),
@@ -234,10 +249,10 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
     return DkCard(
-      padding: EdgeInsets.all(spacing.lg),
+      padding: EdgeInsets.all(spacing.s24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: spacing.lg,
+        spacing: spacing.s24,
         children: const [
           DkSummaryTile.money(
             label: 'Чистыми',
@@ -289,7 +304,7 @@ class _TileRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: context.dkSpacing.md,
+      spacing: context.dkSpacing.s16,
       children: [
         Expanded(child: left),
         Expanded(child: right),
@@ -336,12 +351,12 @@ class _SkeletonCard extends StatelessWidget {
     final spacing = context.dkSpacing;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: spacing.sm,
+      spacing: spacing.s12,
       children: [
-        DkSkeleton(height: spacing.md, width: spacing.xxl * 2),
-        DkSkeleton(height: spacing.xxl, width: spacing.xxl * 4),
-        DkSkeleton(height: spacing.lg),
-        DkSkeleton(height: spacing.lg),
+        DkSkeleton(height: spacing.s16, width: spacing.s48 * 2),
+        DkSkeleton(height: spacing.s48, width: spacing.s48 * 4),
+        DkSkeleton(height: spacing.s24),
+        DkSkeleton(height: spacing.s24),
       ],
     );
   }
@@ -352,66 +367,136 @@ class _Palette extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.dkColors;
-    final swatches = {
-      'background': c.background,
-      'surface': c.surface,
-      'surfaceMuted': c.surfaceMuted,
-      'textPrimary': c.textPrimary,
-      'textSecondary': c.textSecondary,
-      'primary': c.primary,
-      'positive': c.positive,
-      'cash': c.cash,
-      'card': c.card,
-      'error': c.error,
-      'outline': c.outline,
-      'border': c.border,
-    };
-    return Wrap(
-      spacing: context.dkSpacing.xs,
-      runSpacing: context.dkSpacing.xs,
+    const light = DkColors.light;
+    const dark = DkColors.dark;
+    final rows = <(String, Color, Color)>[
+      ('bg', light.bg, dark.bg),
+      ('surface', light.surface, dark.surface),
+      ('surfaceMuted', light.surfaceMuted, dark.surfaceMuted),
+      ('segmentTrack', light.segmentTrack, dark.segmentTrack),
+      ('segmentThumb', light.segmentThumb, dark.segmentThumb),
+      ('border', light.border, dark.border),
+      ('divider', light.divider, dark.divider),
+      ('textPrimary', light.textPrimary, dark.textPrimary),
+      ('textSecondary', light.textSecondary, dark.textSecondary),
+      ('textTertiary', light.textTertiary, dark.textTertiary),
+      ('textDisabled', light.textDisabled, dark.textDisabled),
+      ('iconDisabled', light.iconDisabled, dark.iconDisabled),
+      ('accent', light.accent, dark.accent),
+      ('onAccent', light.onAccent, dark.onAccent),
+      ('accentSoft', light.accentSoft, dark.accentSoft),
+      ('success', light.success, dark.success),
+      ('successSoft', light.successSoft, dark.successSoft),
+      ('error', light.error, dark.error),
+      ('errorSoft', light.errorSoft, dark.errorSoft),
+      ('inverseSurface', light.inverseSurface, dark.inverseSurface),
+      ('onInverse', light.onInverse, dark.onInverse),
+      ('inverseAccent', light.inverseAccent, dark.inverseAccent),
+      ('inverseError', light.inverseError, dark.inverseError),
+      ('inverseSuccess', light.inverseSuccess, dark.inverseSuccess),
+      ('skeleton', light.skeleton, dark.skeleton),
+      ('splitNeutral', light.splitNeutral, dark.splitNeutral),
+      ('disabledFill', light.disabledFill, dark.disabledFill),
+      ('scrim', light.scrim, dark.scrim),
+    ];
+    return DkCard(
+      child: Column(
+        spacing: context.dkSpacing.s8,
+        children: [
+          const _TableHeader(['Токен', 'Светлая', 'Тёмная']),
+          for (final (name, l, d) in rows)
+            Row(
+              children: [
+                Expanded(child: _Mono(name)),
+                Expanded(child: _Swatch(color: l)),
+                Expanded(child: _Swatch(color: d)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TableHeader extends StatelessWidget {
+  const new(this.titles);
+
+  final List<String> titles;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
       children: [
-        for (final MapEntry(key: name, value: color) in swatches.entries)
-          _Swatch(name: name, color: color),
+        for (final title in titles)
+          Expanded(
+            child: Text(
+              title.toUpperCase(),
+              style: context.dkText.captionStrong.copyWith(
+                color: context.dkColors.textTertiary,
+              ),
+            ),
+          ),
       ],
     );
   }
 }
 
-class _Swatch extends StatelessWidget {
-  const new({required this.name, required this.color});
+class _Mono extends StatelessWidget {
+  const new(this.text);
 
-  final String name;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: context.dkText.captionStrong.copyWith(
+        color: context.dkColors.textPrimary,
+      ),
+    );
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  const new({required this.color});
+
   final Color color;
+
+  static String hex(Color c) {
+    final argb = c.toARGB32();
+    final rgb = (argb & 0xFFFFFF).toRadixString(16).padLeft(6, '0');
+    final alpha = (argb >>> 24).toRadixString(16).padLeft(2, '0');
+    final suffix = alpha == 'ff' ? '' : alpha;
+    return '#$rgb$suffix'.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
     final sizes = context.dkSizes;
-    return SizedBox(
-      width: sizes.controlHeight * 2,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: sizes.minTouchTarget,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(context.dkRadii.sm),
-              border: Border.all(
-                color: context.dkColors.border,
-                width: sizes.borderWidth,
-              ),
+    return Row(
+      spacing: context.dkSpacing.s8,
+      children: [
+        Container(
+          width: sizes.iconAction,
+          height: sizes.iconAction,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(context.dkRadii.xs),
+            border: Border.all(
+              color: context.dkColors.divider,
+              width: sizes.fieldBorder,
             ),
           ),
-          SizedBox(height: context.dkSpacing.xxs),
-          Text(
-            name,
-            style: context.dkText.label.copyWith(
+        ),
+        Flexible(
+          child: Text(
+            hex(color),
+            style: context.dkText.caption.copyWith(
               color: context.dkColors.textSecondary,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -419,35 +504,239 @@ class _Swatch extends StatelessWidget {
 class _TypeScale extends StatelessWidget {
   const new();
 
+  static const _specs = {
+    'moneyHero': '44/48 · w800 · −2%',
+    'moneyHeroSuffix': '32/48 · w700 · −2%',
+    'titleL': '22/28 · w800 · −1%',
+    'moneyL': '22/28 · w700',
+    'wordmark': '20/28 · w800 · −2%',
+    'titleDialog': '20/28 · w800 · −1%',
+    'fieldTime': '18/24 · w700',
+    'titleM': '17/24 · w700',
+    'moneyM': '17/24 · w700',
+    'bodyStrong': '16/24 · w700',
+    'body': '16/24 · w500',
+    'bodyMd': '15/22 · w500',
+    'bodyS': '14/20 · w500',
+    'label': '14/20 · w600',
+    'captionStrong': '13/16 · w600',
+    'caption': '13/16 · w500',
+    'badge': '12/24 · w700',
+    'superscript': '11/14 · w800',
+  };
+
+  static const _samples = {
+    'moneyHero': '3 315',
+    'moneyHeroSuffix': '₸',
+    'titleL': 'За этот день поездок нет',
+    'moneyL': '2 400 ₸',
+    'wordmark': 'Дневник смен',
+    'titleDialog': 'Эта поездка уже сохранена',
+    'fieldTime': '08:10',
+    'titleM': '1 октября 2026',
+    'moneyM': '3 900 ₸',
+    'bodyStrong': '08:10 – 08:32 · Сохранить',
+    'body': 'Проверьте интернет и попробуйте ещё раз.',
+    'bodyMd': 'Первая отправка дошла до сервера',
+    'bodyS': '22 мин · Карта',
+    'label': 'Сумма',
+    'captionStrong': 'Выручка · Сумма должна быть больше 0',
+    'caption': 'комиссия 360 ₸',
+    'badge': '+1 день',
+    'superscript': '+1',
+  };
+
   @override
   Widget build(BuildContext context) {
-    final t = context.dkText;
-    final color = context.dkColors.textPrimary;
-    final samples = [
-      ('moneyHero 44', t.moneyHero, DkMoney.format(3315)),
-      ('moneyLarge 26', t.moneyLarge, DkMoney.format(3900)),
-      ('moneyMedium 20', t.moneyMedium, DkMoney.format(2400)),
-      ('title 20', t.title, 'Дневник смены'),
-      ('titleSmall 17', t.titleSmall, 'Поездки за день'),
-      ('body 16', t.body, 'Чистыми за смену после комиссии'),
-      ('label 14', t.label, 'Начало · Конец · Сумма'),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: context.dkSpacing.xs,
+    final colors = context.dkColors;
+    return DkCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: context.dkSpacing.s16,
+        children: [
+          for (final MapEntry(key: name, value: style)
+              in context.dkText.all.entries)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: context.dkSpacing.s4,
+              children: [
+                Wrap(
+                  spacing: context.dkSpacing.s8,
+                  children: [
+                    _Mono(name),
+                    Text(
+                      '${_specs[name]} · tnum',
+                      style: context.dkText.caption.copyWith(
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  _samples[name]!,
+                  style: style.copyWith(
+                    color: name == 'moneyHero' || name == 'superscript'
+                        ? colors.accent
+                        : colors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The «На руки» hero: number and `₸` as separate spans joined by U+202F.
+/// `₸` and U+202F come from the bundled IBM Plex Sans fallback.
+class HeroMoneySample extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.dkText;
+    final accent = context.dkColors.accent;
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '3 315 ',
+            style: text.moneyHero.copyWith(color: accent),
+          ),
+          TextSpan(
+            text: '₸',
+            style: text.moneyHeroSuffix.copyWith(color: accent),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SpacingScale extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = context.dkSpacing;
+    final steps = {
+      's2': s.s2,
+      's4': s.s4,
+      's6': s.s6,
+      's8': s.s8,
+      's10': s.s10,
+      's12': s.s12,
+      's14': s.s14,
+      's16': s.s16,
+      's20': s.s20,
+      's24': s.s24,
+      's32': s.s32,
+      's40': s.s40,
+      's48': s.s48,
+      's64': s.s64,
+    };
+    return DkCard(
+      child: Column(
+        spacing: s.s8,
+        children: [
+          for (final MapEntry(key: name, :value) in steps.entries)
+            Row(
+              spacing: s.s12,
+              children: [
+                SizedBox(
+                  width: s.s64 + s.s32,
+                  child: _Mono('$name · ${value.toInt()}'),
+                ),
+                Container(
+                  width: value,
+                  height: s.s12,
+                  decoration: BoxDecoration(
+                    color: context.dkColors.accent,
+                    borderRadius: BorderRadius.circular(context.dkRadii.xs),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RadiiAndShadows extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final r = context.dkRadii;
+    final e = context.dkElevation;
+    final s = context.dkSpacing;
+    final colors = context.dkColors;
+    final radii = {
+      'xs · 4': r.xs,
+      'sm · 8': r.sm,
+      'segment · 10': r.segment,
+      'md · 12': r.md,
+      'segmentTrack · 14': r.segmentTrack,
+      'lg · 16': r.lg,
+      'xl · 24': r.xl,
+      'pill': r.pill,
+    };
+    final shadows = {
+      'e1': e.e1,
+      'e1Hero': e.e1Hero,
+      'e2Fab': e.e2Fab,
+      'e3': e.e3,
+      'thumb': e.thumb,
+    };
+    Widget box(String label, BoxDecoration decoration) => Column(
+      spacing: s.s6,
       children: [
-        for (final (name, style, sample) in samples)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Container(width: s.s64, height: s.s48, decoration: decoration),
+        _Mono(label),
+      ],
+    );
+    return DkCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: s.s20,
+        children: [
+          Wrap(
+            spacing: s.s16,
+            runSpacing: s.s16,
             children: [
-              Text(
-                name,
-                style: t.label.copyWith(color: context.dkColors.textSecondary),
-              ),
-              Text(sample, style: style.copyWith(color: color)),
+              for (final MapEntry(key: label, value: radius) in radii.entries)
+                box(
+                  label,
+                  BoxDecoration(
+                    color: colors.accentSoft,
+                    borderRadius: BorderRadius.circular(radius),
+                    border: Border.all(
+                      color: colors.accent,
+                      width: context.dkSizes.fieldBorderFocused,
+                    ),
+                  ),
+                ),
             ],
           ),
-      ],
+          Wrap(
+            spacing: s.s16,
+            runSpacing: s.s16,
+            children: [
+              for (final MapEntry(key: label, value: shadow) in shadows.entries)
+                box(
+                  label,
+                  BoxDecoration(
+                    color: label == 'e2Fab' ? colors.accent : colors.surface,
+                    borderRadius: BorderRadius.circular(r.lg),
+                    boxShadow: shadow,
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
