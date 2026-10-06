@@ -4,66 +4,78 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('showcase renders every component', (tester) async {
+  Future<void> pumpTall(
+    WidgetTester tester,
+    Widget app, {
+    double width = 800,
+  }) async {
     // Tall surface so the whole showcase is built without scrolling.
     tester.view
-      ..physicalSize = const Size(800, 6000)
+      ..physicalSize = Size(width, 9000)
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    await tester.pumpWidget(app);
+    await tester.pump();
+  }
 
-    await tester.pumpWidget(const App());
+  testWidgets('showcase renders every component', (tester) async {
+    await pumpTall(tester, const App());
 
     for (final type in [
-      DkDaySwitcher,
-      DkCard,
-      DkSummaryTile,
-      DkTripTile,
       DkButton,
-      DkTextField,
-      DkSegmentedControl<DkPaymentKind>,
+      DkFab,
+      DkDaySwitcher,
+      DkSegmentedControl<DkPaymentMethod>,
+      DkSummaryCard,
+      DkSummaryTile,
+      DkPaymentCard,
+      DkSplitBar,
+      DkTripTile,
+      DkTripList,
+      DkListHeader,
       DkSkeleton,
+      DkTextField,
+      DkTimeField,
+      DkBadge,
       DkEmptyState,
       DkErrorState,
+      DkSnackbarView,
+      DkDialogView,
+      DkWordmark,
+      DkModalAppBar,
+      DkBottomBar,
     ]) {
       expect(find.byType(type), findsWidgets, reason: '$type');
     }
-    expect(find.text(DkMoney.format(3315)), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
   testWidgets('theme toggle switches to dark', (tester) async {
     await tester.pumpWidget(const App());
-    expect(
-      Theme.of(tester.element(find.byType(ShowcasePage))).brightness,
-      Brightness.light,
-    );
+    final page = find.byType(ShowcasePage);
+    expect(Theme.of(tester.element(page)).brightness, Brightness.light);
 
     await tester.tap(find.byTooltip('Тёмная тема'));
     // Starts the theme animation, then lets it finish. (No pumpAndSettle:
-    // the skeleton pulses forever.)
+    // skeletons pulse forever.)
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(
-      Theme.of(tester.element(find.byType(ShowcasePage))).brightness,
-      Brightness.dark,
-    );
+    expect(Theme.of(tester.element(page)).brightness, Brightness.dark);
   });
 
-  for (final theme in ['light', 'dark']) {
-    testWidgets('no overflow on a 360dp phone ($theme)', (tester) async {
-      tester.view
-        ..physicalSize = const Size(360, 6000)
-        ..devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-
-      await tester.pumpWidget(
-        App(
-          initialThemeMode: theme == 'dark' ? ThemeMode.dark : ThemeMode.light,
-        ),
-      );
-
-      expect(tester.takeException(), isNull);
-    });
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    for (final tab in [0, 1]) {
+      testWidgets('no overflow on a 360dp phone (${mode.name}, tab $tab)', (
+        tester,
+      ) async {
+        await pumpTall(
+          tester,
+          App(initialThemeMode: mode, initialTab: tab),
+          width: 360,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
   }
 }

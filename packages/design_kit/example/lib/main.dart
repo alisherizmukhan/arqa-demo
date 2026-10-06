@@ -2,16 +2,28 @@ import 'package:design_kit/design_kit.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  // `?theme=dark` (web) opens the dark theme, e.g. for screenshots.
-  final dark = Uri.base.queryParameters['theme'] == 'dark';
-  runApp(App(initialThemeMode: dark ? ThemeMode.dark : ThemeMode.light));
+  // `?theme=dark` and `?tab=tokens` (web) for screenshots.
+  final query = Uri.base.queryParameters;
+  runApp(
+    App(
+      initialThemeMode: query['theme'] == 'dark'
+          ? ThemeMode.dark
+          : ThemeMode.light,
+      initialTab: query['tab'] == 'tokens' ? 1 : 0,
+    ),
+  );
 }
 
-/// Showcase of every design kit component, in light and dark.
+/// Showcase of every design kit component in every state, light and dark.
 class App extends StatefulWidget {
-  const new({this.initialThemeMode = ThemeMode.light, super.key});
+  const new({
+    this.initialThemeMode = ThemeMode.light,
+    this.initialTab = 0,
+    super.key,
+  });
 
   final ThemeMode initialThemeMode;
+  final int initialTab;
 
   @override
   State<App> createState() => _AppState();
@@ -30,6 +42,7 @@ class _AppState extends State<App> {
       themeMode: _mode,
       home: ShowcasePage(
         isDark: _mode == ThemeMode.dark,
+        initialTab: widget.initialTab,
         onToggleTheme: () => setState(() {
           _mode = _mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
         }),
@@ -38,181 +51,94 @@ class _AppState extends State<App> {
   }
 }
 
-class ShowcasePage extends StatefulWidget {
-  const new({required this.isDark, required this.onToggleTheme, super.key});
+class ShowcasePage extends StatelessWidget {
+  const new({
+    required this.isDark,
+    required this.onToggleTheme,
+    this.initialTab = 0,
+    super.key,
+  });
 
   final bool isDark;
   final VoidCallback onToggleTheme;
-
-  @override
-  State<ShowcasePage> createState() => _ShowcasePageState();
-}
-
-class _ShowcasePageState extends State<ShowcasePage> {
-  DkPaymentKind _payment = DkPaymentKind.card;
-  bool _loading = false;
-  int _dayOffset = 0;
+  final int initialTab;
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Design kit'),
-        actions: [
-          IconButton(
-            tooltip: widget.isDark ? 'Светлая тема' : 'Тёмная тема',
-            onPressed: widget.onToggleTheme,
-            icon: Icon(
-              widget.isDark
-                  ? Icons.light_mode_outlined
-                  : Icons.dark_mode_outlined,
+    return DefaultTabController(
+      length: 2,
+      initialIndex: initialTab,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const DkWordmark(title: 'Дневник смен · Кит'),
+          actions: [
+            IconButton(
+              tooltip: isDark ? 'Светлая тема' : 'Тёмная тема',
+              onPressed: onToggleTheme,
+              icon: Icon(
+                isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              ),
             ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Компоненты'),
+              Tab(text: 'Токены'),
+            ],
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.all(spacing.s16),
+        ),
+        body: TabBarView(
           children: [
-            const _Section(
-              title: '«На руки» · Manrope + fallback ₸ / U+202F',
-              child: HeroMoneySample(),
-            ),
-            const _Section(title: 'Цвета · DkColors', child: _Palette()),
-            const _Section(
-              title: 'Типографика · DkTypography',
-              child: _TypeScale(),
-            ),
-            const _Section(
-              title: 'Отступы · DkSpacing',
-              child: _SpacingScale(),
-            ),
-            const _Section(
-              title: 'Скругления и тени · DkRadii · DkElevation',
-              child: _RadiiAndShadows(),
-            ),
-            _Section(
-              title: 'DkDaySwitcher',
-              child: DkDaySwitcher(
-                label: _dayLabel(_dayOffset),
-                onPrevious: () => setState(() => _dayOffset--),
-                onNext: _dayOffset < 0
-                    ? () => setState(() => _dayOffset++)
-                    : null,
-                onPick: () {},
-              ),
-            ),
-            const _Section(title: 'DkSummaryTile · DkCard', child: _Summary()),
-            const _Section(title: 'DkTripTile', child: _Trips()),
-            _Section(
-              title: 'DkButton',
-              child: Column(
-                spacing: spacing.s12,
-                children: [
-                  DkButton(
-                    label: 'Добавить поездку',
-                    icon: Icons.add,
-                    onPressed: () {},
-                  ),
-                  DkButton(
-                    label: _loading ? 'Сохраняем' : 'Сохранить (нажми)',
-                    isLoading: _loading,
-                    onPressed: () async {
-                      setState(() => _loading = true);
-                      await Future<void>.delayed(const Duration(seconds: 2));
-                      if (mounted) setState(() => _loading = false);
-                    },
-                  ),
-                  DkButton(
-                    label: 'Отмена',
-                    variant: DkButtonVariant.secondary,
-                    onPressed: () {},
-                  ),
-                  DkButton(
-                    label: 'Подробнее',
-                    variant: DkButtonVariant.text,
-                    onPressed: () {},
-                  ),
-                  const DkButton(label: 'Недоступно', onPressed: null),
-                ],
-              ),
-            ),
-            _Section(
-              title: 'DkTextField · DkSegmentedControl',
-              child: Column(
-                spacing: spacing.s16,
-                children: [
-                  const DkTextField(
-                    label: 'Начало',
-                    hint: '08:10',
-                    prefixIcon: Icons.schedule,
-                    readOnly: true,
-                  ),
-                  const DkTextField(
-                    label: 'Сумма',
-                    hint: '2400',
-                    suffixText: '₸',
-                    helperText: 'Целое число тенге',
-                    keyboardType: TextInputType.number,
-                  ),
-                  const DkTextField(
-                    label: 'Комиссия',
-                    suffixText: '₸',
-                    errorText: 'Комиссия не может быть больше суммы',
-                    keyboardType: TextInputType.number,
-                  ),
-                  DkSegmentedControl<DkPaymentKind>(
-                    label: 'Оплата',
-                    segments: [
-                      for (final kind in DkPaymentKind.values)
-                        DkSegment(
-                          value: kind,
-                          label: kind.label,
-                          icon: kind.icon,
-                        ),
-                    ],
-                    selected: _payment,
-                    onChanged: (value) => setState(() => _payment = value),
-                  ),
-                ],
-              ),
-            ),
-            const _Section(
-              title: 'DkSkeleton',
-              child: DkCard(child: _SkeletonCard()),
-            ),
-            _Section(
-              title: 'DkEmptyState',
-              child: DkCard(
-                child: DkEmptyState(
-                  title: 'Поездок нет',
-                  message: 'За этот день ещё нет поездок.',
-                  actionLabel: 'Добавить поездку',
-                  onAction: () {},
+            ListView(
+              padding: EdgeInsets.all(spacing.screenGutter),
+              children: const [
+                _Section(title: 'DkButton', child: _ButtonMatrix()),
+                _Section(title: 'DkFab', child: _FabDemo()),
+                _Section(title: 'DkDaySwitcher', child: _DaySwitchers()),
+                _Section(title: 'DkSegmentedControl', child: _Segments()),
+                _Section(
+                  title: 'DkSummaryCard · DkSummaryTile · DkSplitBar',
+                  child: _Summary(),
                 ),
-              ),
-            ),
-            _Section(
-              title: 'DkErrorState',
-              child: DkCard(
-                child: DkErrorState(
-                  message: 'Проверьте интернет и попробуйте ещё раз.',
-                  onRetry: () {},
+                _Section(title: 'DkTripTile · DkTripList', child: _Trips()),
+                _Section(title: 'DkSkeleton', child: _Skeletons()),
+                _Section(title: 'DkTextField', child: _Fields()),
+                _Section(title: 'DkTimeField · DkBadge', child: _TimeFields()),
+                _Section(title: 'DkEmptyState', child: _Empty()),
+                _Section(title: 'DkErrorState', child: _Error()),
+                _Section(title: 'DkSnackbar', child: _Snackbars()),
+                _Section(title: 'DkDialog', child: _Dialog()),
+                _Section(
+                  title: 'DkWordmark · DkModalAppBar · DkBottomBar',
+                  child: _Chrome(),
                 ),
-              ),
+              ],
+            ),
+            ListView(
+              padding: EdgeInsets.all(spacing.screenGutter),
+              children: const [
+                _Section(
+                  title: '«На руки» · Manrope + fallback ₸ / U+202F',
+                  child: HeroMoneySample(),
+                ),
+                _Section(title: 'Цвета · DkColors', child: _Palette()),
+                _Section(
+                  title: 'Типографика · DkTypography',
+                  child: _TypeScale(),
+                ),
+                _Section(title: 'Отступы · DkSpacing', child: _SpacingScale()),
+                _Section(
+                  title: 'Скругления и тени · DkRadii · DkElevation',
+                  child: _RadiiAndShadows(),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
-
-  static String _dayLabel(int offset) => switch (offset) {
-    0 => 'Сегодня, 1 октября',
-    -1 => 'Вчера, 30 сентября',
-    _ => '${offset.abs()} дн. назад',
-  };
 }
 
 class _Section extends StatelessWidget {
@@ -230,8 +156,8 @@ class _Section extends StatelessWidget {
         children: [
           Text(
             title,
-            style: context.dkText.label.copyWith(
-              color: context.dkColors.textSecondary,
+            style: context.dkText.captionStrong.copyWith(
+              color: context.dkColors.textTertiary,
             ),
           ),
           SizedBox(height: context.dkSpacing.s12),
@@ -242,124 +168,497 @@ class _Section extends StatelessWidget {
   }
 }
 
-class _Summary extends StatelessWidget {
-  const new();
+/// A caption over a demo, e.g. «disabled».
+class _Labeled extends StatelessWidget {
+  const new(this.label, this.child);
+
+  final String label;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final spacing = context.dkSpacing;
-    return DkCard(
-      padding: EdgeInsets.all(spacing.s24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: spacing.s24,
-        children: const [
-          DkSummaryTile.money(
-            label: 'Чистыми',
-            amount: 3315,
-            icon: Icons.account_balance_wallet_outlined,
-            tone: DkTone.positive,
-            emphasis: DkSummaryEmphasis.hero,
-          ),
-          _TileRow(
-            left: DkSummaryTile.money(label: 'Выручка', amount: 3900),
-            right: DkSummaryTile.money(
-              label: 'Комиссия',
-              amount: 585,
-              isDeduction: true,
-            ),
-          ),
-          _TileRow(
-            left: DkSummaryTile.money(
-              label: 'Наличные',
-              amount: 1500,
-              icon: Icons.payments_outlined,
-              tone: DkTone.cash,
-            ),
-            right: DkSummaryTile.money(
-              label: 'Карта',
-              amount: 2400,
-              icon: Icons.credit_card,
-              tone: DkTone.card,
-            ),
-          ),
-          DkSummaryTile.count(
-            label: 'Поездок',
-            count: 2,
-            icon: Icons.local_taxi_outlined,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TileRow extends StatelessWidget {
-  const new({required this.left, required this.right});
-
-  final Widget left;
-  final Widget right;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: context.dkSpacing.s16,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: context.dkSpacing.s6,
       children: [
-        Expanded(child: left),
-        Expanded(child: right),
+        Text(
+          label,
+          style: context.dkText.caption.copyWith(
+            color: context.dkColors.textTertiary,
+          ),
+        ),
+        child,
       ],
     );
   }
 }
 
-class _Trips extends StatelessWidget {
-  const new();
-
-  @override
-  Widget build(BuildContext context) {
-    return DkCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          DkTripTile(
-            timeRange: '08:10 – 08:32',
-            amount: 2400,
-            payment: DkPaymentKind.card,
-            details: 'комиссия ${DkMoney.format(360)}',
-            onTap: () {},
-          ),
-          const Divider(),
-          DkTripTile(
-            timeRange: '09:05 – 09:20',
-            amount: 1500,
-            payment: DkPaymentKind.cash,
-            details: 'комиссия ${DkMoney.format(225)}',
-            onTap: () {},
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SkeletonCard extends StatelessWidget {
+class _ButtonMatrix extends StatelessWidget {
   const new();
 
   @override
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: spacing.s12,
       children: [
-        DkSkeleton(height: spacing.s16, width: spacing.s48 * 2),
-        DkSkeleton(height: spacing.s48, width: spacing.s48 * 4),
-        DkSkeleton(height: spacing.s24),
-        DkSkeleton(height: spacing.s24),
+        for (final variant in DkButtonVariant.values)
+          _Labeled(
+            '${variant.name} · enabled / disabled / loading',
+            Wrap(
+              spacing: spacing.s8,
+              runSpacing: spacing.s8,
+              children: [
+                DkButton(
+                  label: variant == DkButtonVariant.primary
+                      ? 'Сохранить'
+                      : 'Повторить',
+                  icon: variant == DkButtonVariant.primary
+                      ? null
+                      : DkIcons.retry,
+                  variant: variant,
+                  onPressed: () {},
+                ),
+                DkButton(
+                  label: variant == DkButtonVariant.primary
+                      ? 'Сохранить'
+                      : 'Повторить',
+                  icon: variant == DkButtonVariant.primary
+                      ? null
+                      : DkIcons.retry,
+                  variant: variant,
+                ),
+                DkButton(
+                  label: switch (variant) {
+                    DkButtonVariant.primary => 'Сохраняем…',
+                    DkButtonVariant.secondary => 'Загружаем…',
+                    DkButtonVariant.text => 'Повторяем…',
+                  },
+                  variant: variant,
+                  isLoading: true,
+                  onPressed: () {},
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
+}
+
+class _FabDemo extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: AlignmentDirectional.centerStart,
+    child: DkFab(label: 'Поездка', icon: DkIcons.add, onPressed: () {}),
+  );
+}
+
+class _DaySwitchers extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime(2026, 10, 6);
+    return Column(
+      spacing: context.dkSpacing.s12,
+      children: [
+        DkDaySwitcher(
+          // Explicit day for readability (it equals the default).
+          // ignore: avoid_redundant_argument_values
+          date: DateTime(2026, 10, 1),
+          today: today,
+          onPrev: () {},
+          onNext: () {},
+          onPickDate: () {},
+        ),
+        DkDaySwitcher(
+          date: today,
+          today: today,
+          onPrev: () {},
+          onNext: () {},
+          onPickDate: () {},
+        ),
+      ],
+    );
+  }
+}
+
+class _Segments extends StatefulWidget {
+  const new();
+
+  @override
+  State<_Segments> createState() => _SegmentsState();
+}
+
+class _SegmentsState extends State<_Segments> {
+  DkPaymentMethod _method = DkPaymentMethod.cash;
+
+  @override
+  Widget build(BuildContext context) {
+    final segments = [
+      for (final m in DkPaymentMethod.values)
+        DkSegment(value: m, label: m.label, icon: m.icon),
+    ];
+    return Column(
+      spacing: context.dkSpacing.s12,
+      children: [
+        DkSegmentedControl<DkPaymentMethod>(
+          label: 'Способ оплаты',
+          segments: segments,
+          selected: _method,
+          onChanged: (value) => setState(() => _method = value),
+        ),
+        _Labeled(
+          'disabled (сохранение)',
+          DkSegmentedControl<DkPaymentMethod>(
+            segments: segments,
+            selected: DkPaymentMethod.card,
+            onChanged: null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Summary extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    spacing: context.dkSpacing.s16,
+    children: const [
+      DkSummaryCard(net: 3315, revenue: 3900, commission: 585, tripsCount: 2),
+      DkPaymentCard(cash: 1500, card: 2400),
+      DkPaymentCard(cash: 0, card: 0),
+    ],
+  );
+}
+
+class _Trips extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: context.dkSpacing.s8,
+    children: [
+      const DkListHeader(title: 'Поездки', trailing: '2 поездки · 55 мин'),
+      DkTripList(
+        children: [
+          DkTripTile(
+            timeRange: DkFormat.timeRange('08:10', '08:32'),
+            endsNextDay: false,
+            meta: '22 мин · Карта',
+            amount: DkMoney.format(2400),
+            commission: 'комиссия ${DkMoney.format(360)}',
+            method: DkPaymentMethod.card,
+          ),
+          DkTripTile(
+            timeRange: DkFormat.timeRange('23:50', '00:20'),
+            endsNextDay: true,
+            meta: '30 мин · Наличные',
+            amount: DkMoney.format(3000),
+            commission: 'комиссия ${DkMoney.format(450)}',
+            method: DkPaymentMethod.cash,
+            highlighted: true,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+class _Skeletons extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.dkSpacing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.s16,
+      children: [
+        Row(
+          spacing: spacing.s16,
+          children: [
+            DkSkeleton.line(
+              width: spacing.s64 + spacing.s48,
+              height: spacing.s12,
+            ),
+            DkSkeleton.line(width: spacing.s64, height: spacing.s20),
+            DkSkeleton.box(size: context.dkSizes.iconTile),
+          ],
+        ),
+        const DkSkeleton.summaryCard(),
+        const DkSkeleton.paymentCard(),
+        const DkTripList(
+          children: [DkSkeleton.tripTile(), DkSkeleton.tripTile()],
+        ),
+      ],
+    );
+  }
+}
+
+class _Fields extends StatefulWidget {
+  const new();
+
+  @override
+  State<_Fields> createState() => _FieldsState();
+}
+
+class _FieldsState extends State<_Fields> {
+  final _commission = DkMoneyEditingController(amount: 360);
+  final _focused = DkMoneyEditingController(amount: 2400);
+  final _error = DkMoneyEditingController(amount: 0);
+  final _disabled = DkMoneyEditingController(amount: 2400);
+
+  @override
+  void dispose() {
+    for (final c in [_commission, _focused, _error, _disabled]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    spacing: context.dkSpacing.s20,
+    children: [
+      DkTextField.money(
+        label: 'Комиссия',
+        controller: _commission,
+        helper: 'На руки с поездки: ${DkMoney.format(2040)}',
+      ),
+      DkTextField.money(
+        label: 'Сумма',
+        controller: _focused,
+        helper: 'Сколько заплатил пассажир',
+        autofocus: true,
+      ),
+      DkTextField.money(
+        label: 'Сумма',
+        controller: _error,
+        errorText: 'Сумма должна быть больше 0',
+      ),
+      DkTextField.money(
+        label: 'Сумма',
+        controller: _disabled,
+        helper: 'Сколько заплатил пассажир',
+        enabled: false,
+      ),
+    ],
+  );
+}
+
+class _TimeFields extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.dkSpacing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.s20,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: spacing.s12,
+          children: [
+            Expanded(
+              child: DkTimeField(label: 'Начало', value: '23:50', onTap: () {}),
+            ),
+            Expanded(
+              child: DkTimeField(
+                label: 'Окончание',
+                value: '00:20',
+                onTap: () {},
+                trailing: const DkBadge('+1 день'),
+              ),
+            ),
+          ],
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: spacing.s6,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: spacing.s12,
+              children: [
+                Expanded(
+                  child: DkTimeField(
+                    label: 'Начало',
+                    value: '09:20',
+                    onTap: () {},
+                  ),
+                ),
+                Expanded(
+                  child: DkTimeField(
+                    label: 'Окончание',
+                    value: '09:05',
+                    onTap: () {},
+                    invalid: true,
+                  ),
+                ),
+              ],
+            ),
+            const DkFieldMessage(
+              text: 'Окончание должно быть позже начала',
+              isError: true,
+            ),
+          ],
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: spacing.s12,
+          children: [
+            Expanded(
+              child: DkTimeField(
+                label: 'Начало',
+                value: '08:10',
+                onTap: () {},
+                enabled: false,
+              ),
+            ),
+            Expanded(
+              child: DkTimeField(label: 'Окончание', value: null, onTap: () {}),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _Empty extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => DkCard(
+    child: DkEmptyState(
+      title: 'За этот день поездок нет',
+      message:
+          'Добавьте поездку — выручка, комиссия и сумма на руки '
+          'посчитаются сами.',
+      actionLabel: 'Добавить поездку',
+      onAction: () {},
+    ),
+  );
+}
+
+class _Error extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    spacing: context.dkSpacing.s16,
+    children: [
+      DkCard(
+        child: DkErrorState(
+          title: 'Не удалось загрузить данные',
+          message:
+              'Проверьте интернет и попробуйте ещё раз. Сохранённые поездки '
+              'никуда не пропадут.',
+          onRetry: () {},
+        ),
+      ),
+      DkCard(
+        child: DkErrorState(
+          title: 'Не удалось загрузить данные',
+          onRetry: () {},
+          isRetrying: true,
+          retryLabel: 'Повторяем…',
+        ),
+      ),
+    ],
+  );
+}
+
+class _Snackbars extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    spacing: context.dkSpacing.s12,
+    children: [
+      const DkSnackbarView(
+        message: 'Поездка добавлена',
+        tone: DkSnackTone.success,
+      ),
+      DkSnackbarView(
+        message: 'Нет связи. Повторим отправку — поездка не задвоится.',
+        tone: DkSnackTone.error,
+        actionLabel: 'Повторить',
+        onAction: () {},
+      ),
+      DkButton(
+        label: 'Показать снекбар',
+        variant: DkButtonVariant.text,
+        onPressed: () => showDkSnackbar(
+          context,
+          message: 'Поездка добавлена',
+          tone: DkSnackTone.success,
+        ),
+      ),
+    ],
+  );
+}
+
+class _Dialog extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: context.dkColors.scrim,
+      borderRadius: BorderRadius.circular(context.dkRadii.xl),
+    ),
+    child: Padding(
+      padding: EdgeInsets.symmetric(vertical: context.dkSpacing.s24),
+      child: DkDialogView(
+        icon: DkIcons.alert,
+        title: 'Эта поездка уже сохранена с другими данными',
+        message: 'Обновите день, чтобы увидеть сохранённую версию.',
+        primaryLabel: 'Оставить сохранённую',
+        onPrimary: () {},
+        secondaryLabel: 'Сохранить как новую поездку',
+        onSecondary: () {},
+        popOnAction: false,
+      ),
+    ),
+  );
+}
+
+class _Chrome extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => DkCard(
+    padding: EdgeInsets.zero,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s16),
+          child: const DkWordmark(),
+        ),
+        DkModalAppBar(
+          title: 'Новая поездка',
+          subtitle: '1 октября 2026',
+          onClose: () {},
+        ),
+        DkBottomBar(
+          child: DkButton(label: 'Сохранить', expand: true, onPressed: () {}),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Palette extends StatelessWidget {
