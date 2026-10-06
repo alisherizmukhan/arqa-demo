@@ -18,6 +18,8 @@ dev_dependencies:
   very_good_analysis: ^11.0.0
 
 flutter:
+  # Material icons font for the kit's own tests (the kit is the root there).
+  uses-material-design: true
   fonts:
     # Manrope (DESIGN.md §2.2): static 500/600/700/800 instances of the
     # variable font, SIL OFL 1.1 (no Reserved Font Name) — fonts/Manrope-OFL.txt.
