@@ -27,3 +27,22 @@ build/
 coverage/
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# AI coding tools: local skills, rules and settings (never committed)
+/.agents/
+/.augment/
+/.claude/
+/.codebuddy/
+/.codewhale/
+/.continue/
+/.cursor/
+/.factory/
+/.gemini/
+/.kilocode/
+/.kiro/
+/.opencode/
+/.qoder/
+/.roo/
+/.trae/
+/.warp/
+/.windsurf/
