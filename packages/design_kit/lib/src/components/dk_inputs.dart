@@ -334,8 +334,9 @@ final TextStyle _suffixStyle = dkTextStyle(
 );
 
 /// Time field (the DkTextField time variant, DESIGN.md §4): clock prefix,
-/// `fieldTime` style, opens a picker via [onTap]. The value and an optional
-/// [trailing] badge wrap onto two lines rather than clipping.
+/// `fieldTime` style, opens a picker via [onTap]. With a [trailing] badge the
+/// clock icon is hidden so both fit one line; at large text scales the badge
+/// moves below the time (the field grows), the time itself never wraps.
 class DkTimeField extends StatelessWidget {
   /// Creates a time field.
   const new({
@@ -412,12 +413,16 @@ class DkTimeField extends StatelessWidget {
           errorText: errorText,
           child: Row(
             children: [
-              Icon(
-                DkIcons.time,
-                size: sizes.iconField,
-                color: colors.textTertiary,
-              ),
-              SizedBox(width: spacing.s10),
+              // With a trailing badge («+1 день») the clock icon is hidden so
+              // time and badge fit one line at 360 dp (approved deviation).
+              if (trailing == null) ...[
+                Icon(
+                  DkIcons.time,
+                  size: sizes.iconField,
+                  color: colors.textTertiary,
+                ),
+                SizedBox(width: spacing.s10),
+              ],
               Expanded(
                 child: Wrap(
                   crossAxisAlignment: WrapCrossAlignment.center,
@@ -460,7 +465,8 @@ class DkBadge extends StatelessWidget {
     return Container(
       constraints: BoxConstraints(minHeight: context.dkSpacing.s24),
       padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s8),
-      alignment: Alignment.center,
+      // No `alignment`: it would make the badge fill the line it sits on
+      // (and push itself below the time). The 24 line height centres it.
       decoration: BoxDecoration(
         color: colors.accentSoft,
         borderRadius: BorderRadius.circular(context.dkRadii.sm),
