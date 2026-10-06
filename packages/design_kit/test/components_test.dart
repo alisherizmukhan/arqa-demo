@@ -585,6 +585,38 @@ void main() {
       });
     }
 
+    testWidgets('a snackbar steps aside while a dialog covers its screen', (
+      tester,
+    ) async {
+      final ctx = await pumpContext(tester);
+      showDkSnackbar(
+        ctx,
+        message: 'Нет связи',
+        tone: DkSnackTone.error,
+        actionLabel: 'Повторить',
+        onAction: () {},
+      );
+      await tester.pump();
+      expect(find.byType(DkSnackbarView), findsOneWidget);
+
+      unawaited(
+        showDkDialog(
+          ctx,
+          icon: DkIcons.alert,
+          title: 'Закрыть без сохранения?',
+          message: 'Введённые данные поездки не сохранятся.',
+          primaryLabel: 'Продолжить ввод',
+          onPrimary: () {},
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(DkSnackbarView), findsNothing);
+
+      await tester.tap(find.text('Продолжить ввод'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DkSnackbarView), findsOneWidget, reason: 'back');
+    });
+
     testWidgets('dialog runs the chosen action and closes', (tester) async {
       final context = await pumpContext(tester);
       final picked = <String>[];

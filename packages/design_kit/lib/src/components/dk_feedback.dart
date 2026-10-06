@@ -61,9 +61,14 @@ DkSnackbarHandle showDkSnackbar(
 }) {
   _current?.close();
   final overlay = Overlay.of(context);
+  // The entry lives on the navigator's overlay, above routes pushed later
+  // (dialogs, pickers). Show it only while its own screen is on top; the
+  // overlay rebuilds its entries whenever routes change.
+  final route = ModalRoute.of(context);
   late final DkSnackbarHandle handle;
   final entry = OverlayEntry(
     builder: (context) {
+      if (route != null && !route.isCurrent) return const SizedBox.shrink();
       final spacing = context.dkSpacing;
       final safeBottom = MediaQuery.paddingOf(context).bottom;
       final compact = tone == DkSnackTone.success;
