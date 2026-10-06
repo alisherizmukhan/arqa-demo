@@ -90,8 +90,12 @@ jobs:
       - name: Generated code is up to date
         working-directory: apps/mobile
         run: |
-          dart run build_runner build --delete-conflicting-outputs
-          git diff --exit-code -- . || (echo "::error::Run build_runner and commit generated files" && exit 1)
+          dart run build_runner build
+          if [ -n "$(git status --porcelain -- .)" ]; then
+            git status --porcelain -- .
+            echo "::error::Generated code is stale: run build_runner and commit the result"
+            exit 1
+          fi
       - name: Analyze
         run: flutter analyze --fatal-infos apps/mobile
       - name: Format
