@@ -61,6 +61,9 @@ void main() {
         'accent icon on accentSoft tile': (c.accent, c.accentSoft),
         'inverseError icon on snackbar': (c.inverseError, c.inverseSurface),
         'inverseSuccess icon on snackbar': (c.inverseSuccess, c.inverseSurface),
+        // WCAG 1.4.11: control boundaries ≥ 3:1 (token changed from the
+        // mockup values, see DECISIONS.md).
+        'field border on surface': (c.border, c.surface),
       };
       for (final MapEntry(key: label, value: (fg, bg)) in pairs.entries) {
         test(label, () => expect(contrast(fg, bg), greaterThanOrEqualTo(3)));
@@ -68,8 +71,5 @@ void main() {
     });
   }
 
-  // Not asserted: `border` on `surface` is 1.41 (light) / 1.54 (dark), below
-  // WCAG 1.4.11's 3:1 for control boundaries. It is a spec value and is not
-  // changed; fields are identified by their visible labels. See DECISIONS.md.
   // Disabled text (`textDisabled` on `disabledFill`) is exempt from WCAG.
 }

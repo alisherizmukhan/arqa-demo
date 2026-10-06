@@ -53,7 +53,7 @@ Access via `context.dkColors`, `context.dkText`, etc. (extension on `BuildContex
 | surfaceMuted | `#EEF0F3` | `#22262D` | Icon tiles, disabled fields |
 | segmentTrack | `#E9ECF0` | `#22262D` | Segmented control track |
 | segmentThumb | `#FFFFFF` | `#343A43` | Selected segment |
-| border | `#D5DAE1` | `#343A43` | Field border (default) |
+| border | `#8F95A0` | `#5F6571` | Field border (default); ≥ 3:1 on `surface` (changed from `#D5DAE1` / `#343A43`, see DECISIONS.md) |
 | divider | `#E6E9EE` | `#262B33` | List dividers, card divider, bottom-bar top border |
 | textPrimary | `#0F1419` | `#F2F4F7` | Main text, amounts |
 | textSecondary | `#4A5260` | `#B4BAC4` | Field labels, trip meta line, body |
@@ -78,6 +78,7 @@ Access via `context.dkColors`, `context.dkText`, etc. (extension on `BuildContex
 | scrim | `#7A0F1419` (0F1419 @ 48%) | `#A3000000` (black @ 64%) | Behind DkDialog |
 
 Contrast: textTertiary ≥ 4.5:1 on `surface` in both themes. Do not put textTertiary on `bg` for essential text.
+`border` (field outline) ≥ 3:1 on `surface` in both themes (WCAG 1.4.11).
 
 ### 2.2 DkTypography
 

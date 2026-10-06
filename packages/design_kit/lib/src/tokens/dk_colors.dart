@@ -42,7 +42,7 @@ class DkColors extends ThemeExtension<DkColors> {
     surfaceMuted: Color(0xFFEEF0F3),
     segmentTrack: Color(0xFFE9ECF0),
     segmentThumb: Color(0xFFFFFFFF),
-    border: Color(0xFFD5DAE1),
+    border: Color(0xFF8F95A0),
     divider: Color(0xFFE6E9EE),
     textPrimary: Color(0xFF0F1419),
     textSecondary: Color(0xFF4A5260),
@@ -74,7 +74,7 @@ class DkColors extends ThemeExtension<DkColors> {
     surfaceMuted: Color(0xFF22262D),
     segmentTrack: Color(0xFF22262D),
     segmentThumb: Color(0xFF343A43),
-    border: Color(0xFF343A43),
+    border: Color(0xFF5F6571),
     divider: Color(0xFF262B33),
     textPrimary: Color(0xFFF2F4F7),
     textSecondary: Color(0xFFB4BAC4),
@@ -114,7 +114,7 @@ class DkColors extends ThemeExtension<DkColors> {
   /// Selected segment.
   final Color segmentThumb;
 
-  /// Field border (default).
+  /// Field border (default); ≥ 3:1 on [surface] (WCAG 1.4.11).
   final Color border;
 
   /// List dividers, card divider, bottom-bar top border.
