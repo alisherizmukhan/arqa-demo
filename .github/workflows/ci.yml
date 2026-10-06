@@ -49,8 +49,8 @@ jobs:
         run: uv run ruff check .
       - name: Type check
         run: uv run mypy
-      - name: Tests
-        run: uv run pytest
+      - name: Tests (with coverage)
+        run: uv run pytest --cov --cov-fail-under=95
 
   design_kit:
     name: Design kit (analyze + tests)
