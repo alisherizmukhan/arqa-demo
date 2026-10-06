@@ -286,6 +286,68 @@ final class DaySummaryProvider
 
 String _$daySummaryHash() => r'41207b0e48f5bf3e13ce711b6cf9590df6c1f514';
 
+/// The id of a just-added trip, highlighted in the list for ~2 s
+/// (DESIGN.md §5.5); null otherwise.
+
+@ProviderFor(HighlightedTrip)
+final highlightedTripProvider = HighlightedTripProvider._();
+
+/// The id of a just-added trip, highlighted in the list for ~2 s
+/// (DESIGN.md §5.5); null otherwise.
+final class HighlightedTripProvider
+    extends $NotifierProvider<HighlightedTrip, String?> {
+  /// The id of a just-added trip, highlighted in the list for ~2 s
+  /// (DESIGN.md §5.5); null otherwise.
+  HighlightedTripProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'highlightedTripProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$highlightedTripHash();
+
+  @$internal
+  @override
+  HighlightedTrip create() => HighlightedTrip();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(String? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<String?>(value),
+    );
+  }
+}
+
+String _$highlightedTripHash() => r'1177423e3de87601e20baeed2f3452f1207c2df7';
+
+/// The id of a just-added trip, highlighted in the list for ~2 s
+/// (DESIGN.md §5.5); null otherwise.
+
+abstract class _$HighlightedTrip extends $Notifier<String?> {
+  String? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<String?, String?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<String?, String?>,
+              String?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// Saving a new trip. Lives as long as the add-trip screen.
 
 @ProviderFor(AddTripController)

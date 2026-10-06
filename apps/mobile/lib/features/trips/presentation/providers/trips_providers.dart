@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/core/error/failure.dart';
 import 'package:driver_diary/core/error/result.dart';
 import 'package:driver_diary/core/providers.dart';
@@ -67,6 +70,25 @@ Future<DailySummary> daySummary(Ref ref) async {
   final zone = ref.watch(driverZoneProvider);
   final trips = await ref.watch(dayTripsProvider.future);
   return calculateDailySummary(day, trips, zone);
+}
+
+/// The id of a just-added trip, highlighted in the list for ~2 s
+/// (DESIGN.md §5.5); null otherwise.
+@Riverpod(keepAlive: true)
+class HighlightedTrip extends _$HighlightedTrip {
+  Timer? _timer;
+
+  @override
+  String? build() {
+    ref.onDispose(() => _timer?.cancel());
+    return null;
+  }
+
+  void flash(String id) {
+    _timer?.cancel();
+    state = id;
+    _timer = Timer(DkMotion.highlight, () => state = null);
+  }
 }
 
 /// Saving a new trip. Lives as long as the add-trip screen.

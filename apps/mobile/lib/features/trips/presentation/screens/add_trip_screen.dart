@@ -1,7 +1,7 @@
 import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/core/error/failure.dart';
 import 'package:driver_diary/core/error/result.dart';
-import 'package:driver_diary/core/format/date_format.dart';
+import 'package:driver_diary/core/l10n/strings_ru.dart';
 import 'package:driver_diary/core/providers.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
@@ -14,41 +14,76 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-/// Form for a new trip. Pops with the saved [Trip].
+/// Full-screen form for a new trip on [day] (DESIGN.md §5.6–5.11). Pops with
+/// the saved [Trip].
 class AddTripScreen extends ConsumerStatefulWidget {
-  const new({required this.initialDay, super.key});
+  const new({required this.day, this.initialInput, super.key});
 
-  final CalendarDay initialDay;
+  /// The day selected on the Day screen; the trip starts on it.
+  final CalendarDay day;
+
+  /// Prefilled values (tests and screenshots).
+  final TripFormInput? initialInput;
 
   @override
   ConsumerState<AddTripScreen> createState() => _AddTripScreenState();
 }
 
 class _AddTripScreenState extends ConsumerState<AddTripScreen> {
-  // The trip date is the day selected on the Day screen (no date field).
-  late final CalendarDay _day = widget.initialDay;
-  ClockTime? _start;
-  ClockTime? _end;
-  PaymentMethod _payment = PaymentMethod.card;
-  final _amount = DkMoneyEditingController();
-  final _commission = DkMoneyEditingController();
+  late ClockTime? _start = widget.initialInput?.start;
+  late ClockTime? _end = widget.initialInput?.end;
+  late PaymentMethod _payment =
+      widget.initialInput?.payment ?? PaymentMethod.card;
+  late final DkMoneyEditingController _amount = _moneyController(
+    widget.initialInput?.amountText,
+  );
+  late final DkMoneyEditingController _commission = _moneyController(
+    widget.initialInput?.commissionText,
+  );
+  final _amountFocus = FocusNode();
+  final _commissionFocus = FocusNode();
+  final GlobalKey _bottomBarKey = GlobalKey();
 
-  /// Field errors; shown once the user has tried to save.
-  Map<TripField, String> _errors = const {};
-  bool _showErrors = false;
+  /// Fields whose errors are shown: left (blur) or picked, §5.7.
+  final _touched = <TripField>{};
 
-  /// Conflict / network / server problems that don't belong to one field.
-  String? _banner;
+  /// Save was pressed: every error is shown.
+  bool _submitted = false;
+
+  /// Server 422s for a field, until that field changes.
+  final _serverErrors = <TripField, String>{};
+
+  DkSnackbarHandle? _snack;
+
+  static DkMoneyEditingController _moneyController(String? text) {
+    return DkMoneyEditingController(amount: DkMoney.parse(text ?? ''));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _amountFocus.addListener(() => _onBlur(_amountFocus, TripField.amount));
+    _commissionFocus.addListener(
+      () => _onBlur(_commissionFocus, TripField.commission),
+    );
+  }
 
   @override
   void dispose() {
+    _snack?.close();
     _amount.dispose();
     _commission.dispose();
+    _amountFocus.dispose();
+    _commissionFocus.dispose();
     super.dispose();
   }
 
+  void _onBlur(FocusNode node, TripField field) {
+    if (!node.hasFocus && mounted) setState(() => _touched.add(field));
+  }
+
   TripFormInput get _input => TripFormInput(
-    day: _day,
+    day: widget.day,
     start: _start,
     end: _end,
     amountText: _amount.text,
@@ -62,32 +97,32 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     id: const Uuid().v4(),
   );
 
-  void _onChanged() {
-    setState(() {
-      _banner = null;
-      if (_showErrors) {
-        _errors = switch (_validate()) {
-          TripFormInvalid(:final errors) => errors,
-          TripFormValid() => const {},
-        };
-      }
-    });
+  Map<TripField, String> get _errors => {
+    if (_validate() case TripFormInvalid(:final errors)) ...errors,
+    ..._serverErrors,
+  };
+
+  /// Errors the user should see now.
+  Map<TripField, String> get _visibleErrors => {
+    for (final MapEntry(:key, :value) in _errors.entries)
+      if (_submitted || _touched.contains(key)) key: value,
+  };
+
+  void _edited(TripField field) {
+    setState(() => _serverErrors.remove(field));
   }
 
   Future<void> _save() async {
-    setState(() {
-      _showErrors = true;
-      _banner = null;
-    });
+    setState(() => _submitted = true);
     final Trip draft;
     switch (_validate()) {
-      case TripFormInvalid(:final errors):
-        setState(() => _errors = errors);
+      case TripFormInvalid():
         return;
       case TripFormValid(:final trip):
-        setState(() => _errors = const {});
         draft = trip;
     }
+    if (_serverErrors.isNotEmpty) return;
+    FocusScope.of(context).unfocus();
 
     final result = await ref
         .read(addTripControllerProvider.notifier)
@@ -95,17 +130,57 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     if (!mounted) return;
     switch (result) {
       case Ok(:final value):
+        _snack?.close();
         Navigator.of(context).pop(value);
       case Err(failure: ValidationFailure(:final code, :final field))
           when _formField(field) != null:
-        setState(() => _errors = {_formField(field)!: validationMessage(code)});
+        _snack?.close();
+        setState(
+          () => _serverErrors[_formField(field)!] = validationMessage(code),
+        );
+      case Err(failure: ConflictFailure()):
+        _snack?.close();
+        await _showConflict();
+      case Err(failure: NetworkFailure() || ServerFailure()) &&
+          Err(:final failure):
+        _showError(failureMessage(failure), retry: true);
       case Err(:final failure):
-        setState(() => _banner = failureMessage(failure));
+        _showError(failureMessage(failure), retry: false);
     }
   }
 
   static TripField? _formField(String? name) =>
       TripField.values.where((f) => f.name == name).firstOrNull;
+
+  /// Error snackbar 12 above the bottom bar (§4 DkSnackbar).
+  void _showError(String message, {required bool retry}) {
+    final bar = _bottomBarKey.currentContext?.size?.height ?? 0;
+    _snack = showDkSnackbar(
+      context,
+      message: message,
+      tone: DkSnackTone.error,
+      actionLabel: retry ? S.retry : null,
+      onAction: retry ? _save : null,
+      bottom:
+          MediaQuery.viewInsetsOf(context).bottom + bar + context.dkSpacing.s12,
+    );
+  }
+
+  /// §5.11 (approved: no stored values; see DECISIONS.md).
+  Future<void> _showConflict() => showDkDialog(
+    context,
+    icon: DkIcons.alert,
+    title: S.conflictTitle,
+    message: S.conflictMessage,
+    primaryLabel: S.conflictKeep,
+    onPrimary: () {
+      ref.invalidate(dayTripsProvider);
+      Navigator.of(context).pop();
+    },
+    secondaryLabel: S.conflictNew,
+    // A new id is used: the conflicting attempt is not retried.
+    onSecondary: _save,
+  );
 
   Future<void> _pickTime({required bool isStart}) async {
     final zone = ref.read(driverZoneProvider);
@@ -117,150 +192,199 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
         hour: current?.hour ?? now.hour,
         minute: current?.minute ?? now.minute,
       ),
-      helpText: isStart ? 'Начало поездки' : 'Окончание поездки',
+      helpText: isStart ? S.startPickerHelp : S.endPickerHelp,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
         child: child!,
       ),
     );
-    if (picked == null) return;
-    final time = (hour: picked.hour, minute: picked.minute);
-    if (isStart) {
-      _start = time;
-    } else {
-      _end = time;
-    }
-    _onChanged();
+    if (!mounted) return;
+    final field = isStart ? TripField.start : TripField.end;
+    setState(() {
+      _touched.add(field);
+      if (picked == null) return;
+      final time = (hour: picked.hour, minute: picked.minute);
+      if (isStart) {
+        _start = time;
+      } else {
+        _end = time;
+      }
+      _serverErrors
+        ..remove(TripField.start)
+        ..remove(TripField.end);
+    });
   }
-
-  String? _error(TripField field) => _showErrors ? _errors[field] : null;
 
   @override
   Widget build(BuildContext context) {
     final saving = ref.watch(addTripControllerProvider).isLoading;
     final spacing = context.dkSpacing;
+    final input = _input;
+    final errors = _errors;
+    final visible = _visibleErrors;
     String? clock(ClockTime? t) =>
-        t == null ? null : formatClock(t.hour, t.minute);
+        t == null ? null : DkFormat.clock(t.hour, t.minute);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Новая поездка')),
       body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.all(spacing.s16),
+        bottom: false,
+        child: Column(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: spacing.s12,
-              children: [
-                Expanded(
-                  child: DkTimeField(
-                    label: 'Начало',
-                    value: clock(_start),
-                    onTap: () => _pickTime(isStart: true),
-                    errorText: _error(TripField.start),
-                  ),
-                ),
-                Expanded(
-                  child: DkTimeField(
-                    label: 'Окончание',
-                    value: clock(_end),
-                    onTap: () => _pickTime(isStart: false),
-                    trailing: _input.endsNextDay
-                        ? const DkBadge('+1 день')
-                        : null,
-                    errorText: _error(TripField.end),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: spacing.s16),
-            DkTextField.money(
-              label: 'Сумма',
-              controller: _amount,
-              helper: 'Сколько заплатил пассажир',
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => _onChanged(),
-              errorText: _error(TripField.amount),
-            ),
-            SizedBox(height: spacing.s16),
-            DkTextField.money(
-              label: 'Комиссия',
-              controller: _commission,
-              textInputAction: TextInputAction.done,
-              onChanged: (_) => _onChanged(),
-              errorText: _error(TripField.commission),
-            ),
-            SizedBox(height: spacing.s16),
-            DkSegmentedControl<PaymentMethod>(
-              label: 'Способ оплаты',
-              segments: [
-                for (final method in PaymentMethod.values)
-                  DkSegment(
-                    value: method,
-                    label: method.toKit().label,
-                    icon: method.toKit().icon,
-                  ),
-              ],
-              selected: _payment,
-              onChanged: saving
-                  ? null
-                  : (method) {
-                      _payment = method;
-                      _onChanged();
-                    },
-            ),
-            if (_banner case final message?) ...[
-              SizedBox(height: spacing.s16),
-              _Banner(message: message),
-            ],
-            SizedBox(height: spacing.s24),
-            DkButton(
-              label: saving ? 'Сохраняем…' : 'Сохранить',
-              expand: true,
-              isLoading: saving,
-              onPressed: _save,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Banner extends StatelessWidget {
-  const new({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.dkColors;
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        padding: EdgeInsets.all(context.dkSpacing.s16),
-        decoration: BoxDecoration(
-          color: colors.errorSoft,
-          borderRadius: BorderRadius.circular(context.dkRadii.md),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: context.dkSpacing.s12,
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: colors.error,
-              size: context.dkSizes.iconNav,
+            DkModalAppBar(
+              title: S.formTitle,
+              subtitle: DkFormat.date(_date(widget.day)),
+              onClose: () => Navigator.of(context).maybePop(),
             ),
             Expanded(
-              child: Text(
-                message,
-                style: context.dkText.body.copyWith(color: colors.error),
+              child: ListView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: spacing.screenGutter,
+                  vertical: spacing.s8,
+                ),
+                children: [
+                  _TimeRow(
+                    start: DkTimeField(
+                      label: S.start,
+                      value: clock(_start),
+                      enabled: !saving,
+                      invalid: visible.containsKey(TripField.start),
+                      onTap: () => _pickTime(isStart: true),
+                    ),
+                    end: DkTimeField(
+                      label: S.end,
+                      value: clock(_end),
+                      enabled: !saving,
+                      invalid: visible.containsKey(TripField.end),
+                      // The badge only for a valid next-day end (mockup 08
+                      // shows none next to the error).
+                      trailing:
+                          input.endsNextDay &&
+                              !errors.containsKey(TripField.end)
+                          ? const DkBadge(S.nextDayBadge)
+                          : null,
+                      onTap: () => _pickTime(isStart: false),
+                    ),
+                    message: _timeMessage(input, errors, visible),
+                  ),
+                  SizedBox(height: spacing.s20),
+                  DkTextField.money(
+                    label: S.amount,
+                    controller: _amount,
+                    focusNode: _amountFocus,
+                    enabled: !saving,
+                    helper: S.amountHelper,
+                    errorText: visible[TripField.amount],
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) => _edited(TripField.amount),
+                  ),
+                  SizedBox(height: spacing.s20),
+                  DkTextField.money(
+                    label: S.commission,
+                    controller: _commission,
+                    focusNode: _commissionFocus,
+                    enabled: !saving,
+                    helper: switch (input.net) {
+                      final net? => S.netHelper(net),
+                      null => null,
+                    },
+                    errorText: visible[TripField.commission],
+                    textInputAction: TextInputAction.done,
+                    onChanged: (_) => _edited(TripField.commission),
+                  ),
+                  SizedBox(height: spacing.s20),
+                  DkSegmentedControl<PaymentMethod>(
+                    label: S.payment,
+                    segments: [
+                      for (final method in PaymentMethod.values)
+                        DkSegment(
+                          value: method,
+                          label: method.toKit().label,
+                          icon: method.toKit().icon,
+                        ),
+                    ],
+                    selected: _payment,
+                    onChanged: saving
+                        ? null
+                        : (method) => setState(() {
+                            _payment = method;
+                            _serverErrors.remove(TripField.payment);
+                          }),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
+      bottomNavigationBar: DkBottomBar(
+        key: _bottomBarKey,
+        child: DkButton(
+          label: saving ? S.saving : S.save,
+          expand: true,
+          isLoading: saving,
+          // §5.7: disabled while any error is shown.
+          onPressed: visible.isEmpty ? _save : null,
+        ),
+      ),
+    );
+  }
+
+  /// The one line under the time row: an error, the midnight explanation
+  /// (§5.10) or the duration.
+  static DkFieldMessage? _timeMessage(
+    TripFormInput input,
+    Map<TripField, String> errors,
+    Map<TripField, String> visible,
+  ) {
+    if (visible[TripField.end] ?? visible[TripField.start] case final error?) {
+      return DkFieldMessage(text: error, isError: true);
+    }
+    final duration = input.duration;
+    if (duration == null ||
+        errors.containsKey(TripField.start) ||
+        errors.containsKey(TripField.end)) {
+      return null;
+    }
+    return DkFieldMessage(
+      text: input.endsNextDay
+          ? S.midnightHelper(
+              endDay: _date(input.endDay),
+              startDay: _date(input.day),
+              duration: duration,
+            )
+          : S.durationHelper(duration),
+    );
+  }
+
+  static DateTime _date(CalendarDay day) =>
+      DateTime(day.year, day.month, day.day);
+}
+
+/// Two time fields side by side (gap 12) and one message under them (gap 6).
+class _TimeRow extends StatelessWidget {
+  const new({required this.start, required this.end, this.message});
+
+  final Widget start;
+  final Widget end;
+  final Widget? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final spacing = context.dkSpacing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.s6,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: spacing.s12,
+          children: [
+            Expanded(child: start),
+            Expanded(child: end),
+          ],
+        ),
+        ?message,
+      ],
     );
   }
 }
