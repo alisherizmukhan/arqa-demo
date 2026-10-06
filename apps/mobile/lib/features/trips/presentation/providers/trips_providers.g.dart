@@ -376,7 +376,7 @@ final class AddTripControllerProvider
   AddTripController create() => AddTripController();
 }
 
-String _$addTripControllerHash() => r'c8a188ae190651fb8634f8ae3f99eb02aff5279b';
+String _$addTripControllerHash() => r'a03b0321e8c477552207515850c6d4b1ebeb31d7';
 
 /// Saving a new trip. Lives as long as the add-trip screen.
 

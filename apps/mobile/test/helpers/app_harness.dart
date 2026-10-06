@@ -8,7 +8,9 @@ import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/repositories/trips_repository.dart';
+import 'package:driver_diary/features/trips/presentation/models/trip_form.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
+import 'package:driver_diary/features/trips/presentation/screens/add_trip_screen.dart';
 import 'package:driver_diary/features/trips/presentation/screens/day_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -164,4 +166,51 @@ Finder get dayScreen => find.byType(DayScreen);
 Future<void> disposeApp(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox());
   await tester.pump(const Duration(seconds: 5));
+}
+
+/// A screen that opens the form the way the Day screen does (pushed,
+/// full-screen) and shows its result as «host: …».
+class FormHost extends StatefulWidget {
+  const new({this.input, super.key});
+
+  final TripFormInput? input;
+
+  @override
+  State<FormHost> createState() => _FormHostState();
+}
+
+class _FormHostState extends State<FormHost> {
+  Object? result = 'open';
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Center(
+      child: TextButton(
+        onPressed: () async {
+          final trip = await Navigator.of(context).push<Trip>(
+            MaterialPageRoute(
+              fullscreenDialog: true,
+              builder: (_) => AddTripScreen(
+                day: widget.input?.day ?? referenceDay,
+                initialInput: widget.input,
+              ),
+            ),
+          );
+          setState(() => result = trip);
+        },
+        child: Text('host: $result'),
+      ),
+    ),
+  );
+}
+
+/// Opens the form over [FormHost].
+Future<void> pumpFormOverHost(
+  WidgetTester tester,
+  FakeTripsRepository repository, {
+  TripFormInput? input,
+}) async {
+  await pumpDiary(tester, repository, home: FormHost(input: input));
+  await tester.tap(find.byType(TextButton));
+  await tester.pumpAndSettle();
 }

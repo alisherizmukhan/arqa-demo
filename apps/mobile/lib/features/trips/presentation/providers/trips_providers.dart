@@ -104,13 +104,16 @@ class AddTripController extends _$AddTripController {
   /// Saves [draft]. If [draft] has the same payload as an unconfirmed
   /// previous attempt, that attempt's id is reused, so the server returns the
   /// stored trip (200) instead of creating a duplicate.
-  Future<Result<Trip>> save(Trip draft) async {
+  ///
+  /// [quietly] (automatic resends) keeps the state out of loading, so the
+  /// form stays editable.
+  Future<Result<Trip>> save(Trip draft, {bool quietly = false}) async {
     final previous = _unconfirmed;
     final trip = previous != null && previous.hasSamePayload(draft)
         ? draft.withId(previous.id)
         : draft;
 
-    state = const AsyncLoading();
+    if (!quietly) state = const AsyncLoading();
     final result = await CreateTrip(ref.read(tripsRepositoryProvider))(
       trip,
       ref.read(driverZoneProvider),

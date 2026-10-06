@@ -80,4 +80,11 @@ abstract final class S {
       'Обновите день, чтобы увидеть сохранённую версию.';
   static const conflictKeep = 'Оставить сохранённую';
   static const conflictNew = 'Сохранить как новую поездку';
+
+  // Closing with unsaved input (§5.6 asks for a confirmation but gives no
+  // copy; proposed in stage R5, see DECISIONS.md).
+  static const discardTitle = 'Закрыть без сохранения?';
+  static const discardMessage = 'Введённые данные поездки не сохранятся.';
+  static const discardKeep = 'Продолжить ввод';
+  static const discardLeave = 'Закрыть';
 }
