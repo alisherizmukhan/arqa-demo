@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:design_kit/design_kit.dart';
-import 'package:driver_diary/core/error/failure.dart';
 import 'package:driver_diary/core/error/result.dart';
 import 'package:driver_diary/core/providers.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
@@ -13,6 +12,7 @@ import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/repositories/trips_repository.dart';
 import 'package:driver_diary/features/trips/domain/usecases/create_trip.dart';
 import 'package:driver_diary/features/trips/domain/usecases/get_day_trips.dart';
+import 'package:driver_diary/features/trips/presentation/error_messages.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'trips_providers.g.dart';
@@ -126,10 +126,8 @@ class AddTripController extends _$AddTripController {
         ref.invalidate(dayTripsProvider);
         state = AsyncData(value);
       case Err(:final failure):
-        _unconfirmed = switch (failure) {
-          NetworkFailure() || ServerFailure() => trip,
-          _ => null,
-        };
+        // Only a transient failure leaves the outcome unknown.
+        _unconfirmed = isTransient(failure) ? trip : null;
         state = AsyncError(failure, StackTrace.current);
     }
     return result;

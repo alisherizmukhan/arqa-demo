@@ -5,10 +5,21 @@ import 'package:driver_diary/core/l10n/strings_ru.dart';
 /// shared by the client-side rules and the server's 422 responses.
 String failureMessage(Failure failure) => switch (failure) {
   NetworkFailure() => S.offline,
-  ServerFailure() => 'Сервер временно недоступен. Попробуйте чуть позже.',
+  ServerFailure() when isTransient(failure) =>
+    'Сервер временно недоступен. Попробуйте чуть позже.',
+  // Other 4xx (400, 401, …): not something a retry fixes.
+  ServerFailure() => 'Что-то пошло не так. Попробуйте ещё раз.',
   ConflictFailure() => S.conflictTitle,
   ValidationFailure(:final code) => validationMessage(code),
   UnexpectedFailure() => 'Что-то пошло не так. Попробуйте ещё раз.',
+};
+
+/// Whether sending again may succeed: no connection, a timeout, or a 5xx.
+/// 4xx answers (400, 401, 409, 422, …) are final and are never resent.
+bool isTransient(Failure failure) => switch (failure) {
+  NetworkFailure() => true,
+  ServerFailure(:final statusCode) => statusCode != null && statusCode >= 500,
+  _ => false,
 };
 
 /// Russian text for a validation code (`commission_exceeds_amount`, ...).

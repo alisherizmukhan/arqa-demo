@@ -203,8 +203,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
         .save(trip, quietly: quietly);
     _sending = false;
     if (!mounted) return;
-    if (result case Err(:final failure)
-        when failure is NetworkFailure || failure is ServerFailure) {
+    if (result case Err(:final failure) when isTransient(failure)) {
       // Unknown outcome: keep resending the same trip (same id). The
       // snackbar opens after the first failure and stays until success.
       final first = _unsent == null;

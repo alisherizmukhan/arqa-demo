@@ -180,6 +180,72 @@ void main() {
     });
   });
 
+  group('only connection errors, timeouts and 5xx are resent', () {
+    const offline = 'Нет связи. Повторим отправку — поездка не задвоится.';
+
+    for (final (name, failure) in [
+      ('timeout', const NetworkFailure('receiveTimeout')),
+      ('503', const ServerFailure(statusCode: 503)),
+      ('500', const ServerFailure(statusCode: 500)),
+    ]) {
+      testWidgets('$name: resent with the same id', (tester) async {
+        final repository = FakeTripsRepository()
+          ..onCreate = (_) async => Err(failure);
+        await openForm(tester, input: valid, repository: repository);
+
+        await save(tester);
+        await tester.pump(const Duration(seconds: 2));
+        expect(repository.created, hasLength(2));
+        expect(repository.created.map((t) => t.id).toSet(), hasLength(1));
+        expect(find.text('Повторить'), findsOneWidget);
+        await disposeApp(tester);
+      });
+    }
+
+    for (final (name, failure, expected) in [
+      (
+        '422',
+        const ValidationFailure(
+          code: 'commission_exceeds_amount',
+          message: 'commission must not exceed amount',
+          field: 'commission',
+        ),
+        'Комиссия не может быть больше суммы',
+      ),
+      (
+        '409',
+        const ConflictFailure(),
+        'Эта поездка уже сохранена с другими данными',
+      ),
+      (
+        '400',
+        const ServerFailure(statusCode: 400),
+        'Что-то пошло не так. Попробуйте ещё раз.',
+      ),
+      (
+        '401',
+        const ServerFailure(statusCode: 401),
+        'Что-то пошло не так. Попробуйте ещё раз.',
+      ),
+    ]) {
+      testWidgets('$name: never resent, no «Нет связи»', (tester) async {
+        final repository = FakeTripsRepository()
+          ..onCreate = (_) async => Err(failure);
+        await openForm(tester, input: valid, repository: repository);
+
+        await save(tester);
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text(expected), findsOneWidget);
+        expect(find.text(offline), findsNothing);
+        expect(find.text('Повторить'), findsNothing);
+
+        await tester.pump(const Duration(minutes: 2));
+        expect(repository.created, hasLength(1));
+        await disposeApp(tester);
+      });
+    }
+  });
+
   group('closing with unsaved input (§5.6)', () {
     testWidgets('an untouched form closes at once', (tester) async {
       await openForm(tester);
