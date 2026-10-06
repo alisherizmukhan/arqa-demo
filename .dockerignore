@@ -1,0 +1,11 @@
+# Docker build context is the repo root; only the backend and the seed file are needed.
+*
+!backend/
+!data/trips.json
+backend/.venv
+backend/tests
+**/__pycache__
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/.env
