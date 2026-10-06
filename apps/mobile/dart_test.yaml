@@ -1,0 +1,4 @@
+tags:
+  live:
+    # Needs a running backend (LIVE_API_URL); skipped otherwise.
+    timeout: 1m
