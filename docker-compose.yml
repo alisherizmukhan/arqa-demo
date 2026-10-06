@@ -1,7 +1,8 @@
 # Local Postgres for development and integration tests.
-#   docker compose up -d db
-# Dev DB:  postgresql://postgres:postgres@localhost:5432/driver_diary
-# Test DB: postgresql://postgres:postgres@localhost:5432/driver_diary_test
+#   docker compose up -d db                  # just Postgres
+#   docker compose --profile full up --build # Postgres + API on http://localhost:8000
+# Dev DB:  postgresql://postgres:postgres@localhost:5433/driver_diary
+# Test DB: postgresql://postgres:postgres@localhost:5433/driver_diary_test
 services:
   db:
     image: postgres:16-alpine
@@ -10,7 +11,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: driver_diary
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
@@ -19,6 +20,20 @@ services:
       interval: 2s
       timeout: 3s
       retries: 20
+
+  backend:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/driver_diary
+      PORT: "8000"
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:
