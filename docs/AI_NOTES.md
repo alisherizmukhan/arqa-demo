@@ -80,3 +80,16 @@ A running log of where the AI assistant was unsure, got something wrong first, a
 - **Goldens caught visual details that tests missed:** the field helper «На руки с поездки: 2040₸» rendered without the wide gap (helpers were plain `Text`), the dark "focused" field was not focused at all (alchemist renders both themes in one tree, so only one field can hold focus), and the loading spinner's first frame is an invisible dot.
 - **Checked the spec's icon name against its intent:** DESIGN.md maps the empty state to Lucide `route` "(road)", and the mockup shows a road. Rendering showed Lucide `route` is a connected path, so the closer Lucide `road` glyph is used (found in the font metadata, not in the Dart API).
 - **Linux check before claiming CI is green:** the full Dart suite (kit 158, showcase 6, app 61) and analyze ran in the Linux container against the regenerated CI goldens.
+
+## Redesign — stage R4 (screens)
+
+- **Real-font screenshots found three kit bugs that every test had missed:**
+  - the split bar was never drawn (segments 0 px high);
+  - the «+1 день» badge filled its line, so it always wrapped. R3 had blamed this on "~1 px too narrow", which was wrong; the note in DECISIONS.md is corrected.
+  - trip amounts stopped short of the right padding.
+  
+  Each fix has a regression test. The first replacement for the amount column used `LayoutBuilder`, and alchemist's table layout exposed that it breaks intrinsic sizing, so it was reworked.
+- **Widget tests measure with the Ahem test font unless real fonts are loaded:** every glyph is a full em wide. The first snackbar-placement tests "proved" the wrong branch. Every geometry check (badge line, snackbar vs FAB, dialog label lines, the layout matrix) now loads the app's fonts from `FontManifest.json`.
+- **A screen test caught a real form gap:** «Сумма должна быть больше 0» was only checked once the commission was filled too, so it never appeared on blur. The amount rule now runs on its own.
+- **Item 4 measured, not assumed:** «Сохранить как новую поездку» fits at 390 dp, but not at 360 dp (216 dp available vs ~240 needed). The fallback (two centred lines, button grows) also showed the label touching the button edges at text scale 1.3, which led to `DkButton` keeping the spec-derived 16 dp insets.
+- **Commit hygiene slip, fixed before anything was pushed:** a staged `git rm` was swept twice into an unrelated commit (`git commit` takes everything staged). Both times the local history was repaired: the files were restored in that commit with a scripted rebase, or the two newest commits were redone, and each commit's file list was checked before committing.
