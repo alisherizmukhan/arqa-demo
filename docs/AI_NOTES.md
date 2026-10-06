@@ -63,3 +63,10 @@ A running log of where the AI assistant was unsure, got something wrong first, a
 - **A test name that claimed too much:** "client-side errors, then a server conflict" never reached the conflict (that needs time pickers). Renamed it to what it checks; the conflict/id-reuse logic is covered by provider tests.
 - **Time zone trap avoided on purpose:** "today" and day boundaries use the driver's offset, not `DateTime.now()`'s device zone. A provider test fixes "now" at 20:00Z, which is already the next day in +05:00.
 - **Verified against reality, not just mocks:** the web build ran against the deployed API (today's total matched the API's `/summary` exactly), and the live contract tests ran the real dio/DTO/repository stack against a local backend (create → 200 on retry → 409 → listing by local day, and a server 422 mapped to a field error).
+
+## Redesign — stage R1/R2 (audit, tokens)
+
+- **Font coverage checked before trusting the spec.** fontTools showed that Manrope — the font DESIGN.md mandates — has no `₸` and no U+202F, the two characters the spec's money format relies on. Raised in the audit; fallback approved.
+- **The fallback golden caught a mockup-vs-spec difference, and I measured instead of eyeballing.** In the first golden, "3 315" looked like "3315". A probe golden was too small to judge, so I measured `TextPainter` widths: U+202F is present but narrow by definition (≈0.1 em: 1.7 px at 17 px, ~4 px in the hero). The mockups draw group gaps at roughly a normal space (~0.25 em). Kept U+202F (DESIGN.md wins) and raised it as an open question rather than silently "fixing" the string.
+- **Spec conformance as a test, not a promise.** Instead of re-typing hex values into assertions (which would only test that I copied my own code), the test parses DESIGN.md's tables and compares.
+- **Small slips caught by the tools:** `expect()` called while declaring groups (not allowed outside a test); comparing freshly lerped extensions with `==` (no value equality); the wider real font overflowing a showcase row at 360 dp. Two long shell heredocs with Cyrillic text failed to parse in Git Bash; scripts now go through files.
