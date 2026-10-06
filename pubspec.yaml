@@ -1,0 +1,11 @@
+name: driver_shift_diary_workspace
+description: Pub workspace root for the Driver Shift Diary monorepo.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - apps/mobile
+  - packages/design_kit
+  - packages/design_kit/example

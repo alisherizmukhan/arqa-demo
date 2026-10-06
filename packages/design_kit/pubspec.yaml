@@ -1,0 +1,21 @@
+name: design_kit
+description: Design tokens, themes and components for Driver Shift Diary.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.35.0"
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  intl: ^0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^11.0.0
+
+flutter:

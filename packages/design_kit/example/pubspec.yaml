@@ -1,0 +1,22 @@
+name: design_kit_example
+description: Showcase app for every design_kit component.
+publish_to: none
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.0
+resolution: workspace
+
+dependencies:
+  design_kit:
+    path: ..
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
