@@ -49,7 +49,8 @@ void main() {
     await pumpApp(tester);
     await tester.pump();
 
-    expect(find.text('Сегодня, 1 октября'), findsOneWidget);
+    expect(find.text('Сегодня'), findsOneWidget);
+    expect(find.text('1 октября 2026'), findsOneWidget);
     expect(find.text(money(3315)), findsOneWidget); // net
     expect(find.text(money(3900)), findsOneWidget); // revenue
     expect(find.text(DkMoney.format(-585)), findsOneWidget); // commission
@@ -68,7 +69,6 @@ void main() {
 
     await pumpApp(tester);
     await tester.pump();
-
     expect(find.text('Поездок нет'), findsOneWidget);
     expect(find.text(money(0)), findsWidgets);
   });
@@ -111,8 +111,8 @@ void main() {
     verifyNever(() => repository.createTrip(any(), any()));
 
     // Commission larger than the amount is caught before any request.
-    await tester.enterText(find.widgetWithText(TextField, '2400'), '1000');
-    await tester.enterText(find.widgetWithText(TextField, '360'), '1500');
+    await tester.enterText(find.byType(TextField).at(0), '1000');
+    await tester.enterText(find.byType(TextField).at(1), '1500');
     await tester.pump();
     expect(find.text('Комиссия не может быть больше суммы'), findsOneWidget);
     verifyNever(() => repository.createTrip(any(), any()));

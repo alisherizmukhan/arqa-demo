@@ -1,6 +1,5 @@
 import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/core/error/failure.dart';
-import 'package:driver_diary/core/format/date_format.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/presentation/error_messages.dart';
@@ -32,10 +31,11 @@ class DayScreen extends ConsumerWidget {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: spacing.s8),
               child: DkDaySwitcher(
-                label: formatDayLabel(day, today: today),
-                onPrevious: selection.previous,
-                onNext: day.isBefore(today) ? selection.next : null,
-                onPick: () => _pickDay(context, ref, day, today),
+                date: DateTime(day.year, day.month, day.day),
+                today: DateTime(today.year, today.month, today.day),
+                onPrev: selection.previous,
+                onNext: selection.next,
+                onPickDate: () => _pickDay(context, ref, day, today),
               ),
             ),
             const Expanded(child: _DayContent()),
@@ -52,7 +52,8 @@ class DayScreen extends ConsumerWidget {
           ),
           child: DkButton(
             label: 'Добавить поездку',
-            icon: Icons.add,
+            icon: DkIcons.add,
+            expand: true,
             onPressed: () => _addTrip(context, ref, day),
           ),
         ),
@@ -119,6 +120,7 @@ class _DayContent extends ConsumerWidget {
       content = const DaySkeleton();
     } else if (trips.error case final Object error) {
       content = DkErrorState(
+        title: 'Не удалось загрузить данные',
         message: error is Failure ? failureMessage(error) : null,
         onRetry: () => ref.invalidate(dayTripsProvider),
       );

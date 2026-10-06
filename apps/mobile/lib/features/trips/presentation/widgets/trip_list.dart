@@ -13,29 +13,28 @@ class TripList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DkCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          for (final (index, trip) in trips.indexed) ...[
-            if (index > 0) const Divider(),
-            DkTripTile(
-              timeRange: formatTimeRange(trip.start, trip.end, zone),
-              amount: trip.amount,
-              payment: trip.payment.toKit(),
-              details: 'комиссия ${DkMoney.format(trip.commission)}',
-            ),
-          ],
-        ],
-      ),
+    return DkTripList(
+      children: [
+        for (final trip in trips)
+          DkTripTile(
+            timeRange: formatTimeRange(trip.start, trip.end, zone),
+            endsNextDay: zone.dayOf(trip.end) != zone.dayOf(trip.start),
+            meta:
+                '${DkFormat.duration(trip.end.difference(trip.start))} · '
+                '${trip.payment.toKit().label}',
+            amount: DkMoney.format(trip.amount),
+            commission: 'комиссия ${DkMoney.format(trip.commission)}',
+            method: trip.payment.toKit(),
+          ),
+      ],
     );
   }
 }
 
 extension PaymentMethodKit on PaymentMethod {
   /// The design kit's counterpart (the kit does not depend on the domain).
-  DkPaymentKind toKit() => switch (this) {
-    PaymentMethod.cash => DkPaymentKind.cash,
-    PaymentMethod.card => DkPaymentKind.card,
+  DkPaymentMethod toKit() => switch (this) {
+    PaymentMethod.cash => DkPaymentMethod.cash,
+    PaymentMethod.card => DkPaymentMethod.card,
   };
 }

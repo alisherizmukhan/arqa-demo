@@ -122,7 +122,8 @@ int? _parseTenge(
   Map<TripField, String> errors,
   TripField field,
 ) {
-  final trimmed = text.trim();
+  // Money fields group digits with U+202F while typing.
+  final trimmed = text.replaceAll(' ', '').trim();
   if (trimmed.isEmpty) {
     errors[field] = emptyMessage;
     return null;
