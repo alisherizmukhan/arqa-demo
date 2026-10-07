@@ -182,3 +182,12 @@ Mockup PNG vs `DESIGN.md`: where they disagree, **DESIGN.md wins** (details and 
 - **Snackbars never cover dialogs or pickers (kit fix):** a snackbar is an `Overlay` entry above every route pushed later, and the offline snackbar covered the discard dialog and caught its taps. It now draws only while its own screen is the current route, and comes back when the dialog closes. On the Day screen the refresh-failure snackbar sits 12 dp above the FAB, never over it.
 - **Accessibility checked on the real screens:** every mockup state and every R5 state, in light and dark, meets Flutter's tap-target (48 dp), labelled-tap-target and text-contrast guidelines. The §4 spoken names («Предыдущий день», «Выбрать дату, 1 октября 2026», «Наличные 38%, карта 62%») are tested.
 
+## Post-redesign UI fixes (user feedback)
+
+- **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
+- **Day data is cached per day** → `dayTripsProvider(day)` / `daySummaryProvider(day)` are families; a loaded day stays in memory for 5 min (`dayCacheTtl`) after the screen leaves it, and the Day screen loads the previous and next day in the background. *Why:* going back to a day just seen showed a skeleton again. A failed load is never cached; pull-to-refresh and a new trip reload from the server. One provider per day also means another day's totals can never show for the selected day.
+- **«Сегодня» in the header** (`DkTodayButton`, right side of the wordmark row, only while another day is shown) → one tap back to today instead of tapping › several times. Placed on the right so the wordmark keeps its spot; the future Menu button (§8.2) goes after it.
+- **One-line labels**: the payment tile label («Наличные · 17%») and the trip meta («30 мин · Наличные») scale down to fit instead of wrapping onto a second line at 360 dp. *Why:* the wrapped share read as a separate value.
+- **Dialogs are centred** (icon, title, message), max width 400. *Why:* the left-aligned discard dialog looked unbalanced.
+- **Light theme by default** (`App.themeMode = ThemeMode.light`) → the app no longer follows a dark phone setting. The dark theme stays in the kit and in the tests (they pass `ThemeMode.system`). A theme switch can go into the Menu screen planned in the next iteration.
+

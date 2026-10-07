@@ -2,9 +2,9 @@
 
 Daily trips and payout summary for ride-hailing drivers: a Flutter app (`apps/mobile`), a design kit (`packages/design_kit`), and a FastAPI backend (`backend`).
 
-| Day (light) | Day (dark) | Add trip | No connection | 409 conflict |
-|---|---|---|---|---|
-| <img src="docs/screenshots/day_light.png" width="180"> | <img src="docs/screenshots/day_dark.png" width="180"> | <img src="docs/screenshots/add_trip.png" width="180"> | <img src="docs/screenshots/add_trip_offline.png" width="180"> | <img src="docs/screenshots/add_trip_409.png" width="180"> |
+| Day (light) | Day (dark) | Add trip | No connection | 409 conflict | Date | Time |
+|---|---|---|---|---|---|---|
+| <img src="docs/screenshots/day_light.png" width="180"> | <img src="docs/screenshots/day_dark.png" width="180"> | <img src="docs/screenshots/add_trip.png" width="180"> | <img src="docs/screenshots/add_trip_offline.png" width="180"> | <img src="docs/screenshots/add_trip_409.png" width="180"> | <img src="docs/screenshots/date_picker.png" width="180"> | <img src="docs/screenshots/time_picker.png" width="180"> |
 
 The UI follows `DESIGN.md` (variant A) and the mockups in `docs/design/`. Side-by-side comparisons are in `docs/design/audit/stage4/` and `stage5/`, and every deviation is listed in `docs/DESIGN_AUDIT.md` and `docs/DECISIONS.md`. The screenshots above are rendered by the app's own tests (see *Screenshots and goldens*).
 
