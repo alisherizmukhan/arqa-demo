@@ -19,7 +19,11 @@
      GitHub сам подставит ссылку вида https://github.com/user-attachments/assets/…
      Эту заметку и строку «Видео скоро появится» после этого можно удалить. -->
 
-*Видео скоро появится.*
+
+
+https://github.com/user-attachments/assets/44a51387-0f43-486c-87e7-9e07c062bf56
+
+
 
 ---
 
