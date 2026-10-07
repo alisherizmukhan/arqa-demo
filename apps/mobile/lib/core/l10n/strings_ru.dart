@@ -6,6 +6,11 @@ abstract final class S {
 
   // Day.
   static const tripsTitle = 'Поездки';
+  static const sortTitle = 'Сортировка';
+  static const orderTimeAscending = 'Сначала ранние';
+  static const orderTimeDescending = 'Сначала поздние';
+  static const orderAmountDescending = 'Сначала дорогие';
+  static const orderAmountAscending = 'Сначала дешёвые';
   static const addTripFab = 'Поездка';
   static const emptyTitle = 'За этот день поездок нет';
   static const emptyMessage =
@@ -22,6 +27,9 @@ abstract final class S {
   static const loading = 'Загрузка';
 
   /// `2 поездки · 37 мин`.
+  static String sortButton(String order) =>
+      '$sortTitle: ${order.toLowerCase()}';
+
   static String tripsHeader(int count, Duration total) =>
       '${DkFormat.trips(count)} · ${DkFormat.duration(total)}';
 

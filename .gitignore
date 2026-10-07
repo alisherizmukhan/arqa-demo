@@ -46,3 +46,6 @@ coverage/
 /.trae/
 /.warp/
 /.windsurf/
+
+# Golden-test failure diffs (flutter_test writes them next to the test)
+**/test/**/failures/

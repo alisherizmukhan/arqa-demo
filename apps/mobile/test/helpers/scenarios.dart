@@ -191,6 +191,7 @@ const darkScenarioIds = {
   'r5_discard_confirm',
   'r6_time_picker',
   'r6_date_picker',
+  'r7_sort_sheet',
   '01_day_light',
   '07_add_trip',
   '12_add_trip_conflict_409',
@@ -231,6 +232,15 @@ final stressScenarios = <Scenario>[
 
 /// Stage R5 states without a mockup (screenshots, layout matrix, a11y).
 final behaviourScenarios = <Scenario>[
+  (
+    id: 'r7_sort_sheet',
+    run: (tester) async {
+      await pumpDiary(tester, FakeTripsRepository([t1, t2]));
+      await selectDay(tester, referenceDay);
+      await tester.tap(find.bySemanticsLabel(RegExp('^Сортировка')));
+      await tester.pumpAndSettle();
+    },
+  ),
   (
     id: 'r6_time_picker',
     run: (tester) async {

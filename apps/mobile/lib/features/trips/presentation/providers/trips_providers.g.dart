@@ -373,6 +373,68 @@ final class DaySummaryFamily extends $Family
   String toString() => r'daySummaryProvider';
 }
 
+/// The order of the Day screen's trips; the same for every day while the
+/// app runs. Starts with [TripOrder.timeAscending].
+
+@ProviderFor(TripOrderSetting)
+final tripOrderSettingProvider = TripOrderSettingProvider._();
+
+/// The order of the Day screen's trips; the same for every day while the
+/// app runs. Starts with [TripOrder.timeAscending].
+final class TripOrderSettingProvider
+    extends $NotifierProvider<TripOrderSetting, TripOrder> {
+  /// The order of the Day screen's trips; the same for every day while the
+  /// app runs. Starts with [TripOrder.timeAscending].
+  TripOrderSettingProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'tripOrderSettingProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$tripOrderSettingHash();
+
+  @$internal
+  @override
+  TripOrderSetting create() => TripOrderSetting();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(TripOrder value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<TripOrder>(value),
+    );
+  }
+}
+
+String _$tripOrderSettingHash() => r'ad7da188388bcadbe7e93d5921b5900ec2d8874b';
+
+/// The order of the Day screen's trips; the same for every day while the
+/// app runs. Starts with [TripOrder.timeAscending].
+
+abstract class _$TripOrderSetting extends $Notifier<TripOrder> {
+  TripOrder build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<TripOrder, TripOrder>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<TripOrder, TripOrder>,
+              TripOrder,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// The id of a just-added trip, highlighted in the list for ~2 s
 /// (DESIGN.md §5.5); null otherwise.
 

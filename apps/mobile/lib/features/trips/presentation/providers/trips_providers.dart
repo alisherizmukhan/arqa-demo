@@ -13,6 +13,7 @@ import 'package:driver_diary/features/trips/domain/repositories/trips_repository
 import 'package:driver_diary/features/trips/domain/usecases/create_trip.dart';
 import 'package:driver_diary/features/trips/domain/usecases/get_day_trips.dart';
 import 'package:driver_diary/features/trips/presentation/error_messages.dart';
+import 'package:driver_diary/features/trips/presentation/models/trip_order.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'trips_providers.g.dart';
@@ -81,6 +82,18 @@ Future<DailySummary> daySummary(Ref ref, CalendarDay day) async {
   final zone = ref.watch(driverZoneProvider);
   final trips = await ref.watch(dayTripsProvider(day).future);
   return calculateDailySummary(day, trips, zone);
+}
+
+/// The order of the Day screen's trips; the same for every day while the
+/// app runs. Starts with [TripOrder.timeAscending].
+@Riverpod(keepAlive: true)
+class TripOrderSetting extends _$TripOrderSetting {
+  @override
+  TripOrder build() => TripOrder.timeAscending;
+
+  TripOrder get order => state;
+
+  set order(TripOrder value) => state = value;
 }
 
 /// The id of a just-added trip, highlighted in the list for ~2 s

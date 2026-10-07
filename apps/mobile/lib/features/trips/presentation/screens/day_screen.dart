@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/core/l10n/strings_ru.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/features/trips/domain/entities/daily_summary.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
+import 'package:driver_diary/features/trips/presentation/models/trip_order.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
 import 'package:driver_diary/features/trips/presentation/screens/add_trip_screen.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/day_skeleton.dart';
@@ -43,6 +46,9 @@ class DayScreen extends ConsumerStatefulWidget {
 
 class _DayScreenState extends ConsumerState<DayScreen> {
   final GlobalKey _fabKey = GlobalKey();
+
+  /// On the highlighted (just-added) trip row: scrolled into view.
+  final GlobalKey _newTripKey = GlobalKey();
   DkSnackbarHandle? _snack;
 
   @override
@@ -158,7 +164,10 @@ class _DayScreenState extends ConsumerState<DayScreen> {
                           TripList(
                             trips: trips,
                             zone: ref.watch(driverZoneProvider),
+                            order: ref.watch(tripOrderSettingProvider),
+                            onSort: _chooseOrder,
                             highlightedId: ref.watch(highlightedTripProvider),
+                            highlightKey: _newTripKey,
                           ),
                         ],
                       ),
@@ -244,6 +253,36 @@ class _DayScreenState extends ConsumerState<DayScreen> {
         .select(CalendarDay(picked.year, picked.month, picked.day));
   }
 
+  Future<void> _chooseOrder() async {
+    final current = ref.read(tripOrderSettingProvider);
+    final picked = await showDkOptionsSheet<TripOrder>(
+      context,
+      title: S.sortTitle,
+      options: [
+        for (final order in TripOrder.values)
+          (value: order, label: order.label),
+      ],
+      selected: current,
+    );
+    if (picked == null || !mounted) return;
+    ref.read(tripOrderSettingProvider.notifier).order = picked;
+  }
+
+  /// Scrolls the just-added trip to the middle of the screen, so it is seen
+  /// even in a long list (and clear of the FAB and the snackbar).
+  Future<void> _revealNewTrip() async {
+    final animate = !MediaQuery.disableAnimationsOf(context);
+    await WidgetsBinding.instance.endOfFrame;
+    final row = _newTripKey.currentContext;
+    if (row == null || !row.mounted) return;
+    await Scrollable.ensureVisible(
+      row,
+      alignment: 0.5,
+      duration: animate ? DkMotion.reveal : Duration.zero,
+      curve: Curves.easeOut,
+    );
+  }
+
   Future<void> _addTrip(CalendarDay day) async {
     _snack?.close();
     final trip = await Navigator.of(context).push<Trip>(
@@ -273,5 +312,6 @@ class _DayScreenState extends ConsumerState<DayScreen> {
       tone: DkSnackTone.success,
       fabSize: _fabKey.currentContext?.size,
     );
+    unawaited(_revealNewTrip());
   }
 }
