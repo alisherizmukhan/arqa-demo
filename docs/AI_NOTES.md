@@ -1,123 +1,156 @@
-# AI notes (draft)
+# Заметки об ИИ (черновик)
 
-A running log of where the AI assistant was unsure, got something wrong first, and what was fixed. Raw material for the final write-up.
+Журнал случаев, где ИИ-ассистент сомневался, ошибался с первого раза, и что было исправлено. Материал для итогового отчёта.
 
-## Stage 1 — skeleton
+## Этап 1 — каркас
 
-- **Dart 3.13 constructor syntax.** The first version of the placeholder widgets used the classic `const App({super.key});`. `very_good_analysis` 11 on Dart 3.13 flags it (`unnecessary_type_name_in_constructor`) and wants the newer `const new({super.key});`. Fixed; all new code uses the new form.
-- **Windows app-control policy blocks `pytest.exe`** (the uv-generated console shim), while `ruff.exe`/`mypy.exe` run fine. Locally, tests run via `uv run python -m pytest`; CI on Linux uses `uv run pytest`. Not a code issue, but it's worth knowing when reproducing on Windows.
-- **Seed data vs. the reference case.** When adding more demo trips, it's easy to break the reference day by accident: a trip at `2026-10-01T19:30Z` *looks* like 10-01 but is 00:30 on 10-02 in +05:00. Kept it on purpose as a boundary example and checked that 10-01 still has only `t1` and `t2`.
-- **Trip id format.** The requirements say the client generates a UUID v4, but the given input uses `t1`/`t2`. Chose an opaque string id so both work (see DECISIONS.md) instead of silently rewriting the seed ids.
+- **Синтаксис конструкторов Dart 3.13.** В первой версии виджетов-заглушек был классический `const App({super.key});`. `very_good_analysis` 11 на Dart 3.13 помечает его (`unnecessary_type_name_in_constructor`) и требует новую форму `const new({super.key});`. Исправлено, весь новый код использует новую форму.
+- **Политика контроля приложений Windows блокирует `pytest.exe`** (обёртку, которую создаёт uv), а `ruff.exe` и `mypy.exe` работают. Локально тесты запускаются через `uv run python -m pytest`, в CI на Linux — через `uv run pytest`. Это не ошибка кода, но это полезно знать при запуске на Windows.
+- **Демо-данные и эталонный день.** При добавлении поездок легко случайно сломать эталонный день. Поездка `2026-10-01T19:30Z` *выглядит* как 10-01, но в +05:00 это 00:30 следующего дня, 10-02. Она оставлена намеренно как пример границы дня. Проверено, что в 10-01 по-прежнему только `t1` и `t2`.
+- **Формат `id` поездки.** По требованиям клиент генерирует UUID v4, но во входных данных `id` — `t1` и `t2`. Выбран непрозрачный строковый `id`, чтобы работало и то, и другое (см. DECISIONS.md). Переписывать `id` в данных молча не стали.
 
-## Stage 2 — backend domain
+## Этап 2 — домен бэкенда
 
-- **Cash vs. card split.** The first draft used `if payment is CASH: … else: card += …`, so any future payment method would silently be counted as card. Switched to an exhaustive `match` with `assert_never`, which mypy checks.
-- **`bool` is an `int` in Python.** `isinstance(True, int)` is `True`, so a naive `isinstance` check would accept `amount: true` as 1 tenge. The domain uses `type(x) is int`, with a test for it. (On the API side, Pydantic strict ints must also reject it — to verify in stage 3.)
-- **Day boundaries — the classic wrong approaches**, called out explicitly so they don't creep in later:
-  - `WHERE date(start) = :day` in SQL uses the DB session timezone (UTC). Trips between 00:00 and 05:00 Almaty time would land on the previous day.
-  - Building the boundary with `datetime.combine(day, time.min)` *without* `tzinfo` and then treating it as UTC shifts the window by 5 hours.
-  - An inclusive end (`<= 23:59:59`) drops trips at `23:59:59.5`.
-  The domain uses an aware, half-open window, converted to UTC for querying. A property test checks that the UTC window always agrees with the local-calendar day for any offset between −14:00 and +14:00.
-- **Unsure: should the summary filter out-of-day trips or fail?** Chose to fail (`ValueError`). Silently filtering would hide a wrong repository query behind plausible-looking but wrong totals.
-- **Unsure: is the same trip with a different offset notation a "different payload"?** Decided no — instants are compared — otherwise a client that normalizes to UTC on retry would get a spurious 409.
-- **Known pitfall for stage 3:** in a URL query string `+` decodes to a space, so `?tz=+05:00` reaches the server as `" 05:00"`. The domain parser is strict on purpose (a test rejects `" 05:00"`); the API layer must handle this explicitly.
+- **Разделение наличных и карты.** Первый вариант: `if payment is CASH: … else: card += …`. Любой будущий способ оплаты молча посчитался бы как карта. Заменено на исчерпывающий `match` с `assert_never`, который проверяет mypy.
+- **В Python `bool` — это `int`.** `isinstance(True, int)` даёт `True`, поэтому наивная проверка `isinstance` приняла бы `amount: true` как 1 тенге. Домен использует `type(x) is int`, на это есть тест. На стороне API строгие целые Pydantic тоже должны отвергать `true` — проверить на этапе 3.
+- **Границы дня — классические ошибки.** Они названы явно, чтобы не появились позже:
+  - `WHERE date(start) = :day` в SQL использует пояс сессии базы (UTC). Поездки между 00:00 и 05:00 по Алматы попали бы в предыдущий день.
+  - Если собрать границу через `datetime.combine(day, time.min)` *без* `tzinfo` и считать её UTC, окно сдвинется на 5 часов.
+  - Включительный конец (`<= 23:59:59`) теряет поездки в `23:59:59.5`.
 
-## Stage 3 — persistence, API, idempotency
+  Домен использует окно с поясом, полуоткрытое, и переводит его в UTC для запроса. Тест свойств проверяет, что UTC-окно совпадает с локальным календарным днём для любого смещения от −14:00 до +14:00.
+- **Сомнение: отфильтровать поездки чужого дня в итогах или упасть?** Выбрано падение (`ValueError`). Тихая фильтрация спрятала бы неверный запрос в репозитории за правдоподобными, но неверными итогами.
+- **Сомнение: та же поездка с другой записью смещения — это «другие данные»?** Решено, что нет: сравниваются моменты времени. Иначе клиент, который при повторе приводит время к UTC, получил бы ложный 409.
+- **Ловушка на этап 3:** в строке запроса `+` превращается в пробел, и `?tz=+05:00` приходит на сервер как `" 05:00"`. Парсер домена намеренно строгий (тест отвергает `" 05:00"`). Слой API должен обработать это явно.
 
-- **Proved the concurrency test can actually fail.** I temporarily replaced `INSERT … ON CONFLICT DO NOTHING` with a check-then-insert (`get` then `add`). All three race tests failed with `UniqueViolationError` → 500 (20 concurrent POSTs of one trip; mixed payloads; 10 sessions racing in the repository). After restoring, they pass. Without this check, a concurrency test that passes proves nothing.
-- **First version of datetime validation was wrong.** I used `Annotated[AwareDatetime, Strict()]` to reject unix timestamps. Every valid POST then failed with "Input should be a valid datetime": FastAPI decodes the JSON first and validates in *Python* mode, where strict datetime refuses strings. Replaced with a `BeforeValidator` that only lets strings through. Caught by a manual smoke test before writing tests.
-- **Alembic naming convention applied twice.** The migration had explicit names like `ck_trips_amount_positive` *and* the metadata had a `ck_%(table_name)s_%(constraint_name)s` convention, producing `ck_trips_ck_trips_amount_positive`. Fixed by using short names in the migration; verified with `\d trips`.
-- **`+` in query strings** (flagged in stage 2): confirmed that `?tz=+05:00` arrives as `" 05:00"`. Handled in the API layer; an integration test covers raw `+`, `%2B` and the default.
-- **Two of my own test bugs** — a `start` passed twice, and `f"T{hour}:00"` producing `T9:00` — showed up as failures. The second one was hidden because the test didn't assert the POST status; added that assertion. Worth noting: the server rejected `T9:00` correctly.
-- **Port clash:** another project's Postgres container already used 5432 on this machine. Moved ours to 5433 instead of stopping someone else's container.
-- **Railway specifics I wasn't sure about** and handled defensively: Railway's `DATABASE_URL` uses `postgresql://` (sometimes `postgres://`); asyncpg rejects libpq's `sslmode` (rewritten to `ssl`); BuildKit cache mounts need Railway-specific ids (not used); `$PORT` is injected (the container honors it — tested with `PORT=9000`).
-- **First Railway deploy failed: Railway used Railpack instead of the Dockerfile.** The root `.dockerignore` (`*` + allow-list for `backend/` and the seed file) is also applied by Railway to the *uploaded snapshot*, so `railway.json` (which points at `backend/Dockerfile`) was filtered out and Railway fell back to auto-detection. Fixed with `!railway.json` in `.dockerignore`. The local `docker build` couldn't catch this, because locally the build config is passed on the command line.
-- **…and the second deploy still used Railpack.** With `railway.json` in the snapshot, Railway still ignored it: the service had no config-file path, and setting one is now refused ("Config as Code is deprecated"; CLI 5.52). My assumption that `railway.json` drives the build was outdated for new services. Fixed by setting the builder, Dockerfile path and healthcheck directly on the service, and documented the extra step in the README. Lesson: verify the platform's *effective* service config (`get-service-config`) instead of assuming the config file applies.
+## Этап 3 — хранение, API, идемпотентность
 
-## Stage 4 — design kit
+- **Доказано, что тест конкурентности может упасть.** Я временно заменил `INSERT … ON CONFLICT DO NOTHING` на «проверить, потом вставить» (`get`, затем `add`). Все три теста гонок упали с `UniqueViolationError` → 500: 20 параллельных POST одной поездки, смешанные данные, 10 сессий в репозитории. После возврата кода они проходят. Без такой проверки зелёный тест конкурентности ничего не доказывает.
+- **Первая версия проверки дат была неверной.** Для запрета unix-времени я использовал `Annotated[AwareDatetime, Strict()]`. После этого каждый корректный POST падал с «Input should be a valid datetime». FastAPI сначала декодирует JSON и проверяет в режиме *Python*, а там строгий datetime не принимает строки. Заменено на `BeforeValidator`, который пропускает только строки. Найдено ручной проверкой до написания тестов.
+- **Соглашение об именах Alembic применилось дважды.** В миграции были явные имена вроде `ck_trips_amount_positive`, а в метаданных — соглашение `ck_%(table_name)s_%(constraint_name)s`. Получилось `ck_trips_ck_trips_amount_positive`. Исправлено короткими именами в миграции, проверено через `\d trips`.
+- **`+` в строке запроса** (отмечено на этапе 2): подтверждено, что `?tz=+05:00` приходит как `" 05:00"`. Обрабатывается в слое API. Интеграционный тест покрывает «сырой» `+`, `%2B` и значение по умолчанию.
+- **Две ошибки в моих собственных тестах.** Первая: `start` передан дважды. Вторая: `f"T{hour}:00"` давал `T9:00`. Обе проявились как падения. Вторая была скрыта, потому что тест не проверял статус POST; эта проверка добавлена. Сервер при этом правильно отверг `T9:00`.
+- **Конфликт портов.** Postgres другого проекта уже занимал 5432 на этой машине. Наш перенесён на 5433, чужой контейнер не останавливали.
+- **Особенности Railway, в которых я не был уверен**, обработаны с запасом:
+  - `DATABASE_URL` на Railway использует `postgresql://`, иногда `postgres://`;
+  - asyncpg не принимает `sslmode` из libpq, он переписывается в `ssl`;
+  - кеш-монтирования BuildKit требуют специфичных для Railway id, поэтому не используются;
+  - `$PORT` подставляется платформой, контейнер его учитывает (проверено с `PORT=9000`).
+- **Первый деплой на Railway упал: Railway собрал через Railpack, а не по Dockerfile.** Корневой `.dockerignore` (`*` плюс список разрешённых: `backend/` и файл данных) Railway применяет и к *загружаемому снимку*. `railway.json` (с путём к `backend/Dockerfile`) отфильтровался, и Railway перешёл на автоопределение. Исправлено строкой `!railway.json` в `.dockerignore`. Локальный `docker build` этого поймать не мог: локально настройки сборки передаются в командной строке.
+- **…и второй деплой тоже пошёл через Railpack.** `railway.json` попал в снимок, но Railway его всё равно проигнорировал. У сервиса не был задан путь к файлу конфигурации, а задать его теперь нельзя («Config as Code is deprecated», CLI 5.52). Моё предположение, что `railway.json` управляет сборкой, для новых сервисов устарело. Исправлено: сборщик, путь к Dockerfile и healthcheck заданы прямо в настройках сервиса, дополнительный шаг описан в README. Урок: проверять *фактическую* конфигурацию сервиса (`get-service-config`), а не полагаться на файл.
 
-- **The skill's recommendation needed filtering.** `--design-system` returned a landing-page pattern ("Enterprise Gateway"), Playfair Display as the *body* font, and "light mode not recommended". I kept the parts that fit (OLED dark, green for earnings, slate neutrals), re-queried color/typography separately as the skill instructs, and rejected the rest with reasons in DESIGN.md.
-- **Font assumptions verified, not trusted.** I checked both candidate fonts with fontTools instead of assuming Cyrillic / `₸` support: both have them. Inter needs the `tnum` feature, while IBM Plex has tabular digits by default.
-- **License catch.** My first plan was to subset Plex into four static weights. The OFL's Reserved Font Name clause makes that a "Modified Version" that may not be called "Plex". Switched to the unmodified variable font, which was about the same size anyway.
-- **Repeated a lint mistake from stage 1** (`const ClassName(` instead of Dart 3.13's `const new(`) across all new files. `dart fix --apply` corrected it mechanically.
-- **Loading-button semantics bug, found by a test:** the `Semantics(value: 'Загрузка')` wrapper became a separate node, so a screen reader would not announce "loading" together with the button. Fixed with `MergeSemantics`.
-- **`textContrastGuideline` failure that wasn't a contrast problem.** The dark theme failed at 1.13:1 for the "Оплата" label. Two wrong guesses first: semantics merging, and off-screen widgets. Reading the flutter_test source showed it samples the `Text` widget's paint box plus 4px: the stretched label was 768px wide with a few glyphs, and the margin reached the neighbor's fill. I printed the real color (#F8FAFC, 19:1). The fix was layout, not color: size the label to its text.
-- **`SegmentedButton` ignores `minimumSize`.** My 56dp token was silently rendered as a 40dp box with 48dp tap padding. Found via a semantics dump, confirmed in the SDK source, and replaced with custom segments.
-- **Screenshot artifact:** at 412px, headless Edge cropped the right side. That looked like an overflow, but a 600px screenshot and a 360dp widget test showed the layout was correct; the cause is headless Edge's minimum window width.
+## Этап 4 — дизайн-кит
 
-## Backend review (requested before stage 5)
+- **Рекомендацию навыка пришлось фильтровать.** `--design-system` вернул шаблон лендинга («Enterprise Gateway»), Playfair Display как шрифт *основного текста* и «светлая тема не рекомендуется». Я оставил подходящее (тёмная OLED-тема, зелёный для заработка, нейтральные slate-цвета), отдельно перезапросил цвета и типографику, как требует навык, а остальное отклонил с причинами в DESIGN.md.
+- **Предположения о шрифтах проверены, а не взяты на веру.** Оба шрифта-кандидата проверены через fontTools на кириллицу и `₸` — они есть в обоих. Inter нужна функция `tnum`, у IBM Plex табличные цифры по умолчанию.
+- **Лицензия.** Сначала я хотел урезать Plex до четырёх статических начертаний. По пункту OFL о зарезервированном имени это «изменённая версия», и называть её «Plex» нельзя. Перешёл на неизменённый вариативный шрифт, по размеру получилось примерно так же.
+- **Повторил ошибку линтера с этапа 1** (`const ClassName(` вместо `const new(` из Dart 3.13) во всех новых файлах. `dart fix --apply` исправил механически.
+- **Ошибка семантики кнопки загрузки, найдена тестом.** Обёртка `Semantics(value: 'Загрузка')` стала отдельным узлом, и скринридер не объявил бы «загрузка» вместе с кнопкой. Исправлено через `MergeSemantics`.
+- **Падение `textContrastGuideline`, которое не было проблемой контраста.** Тёмная тема падала с 1.13:1 на подписи «Оплата». Сначала были две неверные догадки: слияние семантики и виджеты за экраном. Исходники flutter_test показали, что проверка берёт область отрисовки `Text` плюс 4 px. Растянутая подпись была шириной 768 px при нескольких символах, и запас задевал заливку соседа. Я вывел реальный цвет: #F8FAFC, 19:1. Исправление — вёрстка, а не цвет: подпись теперь по размеру текста.
+- **`SegmentedButton` игнорирует `minimumSize`.** Мой токен 56 dp молча рисовался коробкой 40 dp с отступом до 48 dp для нажатия. Найдено по дампу семантики, подтверждено в исходниках SDK, заменено своими сегментами.
+- **Артефакт скриншота.** На 412 px безголовый Edge обрезал правую часть. Это было похоже на переполнение, но скриншот на 600 px и виджет-тест на 360 dp показали, что вёрстка верна. Причина — минимальная ширина окна безголового Edge.
 
-- **Found two 500s by probing edge cases by hand**, not via the test suite: `GET /summary?date=0001-01-01` and a POST with a year-1 timestamp both overflowed when converting to UTC. `date=9999-12-31` happened to work, which shows how easy this is to miss. Fixed with a supported 2000–2099 range; the four extreme dates are now regression tests.
-- **Missing CORS** would have broken the Flutter web demo in stage 5. Easy to forget when the target is "a mobile app".
-- **My own new rule broke an old test:** the day-boundary test used one shared end time, which made the first trip longer than 24h. The test data was wrong, not the rule.
-- **Coverage first reported 87% for `routes.py` with lines that obviously run.** The cause was coverage not tracing greenlets (SQLAlchemy async). With `concurrency = ["greenlet", "thread"]` the real number is 99%.
-- **Generated demo data must not break the reference case.** The generator never writes to 2026-09-30 .. 10-03 (days the tests pin down), and a check recomputes every day's summary from the file.
+## Ревью бэкенда (по запросу перед этапом 5)
 
-## Stage 5 — mobile app
+- **Две ошибки 500 найдены ручной проверкой граничных случаев**, не тестами. `GET /summary?date=0001-01-01` и POST с временем первого года переполнялись при переводе в UTC. `date=9999-12-31` случайно работал — видно, как легко это пропустить. Исправлено поддерживаемым диапазоном 2000–2099, четыре крайние даты стали регрессионными тестами.
+- **Без CORS** сломалась бы веб-демонстрация Flutter на этапе 5. Об этом легко забыть, когда цель — мобильное приложение.
+- **Моё новое правило сломало старый тест.** Тест границы дня использовал общее время окончания, и первая поездка получалась длиннее 24 часов. Ошибка была в данных теста, а не в правиле.
+- **Покрытие `routes.py` сначала показывало 87 %, хотя строки явно выполняются.** Причина: coverage не отслеживал гринлеты (асинхронный SQLAlchemy). С `concurrency = ["greenlet", "thread"]` реальная цифра — 99 %.
+- **Сгенерированные демо-данные не должны ломать эталонный день.** Генератор не пишет в 2026-09-30 .. 10-03 (дни, зафиксированные тестами), а проверка пересчитывает итоги каждого дня из файла.
 
-- **Dart 3.13 constructor syntax, again, but harder.** `dart fix --apply` hung for minutes (killed). The analyzer rejects `factory new(...)` but flags `factory ClassName(...)`. Instead of guessing, I wrote a probe file with three variants and let the analyzer pick: unnamed factory `factory (...)`, private named `const new _(...)`.
-- **freezed 4 + primary constructors produce no JSON.** The first DTOs (primary-constructor style, as freezed's README now recommends) generated `*.freezed.dart` but no `*.g.dart`. A one-class probe confirmed the classic factory form works with the new syntax.
-- **`build_runner` removed `--delete-conflicting-outputs`.** The CI step from stage 1 used it, so CI would have failed on the mobile job. The CI stale-code check also used `git diff`, which misses *new* generated files; it now uses `git status --porcelain`.
-- **New enum value caught by the compiler:** dio 5.11 added `DioExceptionType.transformTimeout`; the exhaustive `switch` in the failure mapper refused to compile until it was handled.
-- **A UX bug found by a widget test:** the form validator returned early when times were missing, so "commission larger than amount" stayed hidden until both times were picked. Split the rules into `validateMoney` / `validateTimes`.
-- **A test name that claimed too much:** "client-side errors, then a server conflict" never reached the conflict (that needs time pickers). Renamed it to what it checks; the conflict/id-reuse logic is covered by provider tests.
-- **Time zone trap avoided on purpose:** "today" and day boundaries use the driver's offset, not `DateTime.now()`'s device zone. A provider test fixes "now" at 20:00Z, which is already the next day in +05:00.
-- **Verified against reality, not just mocks:** the web build ran against the deployed API (today's total matched the API's `/summary` exactly), and the live contract tests ran the real dio/DTO/repository stack against a local backend (create → 200 on retry → 409 → listing by local day, and a server 422 mapped to a field error).
+## Этап 5 — мобильное приложение
 
-## Redesign — stage R1/R2 (audit, tokens)
+- **Снова синтаксис конструкторов Dart 3.13, но сложнее.** `dart fix --apply` завис на несколько минут, его пришлось остановить. Анализатор отвергает `factory new(...)`, но ругается на `factory ClassName(...)`. Вместо угадывания я написал пробный файл с тремя вариантами и дал анализатору выбрать: безымянная фабрика `factory (...)`, приватный именованный `const new _(...)`.
+- **freezed 4 с первичными конструкторами не генерирует JSON.** Первые DTO в стиле первичных конструкторов (как теперь советует README freezed) дали `*.freezed.dart`, но не `*.g.dart`. Проба на одном классе подтвердила, что классическая фабрика работает с новым синтаксисом.
+- **`build_runner` убрал `--delete-conflicting-outputs`.** Шаг CI с этапа 1 использовал этот флаг, и задача приложения в CI упала бы. Проверка устаревшей кодогенерации в CI использовала `git diff`, который не видит *новые* сгенерированные файлы. Теперь там `git status --porcelain`.
+- **Новое значение enum поймал компилятор.** dio 5.11 добавил `DioExceptionType.transformTimeout`. Исчерпывающий `switch` в преобразователе ошибок не компилировался, пока значение не обработали.
+- **Ошибка UX, найденная виджет-тестом.** Валидатор формы выходил раньше времени, если не было времени поездки, и ошибка «комиссия больше суммы» не показывалась, пока не выбраны оба времени. Правила разделены на `validateMoney` и `validateTimes`.
+- **Название теста обещало больше, чем проверял тест.** «Ошибки на клиенте, потом конфликт с сервером» до конфликта не доходил: для этого нужны выборщики времени. Тест переименован по тому, что он проверяет. Логика конфликта и повторного `id` покрыта тестами провайдеров.
+- **Ловушка часового пояса обойдена намеренно.** «Сегодня» и границы дня используют смещение водителя, а не пояс устройства из `DateTime.now()`. Тест провайдера фиксирует «сейчас» на 20:00Z, а в +05:00 это уже следующий день.
+- **Проверено на реальном API, а не только на моках.**
+  - Веб-сборка работала с развёрнутым API, и итог дня совпал с `/summary` API.
+  - Живые контрактные тесты прогнали настоящий стек dio/DTO/репозитория против локального бэкенда: создание → 200 на повтор → 409 → список по локальному дню, плюс серверный 422 → ошибка у поля.
 
-- **Font coverage checked before trusting the spec.** fontTools showed that Manrope — the font DESIGN.md mandates — has no `₸` and no U+202F, the two characters the spec's money format relies on. Raised in the audit; fallback approved.
-- **The fallback golden caught a mockup-vs-spec difference, and I measured instead of eyeballing.** In the first golden, "3 315" looked like "3315". A probe golden was too small to judge, so I measured `TextPainter` widths: U+202F is present but narrow by definition (≈0.1 em: 1.7 px at 17 px, ~4 px in the hero). The mockups draw group gaps at roughly a normal space (~0.25 em). Kept U+202F (DESIGN.md wins) and raised it as an open question rather than silently "fixing" the string.
-- **Spec conformance as a test, not a promise.** Instead of re-typing hex values into assertions (which would only test that I copied my own code), the test parses DESIGN.md's tables and compares.
-- **Small slips caught by the tools:** `expect()` called while declaring groups (not allowed outside a test); comparing freshly lerped extensions with `==` (no value equality); the wider real font overflowing a showcase row at 360 dp. Two long shell heredocs with Cyrillic text failed to parse in Git Bash; scripts now go through files.
-- **"CI goldens are cross-platform" was an assumption, and it was wrong.** Before relying on it, I ran the kit tests with `CI=true` in a Linux container (Flutter 3.47.6 cloned inside Ubuntu; the public Flutter images stop at 3.44). The Windows-generated CI goldens failed there. CI goldens are now generated on Linux by a script and compared only in CI; Windows compares the real-font goldens. Without this check the first push would have turned the design-kit CI job red.
+## Редизайн — этапы R1/R2 (аудит, токены)
 
-## Redesign — stage R3 (components)
+- **Покрытие шрифта проверено до того, как довериться спецификации.** fontTools показал, что в Manrope, который требует DESIGN.md, нет `₸` и U+202F — двух символов, на которых держится формат денег. Вынесено в аудит, запасной шрифт согласован.
+- **Голден запасного шрифта выявил разницу между макетом и спецификацией, и я измерял, а не оценивал на глаз.**
+  - В первом голдене «3 315» выглядело как «3315». Пробный голден был слишком мелким, поэтому я измерил ширину через `TextPainter`.
+  - U+202F на месте, но он узкий по определению: ≈0.1 em, то есть 1.7 px при 17 px и около 4 px в крупной сумме. В макетах промежуток между группами примерно как обычный пробел (~0.25 em).
+  - U+202F оставлен (DESIGN.md главнее), а вопрос вынесен как открытый. Строку молча «чинить» не стали.
+- **Соответствие спецификации — тест, а не обещание.** Вместо того чтобы перепечатывать hex-значения в проверки (это проверило бы лишь, что я скопировал свой же код), тест разбирает таблицы DESIGN.md и сравнивает.
+- **Мелкие промахи, пойманные инструментами:**
+  - `expect()` вызывался при объявлении групп, а вне теста так нельзя;
+  - свежеинтерполированные расширения сравнивались через `==`, хотя равенства по значению у них нет;
+  - более широкий настоящий шрифт переполнял строку витрины на 360 dp;
+  - два длинных heredoc с кириллицей не разобрались в Git Bash, теперь скрипты идут через файлы.
+- **«CI-голдены кроссплатформенные» — это было предположение, и оно оказалось неверным.** Прежде чем на него опираться, я прогнал тесты кита с `CI=true` в Linux-контейнере: Flutter 3.47.6 клонирован внутри Ubuntu, публичные образы Flutter заканчиваются на 3.44. Голдены, созданные на Windows, там упали. Теперь CI-голдены генерирует скрипт на Linux и сравниваются они только в CI, а Windows сравнивает голдены с настоящими шрифтами. Без этой проверки первый пуш сделал бы задачу дизайн-кита в CI красной.
 
-- **A kit bug that kit tests could not see:** `DkButton` centred its content with `Center(widthFactor: 1)`. Without `heightFactor`, a `Center` fills all the height it is offered. Every kit test rendered buttons inside scroll views (unbounded height), where that is harmless. In the app the button sits in `Scaffold.bottomNavigationBar`, grew to the whole screen and squeezed the Day list to zero height. The app's own widget tests caught it; diagnosing took four steps (texts on screen → exception → provider state → widget counts) before the layout was the obvious suspect. Fixed, with a kit regression test that puts the button in a bottom bar.
-- **Overflow found by a 360 dp test with maximum amounts:** the trip tile's amount column was rigid and overflowed by 8.5 px; now flexible, and tested at text scale 1.0 and 1.3.
-- **Two of my own tests asserted impossible states:** a Backspace "right after the gap" that the controller never allows (its caret is moved in front of the gap), and an arrow-key expectation that contradicted the one-stop design. Replaced with real key sequences plus a direct unit test of the formatter for the separator-only deletion.
-- **Goldens caught visual details that tests missed:** the field helper «На руки с поездки: 2040₸» rendered without the wide gap (helpers were plain `Text`), the dark "focused" field was not focused at all (alchemist renders both themes in one tree, so only one field can hold focus), and the loading spinner's first frame is an invisible dot.
-- **Checked the spec's icon name against its intent:** DESIGN.md maps the empty state to Lucide `route` "(road)", and the mockup shows a road. Rendering showed Lucide `route` is a connected path, so the closer Lucide `road` glyph is used (found in the font metadata, not in the Dart API).
-- **Linux check before claiming CI is green:** the full Dart suite (kit 158, showcase 6, app 61) and analyze ran in the Linux container against the regenerated CI goldens.
+## Редизайн — этап R3 (компоненты)
 
-## Redesign — stage R4 (screens)
+- **Ошибка кита, которую тесты кита не видели.**
+  - `DkButton` центрировал содержимое через `Center(widthFactor: 1)`, а `Center` без `heightFactor` занимает всю предложенную высоту.
+  - Все тесты кита рендерили кнопки внутри прокрутки (неограниченная высота), где это безвредно.
+  - В приложении кнопка стояла в `Scaffold.bottomNavigationBar`, растянулась на весь экран и сжала список дня до нулевой высоты.
+  - Поймали собственные виджет-тесты приложения. На диагностику ушло четыре шага (тексты на экране → исключение → состояние провайдера → число виджетов), прежде чем вёрстка стала очевидным подозреваемым.
+  - Исправлено, и в ките появился регрессионный тест с кнопкой в нижней панели.
+- **Переполнение найдено тестом на 360 dp с максимальными суммами.** Колонка суммы в строке поездки была жёсткой и переполнялась на 8.5 px. Теперь она гибкая и проверяется при масштабе текста 1.0 и 1.3.
+- **Два моих теста проверяли невозможные состояния.** Первый: Backspace «сразу после промежутка», который контроллер не допускает (курсор переносится перед промежутком). Второй: ожидание для стрелок, которое противоречило задуманной «одной остановке». Заменены настоящими последовательностями клавиш плюс прямым модульным тестом форматтера для удаления одного разделителя.
+- **Голдены поймали визуальные детали, которые пропустили тесты:**
+  - подсказка поля «На руки с поездки: 2040₸» шла без широкого промежутка, потому что подсказки были обычным `Text`;
+  - «сфокусированное» поле в тёмной теме не было в фокусе: alchemist рендерит обе темы в одном дереве, и фокус может держать только одно поле;
+  - первый кадр индикатора загрузки — невидимая точка.
+- **Имя иконки из спецификации проверено по смыслу.** DESIGN.md сопоставляет пустому состоянию Lucide `route` «(дорога)», и в макете нарисована дорога. Рендер показал, что Lucide `route` — это связанный путь, поэтому используется более близкий глиф Lucide `road`. Он найден в метаданных шрифта, а не в Dart API.
+- **Проверка на Linux до заявления «CI зелёный».** Весь набор Dart (кит 158, витрина 6, приложение 61) и analyze прогнаны в Linux-контейнере против перегенерированных CI-голденов.
 
-- **Real-font screenshots found three kit bugs that every test had missed:**
-  - the split bar was never drawn (segments 0 px high);
-  - the «+1 день» badge filled its line, so it always wrapped. R3 had blamed this on "~1 px too narrow", which was wrong; the note in DECISIONS.md is corrected.
-  - trip amounts stopped short of the right padding.
-  
-  Each fix has a regression test. The first replacement for the amount column used `LayoutBuilder`, and alchemist's table layout exposed that it breaks intrinsic sizing, so it was reworked.
-- **Widget tests measure with the Ahem test font unless real fonts are loaded:** every glyph is a full em wide. The first snackbar-placement tests "proved" the wrong branch. Every geometry check (badge line, snackbar vs FAB, dialog label lines, the layout matrix) now loads the app's fonts from `FontManifest.json`.
-- **A screen test caught a real form gap:** «Сумма должна быть больше 0» was only checked once the commission was filled too, so it never appeared on blur. The amount rule now runs on its own.
-- **Item 4 measured, not assumed:** «Сохранить как новую поездку» fits at 390 dp, but not at 360 dp (216 dp available vs ~240 needed). The fallback (two centred lines, button grows) also showed the label touching the button edges at text scale 1.3, which led to `DkButton` keeping the spec-derived 16 dp insets.
-- **Commit hygiene slip, fixed before anything was pushed:** a staged `git rm` was swept twice into an unrelated commit (`git commit` takes everything staged). Both times the local history was repaired: the files were restored in that commit with a scripted rebase, or the two newest commits were redone, and each commit's file list was checked before committing.
+## Редизайн — этап R4 (экраны)
 
-## Redesign — stage R5 (UI behaviour)
+- **Скриншоты с настоящими шрифтами нашли три ошибки кита, которые пропустили все тесты:**
+  - полоса долей вообще не рисовалась (сегменты высотой 0 px);
+  - плашка «+1 день» занимала всю строку и поэтому всегда переносилась. На R3 причину объяснили как «не хватает ~1 px», это было неверно; заметка в DECISIONS.md исправлена;
+  - суммы поездок не доходили до правого отступа.
 
-- **A behaviour test found an overlay bug no screenshot could show.** "Close the form while resending" failed because the tap on «Закрыть» landed on the offline snackbar: it is an overlay entry above routes pushed later, so it sat over the dialog. The same would have hidden the time picker's buttons. The fix is in the kit (a snackbar draws only while its screen is current) and has its own test.
-- **The first R5 screenshot of a failed refresh showed the error snackbar over the FAB**, the same overlap rule 2 had settled for the success snackbar. It is now placed above the FAB, and the screen test checks the gap.
-- **`Scaffold.bottomNavigationBar` stays behind the keyboard,** so the pinned Save of §5.6 would have been hidden while typing. A test with a keyboard inset pins it down now.
-- **Retry timing is tested with fake time** at each step (just before and just after 2/4/8/30/30 s), including that «Повторить» restarts the schedule and that an edit stops it, so the schedule cannot drift silently.
-- **No copy for the discard dialog exists in DESIGN.md §6.** The text is proposed and flagged in DECISIONS.md rather than presented as spec.
+  У каждого исправления есть регрессионный тест. Первая замена колонки суммы использовала `LayoutBuilder`, и табличная вёрстка alchemist показала, что он ломает внутренние размеры, поэтому её переделали.
+- **Виджет-тесты измеряют тестовым шрифтом Ahem, если не загрузить настоящие шрифты.** В Ahem каждый символ шириной в целый em. Первые тесты положения снэкбара «доказали» не ту ветку. Теперь каждая проверка геометрии загружает шрифты приложения из `FontManifest.json`: строка плашки, снэкбар против FAB, строки подписей диалога, матрица вёрстки.
+- **Тест экрана нашёл реальный пробел в форме.** «Сумма должна быть больше 0» проверялась, только когда заполнена и комиссия, поэтому при уходе с поля не появлялась. Правило суммы теперь работает отдельно.
+- **Пункт 4 измерен, а не предположен.**
+  - «Сохранить как новую поездку» помещается на 390 dp, но не на 360 dp: доступно 216 dp, нужно около 240.
+  - Запасной вариант — две строки по центру, кнопка растёт. При масштабе текста 1.3 подпись касалась краёв кнопки.
+  - Поэтому `DkButton` сохранил отступы 16 dp из спецификации.
+- **Промах в гигиене коммитов, исправлен до пуша.** Подготовленный `git rm` дважды попал в посторонний коммит (`git commit` берёт всё подготовленное). Оба раза локальная история была исправлена: файлы восстанавливались в том коммите скриптовым rebase, или два последних коммита переделывались заново. Список файлов каждого коммита теперь проверяется перед коммитом.
+
+## Редизайн — этап R5 (поведение интерфейса)
+
+- **Тест поведения нашёл ошибку слоёв, которую не показал бы ни один скриншот.** «Закрыть форму во время повторной отправки» падал, потому что нажатие на «Закрыть» попадало в снэкбар «нет связи». Снэкбар — это запись в оверлее поверх маршрутов, открытых позже, поэтому он лежал над диалогом. То же скрыло бы кнопки выбора времени. Исправлено в ките: снэкбар рисуется, только пока его экран текущий. На это есть отдельный тест.
+- **Первый скриншот R5 с неудачным обновлением показал снэкбар ошибки поверх FAB.** Это то же перекрытие, которое правило 2 уже решило для снэкбара успеха. Теперь он ставится над FAB, тест экрана проверяет зазор.
+- **`Scaffold.bottomNavigationBar` остаётся за клавиатурой,** поэтому закреплённая кнопка «Сохранить» из §5.6 пряталась бы при вводе. Теперь это зафиксировано тестом с отступом клавиатуры.
+- **Расписание повторов проверено с поддельным временем** на каждом шаге: чуть до и чуть после 2/4/8/30/30 с. Проверено и то, что «Повторить» перезапускает расписание, а правка формы его останавливает. Расписание не может незаметно поплыть.
+- **Текста для диалога «закрыть без сохранения» в DESIGN.md §6 нет.** Текст предложен и помечен в DECISIONS.md, а не выдан за спецификацию.
+
+## После редизайна — правки по отзыву
+
+- **Пуш с красным CI.** После правки строки поездки (мета-строка «30 мин · Наличные» теперь в одну строку) локальные голдены прошли, а CI-голден экрана дня упал (расхождение 1.63 %). В CI-голденах текст рисуется широкими прямоугольниками, и раньше эта строка там переносилась. Я обновил только голдены Windows и не перегенерировал CI-голден на Linux до пуша, хотя README это требует. Исправлено запуском `tool/update_ci_goldens.sh` в Docker. Урок: после любой визуальной правки кита перегенерировать CI-голдены до пуша.
+- **Подпись с долей не помещалась в узкую плитку.** «Наличные · 17%» переносилось на 360 dp. Сначала я проверил только скриншот на 390 dp, где всё помещалось. Отдельный рендер на 360 dp с долей 17/83 показал ту же проблему в строке поездки. Обе строки теперь масштабируются в одну.
 
 
-## Redesign — where the AI deviated from the mockup or spec, and how it was caught
+## Редизайн — где ИИ отошёл от макета или спецификации и как это поймали
 
-Short summary of the R1–R6 notes above.
+Краткая сводка заметок R1–R6 выше.
 
-- **Manrope has no `₸` and no U+202F.** fontTools was run on the bundled font before writing any styles. Fixed with IBM Plex Sans as the fallback (approved), and a golden of «3 315 ₸» in both themes.
-- **U+202F is too narrow next to the mockups (~0.1 em vs ~0.25 em).** `TextPainter` widths were measured after the first money golden looked like «3315». The string keeps U+202F, and rendering widens it, in one place shared by display and the money input (approved option 2).
-- **The spec's field border failed WCAG 3:1** (1.41:1 / 1.54:1). Caught by the contrast unit test. The border is now `#8F95A0` / `#5F6571`, exactly 3.01:1. The suggested `#959CA7` was measured at 2.77:1 and rejected.
-- **Goldens differ between Windows and Linux,** even with text drawn as blocks. Caught by running `CI=true` in a Linux container before the first push. CI goldens are generated on Linux by `tool/update_ci_goldens.sh`; real-font goldens stay local.
-- **`DkButton` filled the whole screen** in the app's bottom bar (a `Center` without `heightFactor`). Every kit test placed it in a scroll view, so the app's widget tests caught it. Fixed, with a bounded-height regression test.
-- **The split bar was never drawn** (empty segments 0 px high). No kit test or golden covered it; the first real-font app screenshot showed it. Fixed, with a test of the segment size; the Day golden covers it now.
-- **The «+1 день» badge always wrapped below the time.** R3 wrongly blamed "~1 px too narrow"; measuring the badge in R4 showed it filled its line (`Container.alignment`). Fixed in the kit, the R3 note corrected, and the end field drops its clock while the badge shows (approved).
-- **Trip amounts stopped short of the right edge.** Seen in the screenshots. The first fix used `LayoutBuilder`, which alchemist's table layout then showed breaks intrinsic sizing, so it was reworked.
-- **Snackbars were drawn above dialogs and pickers.** A behaviour test's tap landed on the offline snackbar instead of the discard dialog. Fixed in the kit: a snackbar shows only while its own screen is current.
-- **Snackbars over the FAB:** the success snackbar beside the FAB was planned; the refresh-failure snackbar overlapped it in an R5 screenshot. Both now go above the FAB when they don't fit beside it (tested).
-- **Save hidden behind the keyboard** (`Scaffold.bottomNavigationBar`). Found while implementing §5.6, then pinned by a test with a keyboard inset.
-- **400/401 were treated as "no connection"** and would have been resent forever. Caught in the pre-R6 check you asked for. Only connection errors, timeouts and 5xx are resent now (tested for each status).
-- **Widget tests measure with the Ahem font,** where every glyph is a full em wide. Placement tests first "passed" for the wrong reason. All geometry tests now load the real fonts.
-- **Commit hygiene:** a staged `git rm` was swept twice into an unrelated commit. Both times it was repaired before pushing, and each commit's file list is now checked before committing.
+- **В Manrope нет `₸` и U+202F.** fontTools запущен на шрифте до написания стилей. Исправлено запасным IBM Plex Sans (согласовано) и голденом «3 315 ₸» в обеих темах.
+- **U+202F слишком узкий по сравнению с макетами (~0.1 em против ~0.25 em).** Ширины `TextPainter` измерены после того, как первый голден денег выглядел как «3315». Строка сохраняет U+202F, а отрисовка расширяет его — в одном месте для показа и для ввода суммы (согласован вариант 2).
+- **Рамка поля из спецификации не проходила WCAG 3:1** (1.41:1 / 1.54:1). Поймано модульным тестом контраста. Рамка теперь `#8F95A0` / `#5F6571`, ровно 3.01:1. Предложенный `#959CA7` дал при замере 2.77:1 и отклонён.
+- **Голдены отличаются между Windows и Linux,** даже если текст рисуется прямоугольниками. Поймано прогоном с `CI=true` в Linux-контейнере до первого пуша. CI-голдены генерирует `tool/update_ci_goldens.sh` на Linux, голдены с настоящими шрифтами остаются локальными.
+- **`DkButton` заполнял весь экран** в нижней панели приложения (`Center` без `heightFactor`). Все тесты кита ставили кнопку в прокрутку, поэтому поймали виджет-тесты приложения. Исправлено, добавлен регрессионный тест с ограниченной высотой.
+- **Полоса долей не рисовалась** (пустые сегменты высотой 0 px). Ни один тест и голден кита это не покрывал, показал первый скриншот приложения с настоящими шрифтами. Исправлено, есть тест размера сегмента, теперь это покрывает и голден экрана дня.
+- **Плашка «+1 день» всегда переносилась под время.**
+  - На R3 причину ошибочно объяснили как «не хватает ~1 px».
+  - Замер плашки на R4 показал, что она занимала всю строку (`Container.alignment`).
+  - Исправлено в ките, заметка R3 поправлена. Поле окончания убирает иконку часов, пока видна плашка (согласовано).
+- **Суммы поездок не доходили до правого края.** Видно на скриншотах. Первое исправление использовало `LayoutBuilder`, и табличная вёрстка alchemist показала, что он ломает внутренние размеры, поэтому его переделали.
+- **Снэкбары рисовались над диалогами и выборщиками.** Нажатие в тесте поведения попало в снэкбар «нет связи», а не в диалог закрытия. Исправлено в ките: снэкбар показывается, только пока его экран текущий.
+- **Снэкбары поверх FAB.** Снэкбар успеха рядом с FAB был запланирован. Снэкбар ошибки обновления перекрыл FAB на скриншоте R5. Теперь оба уходят над FAB, если не помещаются рядом (есть тест).
+- **«Сохранить» пряталась за клавиатурой** (`Scaffold.bottomNavigationBar`). Найдено при реализации §5.6, затем зафиксировано тестом с отступом клавиатуры.
+- **400/401 считались «нет связи»** и повторялись бы бесконечно. Поймано на проверке перед R6, которую вы попросили. Теперь повторяются только ошибки соединения, таймауты и 5xx (тест на каждый статус).
+- **Виджет-тесты измеряют шрифтом Ahem,** где каждый символ шириной в целый em. Тесты положения сначала «проходили» по неверной причине. Все тесты геометрии теперь загружают настоящие шрифты.
+- **Гигиена коммитов.** Подготовленный `git rm` дважды попал в посторонний коммит. Оба раза это исправлено до пуша, и список файлов каждого коммита теперь проверяется перед коммитом.
