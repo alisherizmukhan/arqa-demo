@@ -54,7 +54,6 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   );
   final _amountFocus = FocusNode();
   final _commissionFocus = FocusNode();
-  final GlobalKey _bottomBarKey = GlobalKey();
 
   /// Fields whose errors are shown: left (blur) or picked, §5.7.
   final _touched = <TripField>{};
@@ -65,7 +64,10 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   /// Server 422s for a field, until that field changes.
   final _serverErrors = <TripField, String>{};
 
-  DkSnackbarHandle? _snack;
+  /// The error snackbar above the bottom bar (null: hidden). Part of the
+  /// layout, not an overlay: it stays 12 above Save while the keyboard opens
+  /// or closes.
+  ({String message, bool retry})? _error;
 
   /// A sent trip whose outcome is unknown (network/server failure). It is
   /// resent with the same id on the [addTripRetryDelays] schedule until it
@@ -93,7 +95,6 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   @override
   void dispose() {
     _retryTimer?.cancel();
-    _snack?.close();
     _amount.dispose();
     _commission.dispose();
     _amountFocus.dispose();
@@ -143,7 +144,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     _retryTimer?.cancel();
     _unsent = null;
     _retryCount = 0;
-    _snack?.close();
+    _closeError();
   }
 
   /// Anything typed or picked: closing then asks for confirmation (§5.6).
@@ -208,7 +209,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       // snackbar opens after the first failure and stays until success.
       final first = _unsent == null;
       _unsent = trip;
-      if (first || !(_snack?.isOpen ?? false)) {
+      if (first || _error == null) {
         _showError(failureMessage(failure), retry: true);
       }
       _scheduleRetry();
@@ -219,16 +220,16 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     _retryCount = 0;
     switch (result) {
       case Ok(:final value):
-        _snack?.close();
+        _closeError();
         Navigator.of(context).pop(value);
       case Err(failure: ValidationFailure(:final code, :final field))
           when _formField(field) != null:
-        _snack?.close();
+        _closeError();
         setState(
           () => _serverErrors[_formField(field)!] = validationMessage(code),
         );
       case Err(failure: ConflictFailure()):
-        _snack?.close();
+        _closeError();
         await _showConflict();
       case Err(:final failure):
         _showError(failureMessage(failure), retry: false);
@@ -239,17 +240,16 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       TripField.values.where((f) => f.name == name).firstOrNull;
 
   /// Error snackbar 12 above the bottom bar (§4 DkSnackbar).
-  void _showError(String message, {required bool retry}) {
-    final bar = _bottomBarKey.currentContext?.size?.height ?? 0;
-    _snack = showDkSnackbar(
-      context,
-      message: message,
-      tone: DkSnackTone.error,
-      actionLabel: retry ? S.retry : null,
-      onAction: retry ? _retryNow : null,
-      bottom:
-          MediaQuery.viewInsetsOf(context).bottom + bar + context.dkSpacing.s12,
-    );
+  void _showError(String message, {required bool retry}) =>
+      setState(() => _error = (message: message, retry: retry));
+
+  void _closeError() {
+    if (_error == null) return;
+    if (mounted) {
+      setState(() => _error = null);
+    } else {
+      _error = null;
+    }
   }
 
   /// §5.11 (approved: no stored values; see DECISIONS.md).
@@ -322,88 +322,109 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                 onClose: () => Navigator.of(context).maybePop(),
               ),
               Expanded(
-                child: ListView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: spacing.screenGutter,
-                    vertical: spacing.s8,
-                  ),
+                child: Stack(
                   children: [
-                    _TimeRow(
-                      start: DkTimeField(
-                        label: S.start,
-                        value: clock(_start),
-                        enabled: !saving,
-                        invalid: visible.containsKey(TripField.start),
-                        onTap: () => _pickTime(isStart: true),
-                      ),
-                      end: DkTimeField(
-                        label: S.end,
-                        value: clock(_end),
-                        enabled: !saving,
-                        invalid: visible.containsKey(TripField.end),
-                        // The badge only for a valid next-day end (mockup 08
-                        // shows none next to the error).
-                        trailing:
-                            input.endsNextDay &&
-                                !errors.containsKey(TripField.end)
-                            ? const DkBadge(S.nextDayBadge)
-                            : null,
-                        onTap: () => _pickTime(isStart: false),
-                      ),
-                      message: _timeMessage(input, errors, visible),
-                    ),
-                    SizedBox(height: spacing.s20),
-                    DkTextField.money(
-                      label: S.amount,
-                      controller: _amount,
-                      focusNode: _amountFocus,
-                      enabled: !saving,
-                      helper: S.amountHelper,
-                      errorText: visible[TripField.amount],
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) => _edited(TripField.amount),
-                    ),
-                    SizedBox(height: spacing.s20),
-                    DkTextField.money(
-                      label: S.commission,
-                      controller: _commission,
-                      focusNode: _commissionFocus,
-                      enabled: !saving,
-                      helper: switch (input.net) {
-                        final net? => S.netHelper(net),
-                        null => null,
-                      },
-                      errorText: visible[TripField.commission],
-                      textInputAction: TextInputAction.done,
-                      onChanged: (_) => _edited(TripField.commission),
-                    ),
-                    SizedBox(height: spacing.s20),
-                    DkSegmentedControl<PaymentMethod>(
-                      label: S.payment,
-                      segments: [
-                        for (final method in PaymentMethod.values)
-                          DkSegment(
-                            value: method,
-                            label: method.toKit().label,
-                            icon: method.toKit().icon,
+                    Positioned.fill(
+                      child: ListView(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: spacing.screenGutter,
+                          vertical: spacing.s8,
+                        ),
+                        children: [
+                          _TimeRow(
+                            start: DkTimeField(
+                              label: S.start,
+                              value: clock(_start),
+                              enabled: !saving,
+                              invalid: visible.containsKey(TripField.start),
+                              onTap: () => _pickTime(isStart: true),
+                            ),
+                            end: DkTimeField(
+                              label: S.end,
+                              value: clock(_end),
+                              enabled: !saving,
+                              invalid: visible.containsKey(TripField.end),
+                              // The badge only for a valid next-day end
+                              // (mockup 08 shows none next to the error).
+                              trailing:
+                                  input.endsNextDay &&
+                                      !errors.containsKey(TripField.end)
+                                  ? const DkBadge(S.nextDayBadge)
+                                  : null,
+                              onTap: () => _pickTime(isStart: false),
+                            ),
+                            message: _timeMessage(input, errors, visible),
                           ),
-                      ],
-                      selected: _payment,
-                      onChanged: saving
-                          ? null
-                          : (method) => setState(() {
-                              _payment = method;
-                              _serverErrors.remove(TripField.payment);
-                              _stopRetrying();
-                            }),
+                          SizedBox(height: spacing.s20),
+                          DkTextField.money(
+                            label: S.amount,
+                            controller: _amount,
+                            focusNode: _amountFocus,
+                            enabled: !saving,
+                            helper: S.amountHelper,
+                            errorText: visible[TripField.amount],
+                            textInputAction: TextInputAction.next,
+                            onChanged: (_) => _edited(TripField.amount),
+                          ),
+                          SizedBox(height: spacing.s20),
+                          DkTextField.money(
+                            label: S.commission,
+                            controller: _commission,
+                            focusNode: _commissionFocus,
+                            enabled: !saving,
+                            helper: switch (input.net) {
+                              final net? => S.netHelper(net),
+                              null => null,
+                            },
+                            errorText: visible[TripField.commission],
+                            textInputAction: TextInputAction.done,
+                            onChanged: (_) => _edited(TripField.commission),
+                          ),
+                          SizedBox(height: spacing.s20),
+                          DkSegmentedControl<PaymentMethod>(
+                            label: S.payment,
+                            segments: [
+                              for (final method in PaymentMethod.values)
+                                DkSegment(
+                                  value: method,
+                                  label: method.toKit().label,
+                                  icon: method.toKit().icon,
+                                ),
+                            ],
+                            selected: _payment,
+                            onChanged: saving
+                                ? null
+                                : (method) => setState(() {
+                                    _payment = method;
+                                    _serverErrors.remove(TripField.payment);
+                                    _stopRetrying();
+                                  }),
+                          ),
+                        ],
+                      ),
                     ),
+                    if (_error case final error?)
+                      Positioned(
+                        left: spacing.s16,
+                        right: spacing.s16,
+                        bottom: spacing.s12,
+                        child: Semantics(
+                          liveRegion: true,
+                          child: DkSnackbarView(
+                            key: ValueKey(error),
+                            message: error.message,
+                            tone: DkSnackTone.error,
+                            actionLabel: error.retry ? S.retry : null,
+                            onAction: error.retry ? _retryNow : null,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
               // In the body, not `bottomNavigationBar`: the body shrinks above
               // the keyboard, so Save stays pinned right above it (§5.6).
               DkBottomBar(
-                key: _bottomBarKey,
                 child: DkButton(
                   label: saving ? S.saving : S.save,
                   expand: true,

@@ -303,4 +303,28 @@ void main() {
     expect(tester.takeException(), isNull);
     await disposeApp(tester);
   });
+  testWidgets('the offline snackbar follows Save when the keyboard closes', (
+    tester,
+  ) async {
+    final repository = FakeTripsRepository()
+      ..onCreate = (_) async => const Err(NetworkFailure());
+    await openForm(tester, input: valid, repository: repository);
+    double gap() =>
+        tester.getRect(find.byType(DkBottomBar)).top -
+        tester.getRect(find.byType(DkSnackbarView)).bottom;
+
+    // Saved while the keyboard is still open: the error arrives before it
+    // has gone down.
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pump();
+    await save(tester);
+    expect(gap(), closeTo(12, 0.5));
+
+    tester.view.viewInsets = FakeViewPadding.zero;
+    await tester.pump();
+    final bar = tester.getRect(find.byType(DkBottomBar));
+    expect(bar.bottom, 844);
+    expect(gap(), closeTo(12, 0.5));
+    await disposeApp(tester);
+  });
 }
