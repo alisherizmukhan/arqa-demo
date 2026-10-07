@@ -1,4 +1,5 @@
 import 'package:design_kit/design_kit.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -109,6 +110,10 @@ class ShowcasePage extends StatelessWidget {
                 _Section(title: 'DkErrorState', child: _Error()),
                 _Section(title: 'DkSnackbar', child: _Snackbars()),
                 _Section(title: 'DkDialog', child: _Dialog()),
+                _Section(
+                  title: 'DkPickerSheet · DkOptionsSheet',
+                  child: _Sheets(),
+                ),
                 _Section(
                   title: 'DkWordmark · DkModalAppBar · DkBottomBar',
                   child: _Chrome(),
@@ -636,6 +641,52 @@ class _Dialog extends StatelessWidget {
   );
 }
 
+class _Sheets extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final sheet = BoxDecoration(
+      color: context.dkColors.surface,
+      borderRadius: BorderRadius.circular(context.dkRadii.xl),
+      boxShadow: context.dkElevation.e1,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: context.dkSpacing.s16,
+      children: [
+        DecoratedBox(
+          decoration: sheet,
+          child: DkPickerSheet(
+            title: 'Начало поездки',
+            doneLabel: 'Готово',
+            initial: DateTime(2000, 1, 1, 8, 10),
+            picker: (value, onChanged) => CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.time,
+              use24hFormat: true,
+              initialDateTime: value,
+              onDateTimeChanged: onChanged,
+            ),
+          ),
+        ),
+        DecoratedBox(
+          decoration: sheet,
+          child: const DkOptionsSheet<int>(
+            title: 'Сортировка',
+            options: [
+              (value: 0, label: 'Сначала ранние'),
+              (value: 1, label: 'Сначала поздние'),
+              (value: 2, label: 'Сначала дорогие'),
+              (value: 3, label: 'Сначала дешёвые'),
+            ],
+            selected: 0,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _Chrome extends StatelessWidget {
   const new();
 
@@ -648,6 +699,22 @@ class _Chrome extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s16),
           child: const DkWordmark(),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s16),
+          child: DkWordmark(trailing: DkTodayButton(onPressed: () {})),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s16),
+          child: DkListHeader(
+            title: 'Поездки',
+            trailing: '15 поездок · 6 ч 20 мин',
+            action: DkIconButton(
+              icon: DkIcons.sort,
+              label: 'Сортировка: сначала ранние',
+              onPressed: () {},
+            ),
+          ),
         ),
         DkModalAppBar(
           title: 'Новая поездка',

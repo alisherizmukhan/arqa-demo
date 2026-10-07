@@ -1,5 +1,6 @@
 import 'package:design_kit/src/components/dk_button.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
+import 'package:design_kit/src/tokens/dk_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -83,6 +84,9 @@ Future<DateTime?> _showWheelSheet(
     backgroundColor: colors.surface,
     barrierColor: colors.scrim,
     useSafeArea: true,
+    // Not capped at 9/16 of the screen: short screens and large text
+    // get the height they need (the content scrolls past the top).
+    isScrollControlled: true,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
         top: Radius.circular(context.dkRadii.xl),
@@ -152,73 +156,209 @@ class _DkPickerSheetState extends State<DkPickerSheet> {
     final shortcutValue = widget.shortcutValue;
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          spacing.s16,
-          spacing.s8,
-          spacing.s16,
-          spacing.s8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: spacing.s40,
-                height: spacing.s4,
-                decoration: BoxDecoration(
-                  color: colors.border,
-                  borderRadius: BorderRadius.circular(context.dkRadii.pill),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            spacing.s16,
+            spacing.s8,
+            spacing.s16,
+            spacing.s8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: spacing.s40,
+                  height: spacing.s4,
+                  decoration: BoxDecoration(
+                    color: colors.border,
+                    borderRadius: BorderRadius.circular(context.dkRadii.pill),
+                  ),
                 ),
               ),
-            ),
-            ConstrainedBox(
-              constraints: BoxConstraints(minHeight: sizes.tapTargetMin),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Semantics(
-                      header: true,
-                      child: Text(
-                        widget.title,
-                        style: text.titleM.copyWith(color: colors.textPrimary),
+              ConstrainedBox(
+                constraints: BoxConstraints(minHeight: sizes.tapTargetMin),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        header: true,
+                        child: Text(
+                          widget.title,
+                          style: text.titleM.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (shortcut != null && shortcutValue != null)
+                      DkButton(
+                        label: shortcut,
+                        variant: DkButtonVariant.text,
+                        onPressed: () => setState(
+                          () => _value = _wheelValue = shortcutValue,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: _wheelHeight,
+                child: CupertinoTheme(
+                  data: CupertinoThemeData(
+                    brightness: Theme.of(context).brightness,
+                    primaryColor: colors.accent,
+                    textTheme: CupertinoTextThemeData(
+                      dateTimePickerTextStyle: text.titleM.copyWith(
+                        color: colors.textPrimary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                  if (shortcut != null && shortcutValue != null)
-                    DkButton(
-                      label: shortcut,
-                      variant: DkButtonVariant.text,
-                      onPressed: () =>
-                          setState(() => _value = _wheelValue = shortcutValue),
-                    ),
-                ],
+                  child: widget.picker(_wheelValue, (v) => _value = v),
+                ),
               ),
-            ),
-            SizedBox(
-              height: _wheelHeight,
-              child: CupertinoTheme(
-                data: CupertinoThemeData(
-                  brightness: Theme.of(context).brightness,
-                  primaryColor: colors.accent,
-                  textTheme: CupertinoTextThemeData(
-                    dateTimePickerTextStyle: text.titleM.copyWith(
-                      color: colors.textPrimary,
-                      fontWeight: FontWeight.w500,
+              SizedBox(height: spacing.s8),
+              DkButton(
+                label: widget.doneLabel,
+                expand: true,
+                onPressed: () => Navigator.of(context).pop(_value),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One choice in [showDkOptionsSheet].
+typedef DkOption<T> = ({T value, String label});
+
+/// A list of choices in a bottom sheet (DESIGN.md §4 DkOptionsSheet): the
+/// [selected] one carries a check. Returns the tapped value, or null when
+/// dismissed.
+Future<T?> showDkOptionsSheet<T>(
+  BuildContext context, {
+  required String title,
+  required List<DkOption<T>> options,
+  required T selected,
+}) {
+  final colors = context.dkColors;
+  return showModalBottomSheet<T>(
+    context: context,
+    backgroundColor: colors.surface,
+    barrierColor: colors.scrim,
+    useSafeArea: true,
+    // Not capped at 9/16 of the screen: short screens and large text
+    // get the height they need (the content scrolls past the top).
+    isScrollControlled: true,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(context.dkRadii.xl),
+      ),
+    ),
+    builder: (_) =>
+        DkOptionsSheet<T>(title: title, options: options, selected: selected),
+  );
+}
+
+/// The options sheet's content. Public for the showcase and goldens.
+class DkOptionsSheet<T> extends StatelessWidget {
+  /// Creates the sheet content.
+  const new({
+    required this.title,
+    required this.options,
+    required this.selected,
+    super.key,
+  });
+
+  /// Sheet title.
+  final String title;
+
+  /// The choices, in display order.
+  final List<DkOption<T>> options;
+
+  /// The current choice.
+  final T selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final text = context.dkText;
+    final spacing = context.dkSpacing;
+    final sizes = context.dkSizes;
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: spacing.s8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: spacing.s40,
+                  height: spacing.s4,
+                  decoration: BoxDecoration(
+                    color: colors.border,
+                    borderRadius: BorderRadius.circular(context.dkRadii.pill),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: spacing.s16,
+                  vertical: spacing.s12,
+                ),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: text.titleM.copyWith(color: colors.textPrimary),
+                  ),
+                ),
+              ),
+              for (final option in options)
+                Semantics(
+                  selected: option.value == selected,
+                  inMutuallyExclusiveGroup: true,
+                  child: InkWell(
+                    onTap: () => Navigator.of(context).pop(option.value),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: sizes.buttonHeight,
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: spacing.s16),
+                        child: Row(
+                          spacing: spacing.s12,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                option.label,
+                                style: text.body.copyWith(
+                                  color: colors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            if (option.value == selected)
+                              Icon(
+                                DkIcons.check,
+                                size: sizes.iconAction,
+                                color: colors.accent,
+                              ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                child: widget.picker(_wheelValue, (v) => _value = v),
-              ),
-            ),
-            SizedBox(height: spacing.s8),
-            DkButton(
-              label: widget.doneLabel,
-              expand: true,
-              onPressed: () => Navigator.of(context).pop(_value),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

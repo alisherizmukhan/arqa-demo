@@ -244,7 +244,7 @@ Payment card = DkCard(padding 16, gap 14): Row of two payment DkSummaryTiles (gr
 - right, end-aligned: amount `bodyStrong` / `"комиссия 360 ₸"` `caption` textTertiary.
 - highlighted: row bg `accentSoft` for ~2 s after the trip is created, then fades.
 - In a list: one DkCard(padding 0, clip), dividers 1px `divider` inset left 68.
-- List header above the card: «Поездки» `titleM` + right `"2 поездки · 37 мин"` `captionStrong` textTertiary, padding 0 4, gap 8 to card.
+- List header above the card: «Поездки» `titleM` + right `"2 поездки · 37 мин"` `captionStrong` textTertiary (one line, scales down to fit) + optional `action` (the sort `DkIconButton`), padding 0 4, gap 8 to card.
 
 ### DkDaySwitcher
 `DkDaySwitcher({required DateTime date, required DateTime today, required VoidCallback onPrev, VoidCallback? onNext, required VoidCallback onPickDate})`
@@ -277,7 +277,7 @@ height 24, radius sm, padding h 8, bg `accentSoft`, text `badge` accent.
 ### DkSnackbar
 `showDkSnackbar(context, {required String message, DkSnackTone tone, String? actionLabel, VoidCallback? onAction})`
 - error/info: full width (left/right 16), bg `inverseSurface`, radius lg, padding 8 8 8 16, gap 12, shadow e3; icon 22 (`wifi-off` inverseError) + text `bodyS` onInverse + text button (h48, 15/700 inverseAccent).
-  Sits 12 above the form bottom bar. Stays until success.
+  Sits 12 above the form bottom bar. Stays until success. In the form it is part of the layout (a `DkSnackbarView` in a `Stack` above the bottom bar), not an overlay entry, so it moves with the bar when the keyboard opens or closes.
 - success: compact, height 56, padding 0 16 0 14, gap 8, icon `circle-check` 22 inverseSuccess, text 14/600 onInverse; placed bottom-left (left 16, bottom safe+16) **beside the FAB, never over it**; auto-dismiss 3 s.
 
 ### DkDialog
@@ -288,9 +288,17 @@ max width 400; icon tile 56 (errorSoft / error, icon 28) **centred** → title `
 ### DkPickerSheet
 `showDkTimePicker(context, {required int hour, required int minute, String title, String doneLabel})` → `({int hour, int minute})?`
 `showDkDatePicker(context, {required DateTime initialDate, required DateTime firstDate, required DateTime lastDate, String title, String doneLabel, String? todayLabel})` → `DateTime?`
-- Modal bottom sheet, bg `surface`, top radius xl, scrim `scrim`; padding 8 16 8 16 + safe area.
+- Modal bottom sheet, bg `surface`, top radius xl, scrim `scrim`; padding 8 16 8 16 + safe area. Not capped at 9/16 of the screen: on a short screen or with large text the content scrolls.
 - Handle 40×4 `border` radius pill → header row (min 48): title `titleM` textPrimary + optional text button shortcut (date: «Сегодня» selects `lastDate`) → `CupertinoDatePicker` wheel 216 high (time: 24 h; date: min/max dates), text `titleM` w500 textPrimary → gap 8 → DkButton primary expand «Готово».
 - The same iOS-style wheel on Android and iOS. Dismissing the sheet (swipe or scrim) = cancel (null).
+
+### DkOptionsSheet
+`showDkOptionsSheet<T>(context, {required String title, required List<DkOption<T>> options, required T selected})` → `T?`
+Same sheet as DkPickerSheet (handle, title `titleM` padding 12 16); rows min 56, padding 0 16: label `body` textPrimary + `check` 22 `accent` on the selected row. Tap = choose and close. Rows are a mutually exclusive group for screen readers.
+
+### DkIconButton
+`DkIconButton({required IconData icon, required String label, required VoidCallback onPressed, bool active = false})`
+48×48, transparent, radius md, icon 22 `textPrimary` (`accent` when `active`). `label` is the spoken name.
 
 ### DkTodayButton
 `DkTodayButton({required VoidCallback onPressed, String label = 'Сегодня'})`
@@ -339,7 +347,9 @@ Header + switcher, DkErrorState: «Не удалось загрузить дан
 If data was already shown and a refresh fails: keep data, show error DkSnackbar instead.
 
 ### 5.5 Day — trip added (`06_day_trip_added`)
-After a successful save the form closes, the day of the trip's **start** is shown, the new DkTripTile is `highlighted`, success snackbar «Поездка добавлена» bottom-left next to the FAB.
+After a successful save the form closes, the day of the trip's **start** is shown, the new DkTripTile is `highlighted`, success snackbar «Поездка добавлена» bottom-left next to the FAB. The list scrolls the new row to the middle of the screen (`Scrollable.ensureVisible`, alignment 0.5, `DkMotion.reveal` 300 ms; instant with reduced motion), so it is seen in a long list.
+
+**Sorting.** The «Поездки» header has a sort `DkIconButton` (`arrow-up-down`; `accent` when not the default; spoken «Сортировка: сначала ранние»). It opens a `DkOptionsSheet` «Сортировка»: «Сначала ранние» (default), «Сначала поздние», «Сначала дорогие», «Сначала дешёвые». Equal amounts keep start order. The choice holds for every day until the app restarts.
 
 ### 5.6 Add trip — form (`07_add_trip`)
 **Full-screen modal route** (`fullscreenDialog: true`), not a bottom sheet:

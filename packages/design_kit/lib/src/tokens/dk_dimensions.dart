@@ -612,6 +612,9 @@ abstract final class DkMotion {
   /// How long a newly added trip stays highlighted (~2 s).
   static const Duration highlight = Duration(seconds: 2);
 
+  /// Scrolling a list to a just-added row (300 ms).
+  static const Duration reveal = Duration(milliseconds: 300);
+
   /// Success snackbar auto-dismiss (3 s).
   static const Duration successSnack = Duration(seconds: 3);
 }

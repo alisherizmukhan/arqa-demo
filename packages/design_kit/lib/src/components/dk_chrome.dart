@@ -233,3 +233,51 @@ class DkBottomBar extends StatelessWidget {
     );
   }
 }
+
+/// 48×48 icon button, DESIGN.md §8.0: transparent, radius md, icon 22
+/// (`textPrimary`, or `accent` when [active]). [label] is its spoken name.
+class DkIconButton extends StatelessWidget {
+  /// Creates the button.
+  const new({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    this.active = false,
+    super.key,
+  });
+
+  /// The icon.
+  final IconData icon;
+
+  /// Accessible name, e.g. «Сортировка: сначала ранние».
+  final String label;
+
+  /// Tap handler.
+  final VoidCallback onPressed;
+
+  /// Draws the icon in `accent` (a non-default setting is on).
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final sizes = context.dkSizes;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: SizedBox.square(
+        dimension: sizes.tapTargetMin,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(context.dkRadii.md),
+          child: Icon(
+            icon,
+            size: sizes.iconAction,
+            color: active ? colors.accent : colors.textPrimary,
+          ),
+        ),
+      ),
+    );
+  }
+}

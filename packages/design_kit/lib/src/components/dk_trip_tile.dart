@@ -208,7 +208,7 @@ class DkTripList extends StatelessWidget {
 /// Section header above a list: «Поездки» + «2 поездки · 37 мин».
 class DkListHeader extends StatelessWidget {
   /// Creates a header.
-  const new({required this.title, this.trailing, super.key});
+  const new({required this.title, this.trailing, this.action, super.key});
 
   /// `titleM` title.
   final String title;
@@ -216,29 +216,45 @@ class DkListHeader extends StatelessWidget {
   /// `captionStrong` summary on the right.
   final String? trailing;
 
+  /// A control after the summary (e.g. a sort `DkIconButton`).
+  final Widget? action;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
     final text = context.dkText;
+    final heading = Semantics(
+      header: true,
+      child: Text(
+        title,
+        style: text.titleM.copyWith(color: colors.textPrimary),
+      ),
+    );
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s4),
       child: Row(
         spacing: context.dkSpacing.s8,
         children: [
-          Expanded(
-            child: Semantics(
-              header: true,
-              child: Text(
-                title,
-                style: text.titleM.copyWith(color: colors.textPrimary),
+          // The summary (or, without one, the title) takes the free space,
+          // so the summary and the action end at the right edge.
+          if (trailing == null) Expanded(child: heading) else heading,
+          if (trailing case final value?)
+            // One line: scales down rather than wrapping or overflowing
+            // when an [action] takes room.
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerEnd,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  style: text.captionStrong.copyWith(
+                    color: colors.textTertiary,
+                  ),
+                ),
               ),
             ),
-          ),
-          if (trailing case final value?)
-            Text(
-              value,
-              style: text.captionStrong.copyWith(color: colors.textTertiary),
-            ),
+          ?action,
         ],
       ),
     );

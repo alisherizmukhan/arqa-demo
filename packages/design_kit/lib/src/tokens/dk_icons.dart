@@ -19,6 +19,12 @@ abstract final class DkIcons {
   /// Jump to today.
   static const IconData today = LucideIcons.calendarCheck400;
 
+  /// Sort order of a list.
+  static const IconData sort = LucideIcons.arrowUpDown400;
+
+  /// The selected option in a list.
+  static const IconData check = LucideIcons.check400;
+
   /// Cash.
   static const IconData cash = LucideIcons.banknote400;
 

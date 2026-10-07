@@ -46,9 +46,23 @@ class _GalleryState extends State<_Gallery> {
               tripsCount: 2,
             ),
             const DkPaymentCard(cash: 1500, card: 2400),
-            const DkListHeader(
+            DkWordmark(trailing: DkTodayButton(onPressed: () {})),
+            DkListHeader(
               title: 'Поездки',
               trailing: '2 поездки · 37 мин',
+              action: DkIconButton(
+                icon: DkIcons.sort,
+                label: 'Сортировка: сначала ранние',
+                onPressed: () {},
+              ),
+            ),
+            const DkOptionsSheet<int>(
+              title: 'Сортировка',
+              options: [
+                (value: 0, label: 'Сначала ранние'),
+                (value: 1, label: 'Сначала поздние'),
+              ],
+              selected: 0,
             ),
             const DkTripList(
               children: [
