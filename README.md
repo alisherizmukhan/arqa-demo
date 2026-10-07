@@ -11,6 +11,16 @@
 |---|---|---|
 | <img src="docs/screenshots/day_light.png" width="200"> | <img src="docs/screenshots/day_dark.png" width="200"> | <img src="docs/screenshots/add_trip.png" width="200"> |
 
+**Скачать APK для Android:** [driver-diary.apk](https://github.com/alisherizmukhan/arqa-demo/releases/latest/download/driver-diary.apk) (все релизы — на странице [Releases](https://github.com/alisherizmukhan/arqa-demo/releases)). Приложение работает с развёрнутым API, ничего настраивать не нужно.
+
+### Демо-видео
+
+<!-- Сюда вставить видео: откройте README.md на GitHub → «Edit» → перетащите .mp4 в это место.
+     GitHub сам подставит ссылку вида https://github.com/user-attachments/assets/…
+     Эту заметку и строку «Видео скоро появится» после этого можно удалить. -->
+
+*Видео скоро появится.*
+
 ---
 
 ## Требования задания
@@ -56,15 +66,86 @@ uv run python -m app             # http://127.0.0.1:8000/docs; пустая ба
 
 ### Мобильное приложение
 
+Самый быстрый способ — установить [APK](https://github.com/alisherizmukhan/arqa-demo/releases/latest/download/driver-diary.apk) (см. ниже). Чтобы собрать из исходников:
+
 ```bash
-flutter pub get                                          # из корня репозитория (pub workspace)
+flutter pub get          # из корня репозитория (pub workspace)
 cd apps/mobile
-flutter run                                              # работает с развёрнутым API
-flutter run --dart-define=API_URL=http://10.0.2.2:8000   # эмулятор Android -> локальный бэкенд
-flutter run -d chrome --dart-define=API_URL=http://localhost:8000   # веб -> локальный бэкенд
+flutter devices          # список подключённых устройств и эмуляторов
+flutter run              # на первом найденном устройстве, с развёрнутым API
 ```
 
-Часовой пояс водителя задаётся флагом `--dart-define=DRIVER_TZ=+05:00` (это значение по умолчанию). После изменения DTO или провайдеров нужна кодогенерация: `dart run build_runner build`.
+По умолчанию приложение ходит в развёрнутый API на Railway. Другой адрес задаётся флагом `--dart-define=API_URL=…`. Часовой пояс водителя — флагом `--dart-define=DRIVER_TZ=+05:00` (это значение по умолчанию). После изменения DTO или провайдеров нужна кодогенерация: `dart run build_runner build`.
+
+#### Android: пошагово
+
+**Установить готовый APK на телефон:**
+
+1. Скачайте [driver-diary.apk](https://github.com/alisherizmukhan/arqa-demo/releases/latest/download/driver-diary.apk) на телефон.
+2. Откройте файл. Android попросит разрешить установку из этого источника (браузера или «Файлов») — разрешите.
+3. Нажмите «Установить», затем «Открыть». На экране появится «Дневник смен» с поездками за сегодня.
+
+APK подписан отладочным ключом, поэтому Google Play Защита может показать предупреждение. Нажмите «Всё равно установить».
+
+**Запустить из исходников на эмуляторе:**
+
+1. Установите [Android Studio](https://developer.android.com/studio). В Device Manager создайте эмулятор, например Pixel с Android 14+.
+2. Проверьте окружение: `flutter doctor` — строка «Android toolchain» должна быть с ✓.
+3. Запустите эмулятор: `flutter emulators` покажет список, `flutter emulators --launch <имя>` запустит.
+4. В `apps/mobile` выполните `flutter run`.
+
+**Запустить на своём телефоне по USB:**
+
+1. Включите режим разработчика: «Настройки» → «О телефоне» → 7 раз нажмите «Номер сборки».
+2. В «Для разработчиков» включите «Отладка по USB». Подключите кабель и подтвердите запрос на телефоне.
+3. `flutter devices` должен показать телефон. Затем `flutter run -d <id телефона>`.
+
+**С локальным бэкендом** (сначала поднимите его, см. «Бэкенд локально»):
+
+```bash
+# эмулятор: 10.0.2.2 — это localhost компьютера
+flutter run --dart-define=API_URL=http://10.0.2.2:8000
+
+# телефон по USB: пробросить порт 8000 телефона на компьютер
+adb reverse tcp:8000 tcp:8000
+flutter run -d <id телефона> --dart-define=API_URL=http://127.0.0.1:8000
+```
+
+Обычный HTTP к локальному бэкенду разрешён только в отладочной сборке. Релизный APK ходит только по HTTPS.
+
+**Собрать APK самому:**
+
+```bash
+flutter build apk --release
+# файл: apps/mobile/build/app/outputs/flutter-apk/app-release.apk
+```
+
+#### iOS: пошагово
+
+iOS-сборка требует macOS и Xcode. Проект собирается из тех же исходников, но на iOS он не проверялся: разработка шла на Windows. Android-сборка (APK и отладочный запуск) проверена на эмуляторе Android.
+
+**Симулятор:**
+
+1. Установите Xcode из App Store и выполните один раз:
+   ```bash
+   sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+   sudo xcodebuild -runFirstLaunch
+   ```
+2. Проверьте окружение: `flutter doctor` — строка «Xcode» должна быть с ✓.
+3. Запустите симулятор: `open -a Simulator`.
+4. В `apps/mobile` выполните `flutter run`.
+
+С локальным бэкендом в симуляторе: `flutter run --dart-define=API_URL=http://127.0.0.1:8000` — симулятор видит localhost компьютера.
+
+**Свой iPhone:**
+
+1. Подключите iPhone кабелем и нажмите «Доверять этому компьютеру».
+2. Откройте `apps/mobile/ios/Runner.xcworkspace` в Xcode.
+3. Runner → Signing & Capabilities: выберите свою команду (Team; подойдёт бесплатный Apple ID). Если Xcode пишет, что идентификатор занят, замените Bundle Identifier `kz.driverdiary.driverDiary` на свой.
+4. На iPhone включите «Настройки» → «Конфиденциальность и безопасность» → «Режим разработчика» (iOS 16+). Телефон перезагрузится.
+5. Выполните `flutter run -d <id iPhone>`. При первом запуске разрешите разработчика: «Настройки» → «Основные» → «VPN и управление устройством».
+
+На iPhone удобнее работать с развёрнутым API (флаг `API_URL` не нужен).
 
 ### Тесты
 

@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The app talks to the trips API: needed in release builds too (the
+         debug and profile manifests add it only for the Flutter tool). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="driver_diary"
+        android:label="Дневник смен"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
