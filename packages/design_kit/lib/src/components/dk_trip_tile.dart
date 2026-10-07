@@ -130,10 +130,17 @@ class DkTripTile extends StatelessWidget {
                             color: colors.textPrimary,
                           ),
                         ),
-                        Text(
-                          meta,
-                          style: text.bodyS.copyWith(
-                            color: colors.textSecondary,
+                        // One line: «30 мин · Наличные» shrinks to fit
+                        // rather than wrapping the payment onto a new line.
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            meta,
+                            maxLines: 1,
+                            style: text.bodyS.copyWith(
+                              color: colors.textSecondary,
+                            ),
                           ),
                         ),
                       ],

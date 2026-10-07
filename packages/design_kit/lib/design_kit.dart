@@ -10,6 +10,7 @@ export 'src/components/dk_chrome.dart';
 export 'src/components/dk_day_switcher.dart';
 export 'src/components/dk_feedback.dart';
 export 'src/components/dk_inputs.dart';
+export 'src/components/dk_picker.dart';
 export 'src/components/dk_states.dart';
 export 'src/components/dk_trip_tile.dart';
 export 'src/format/dk_format.dart';

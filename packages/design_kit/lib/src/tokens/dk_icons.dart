@@ -16,6 +16,9 @@ abstract final class DkIcons {
   /// Date picker hint (stroke 2.4 → w500).
   static const IconData chevronDown = LucideIcons.chevronDown500;
 
+  /// Jump to today.
+  static const IconData today = LucideIcons.calendarCheck400;
+
   /// Cash.
   static const IconData cash = LucideIcons.banknote400;
 

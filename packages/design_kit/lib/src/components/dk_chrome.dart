@@ -6,10 +6,13 @@ import 'package:flutter/material.dart';
 /// «Дневник смен» in `wordmark`; row min height 48.
 class DkWordmark extends StatelessWidget {
   /// Creates the wordmark.
-  const new({this.title = 'Дневник смен', super.key});
+  const new({this.title = 'Дневник смен', this.trailing, super.key});
 
   /// App title.
   final String title;
+
+  /// Right-aligned action (e.g. [DkTodayButton]).
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +33,7 @@ class DkWordmark extends StatelessWidget {
             ),
           ),
           SizedBox(width: context.dkSpacing.s10),
-          Flexible(
+          Expanded(
             child: Semantics(
               header: true,
               child: Text(
@@ -41,7 +44,71 @@ class DkWordmark extends StatelessWidget {
               ),
             ),
           ),
+          ?trailing,
         ],
+      ),
+    );
+  }
+}
+
+/// «Сегодня» pill for the header: `accentSoft` / `accent`, icon + label,
+/// 48 tap target. Shown only while another day is selected.
+class DkTodayButton extends StatelessWidget {
+  /// Creates the button.
+  const new({required this.onPressed, this.label = 'Сегодня', super.key});
+
+  /// Jumps to today.
+  final VoidCallback onPressed;
+
+  /// «Сегодня».
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final spacing = context.dkSpacing;
+    final sizes = context.dkSizes;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const StadiumBorder(),
+        child: SizedBox(
+          height: sizes.tapTargetMin,
+          child: Center(
+            child: DecoratedBox(
+              decoration: ShapeDecoration(
+                color: colors.accentSoft,
+                shape: const StadiumBorder(),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: spacing.s12,
+                  vertical: spacing.s6,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: spacing.s6,
+                  children: [
+                    Icon(
+                      DkIcons.today,
+                      size: sizes.iconInline,
+                      color: colors.accent,
+                    ),
+                    Text(
+                      label,
+                      style: context.dkText.captionStrong.copyWith(
+                        color: colors.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

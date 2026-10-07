@@ -272,8 +272,11 @@ class _FadeIn extends StatelessWidget {
   }
 }
 
-/// Dialog, DESIGN.md §4: scrim, card r24 padding 24, icon tile 56
-/// (errorSoft/error), title, message, stacked full-width buttons.
+/// The dialog never grows wider than this (tablets, landscape).
+const double _dialogMaxWidth = 400;
+
+/// Dialog, DESIGN.md §4: scrim, card r24 padding 24, centred icon tile 56
+/// (errorSoft/error), centred title and message, stacked full-width buttons.
 Future<void> showDkDialog(
   BuildContext context, {
   required IconData icon,
@@ -357,81 +360,84 @@ class DkDialogView extends StatelessWidget {
       child: Center(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: spacing.s24),
-          child: Material(
-            type: MaterialType.transparency,
-            child: Container(
-              padding: EdgeInsets.all(spacing.s24),
-              decoration: BoxDecoration(
-                color: colors.surface,
-                borderRadius: BorderRadius.circular(context.dkRadii.xl),
-                boxShadow: context.dkElevation.e3,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  spacing: spacing.s20,
-                  children: [
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: ExcludeSemantics(
-                        child: Container(
-                          width: sizes.dialogIconTile,
-                          height: sizes.dialogIconTile,
-                          decoration: BoxDecoration(
-                            color: colors.errorSoft,
-                            borderRadius: BorderRadius.circular(
-                              context.dkRadii.lg,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _dialogMaxWidth),
+            child: Material(
+              type: MaterialType.transparency,
+              child: Container(
+                padding: EdgeInsets.all(spacing.s24),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(context.dkRadii.xl),
+                  boxShadow: context.dkElevation.e3,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    spacing: spacing.s20,
+                    children: [
+                      Center(
+                        child: ExcludeSemantics(
+                          child: Container(
+                            width: sizes.dialogIconTile,
+                            height: sizes.dialogIconTile,
+                            decoration: BoxDecoration(
+                              color: colors.errorSoft,
+                              borderRadius: BorderRadius.circular(
+                                context.dkRadii.lg,
+                              ),
                             ),
-                          ),
-                          child: Icon(
-                            icon,
-                            size: sizes.dialogIcon,
-                            color: colors.error,
+                            child: Icon(
+                              icon,
+                              size: sizes.dialogIcon,
+                              color: colors.error,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      spacing: spacing.s8,
-                      children: [
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            title,
-                            style: text.titleDialog.copyWith(
-                              color: colors.textPrimary,
+                      Column(
+                        spacing: spacing.s8,
+                        children: [
+                          Semantics(
+                            header: true,
+                            child: Text(
+                              title,
+                              textAlign: TextAlign.center,
+                              style: text.titleDialog.copyWith(
+                                color: colors.textPrimary,
+                              ),
                             ),
                           ),
-                        ),
-                        Text(
-                          message,
-                          style: text.bodyMd.copyWith(
-                            color: colors.textSecondary,
+                          Text(
+                            message,
+                            textAlign: TextAlign.center,
+                            style: text.bodyMd.copyWith(
+                              color: colors.textSecondary,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      spacing: spacing.s8,
-                      children: [
-                        DkButton(
-                          label: primaryLabel,
-                          expand: true,
-                          onPressed: () => close(onPrimary),
-                        ),
-                        if (secondary != null && onSecondary != null)
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        spacing: spacing.s8,
+                        children: [
                           DkButton(
-                            label: secondary,
+                            label: primaryLabel,
                             expand: true,
-                            variant: DkButtonVariant.secondary,
-                            onPressed: () => close(onSecondary!),
+                            onPressed: () => close(onPrimary),
                           ),
-                      ],
-                    ),
-                  ],
+                          if (secondary != null && onSecondary != null)
+                            DkButton(
+                              label: secondary,
+                              expand: true,
+                              variant: DkButtonVariant.secondary,
+                              onPressed: () => close(onSecondary!),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

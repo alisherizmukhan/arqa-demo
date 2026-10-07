@@ -34,7 +34,7 @@ All px values below map 1:1 to Flutter logical pixels (dp).
 3. Meaning is never color-only: payment method = icon + text; errors = icon + text + border.
 4. Tap targets ≥ 48 dp everywhere.
 5. All numbers use tabular figures (`FontFeature.tabularFigures()`).
-6. Light and dark themes share one layout; only `DkColors` changes. Shadows are off in dark.
+6. Light and dark themes share one layout; only `DkColors` changes. Shadows are off in dark. The app opens in the **light** theme whatever the phone's setting (the dark theme stays in the kit).
 
 ---
 
@@ -229,6 +229,7 @@ bg `surface`, shadow `e1` (`e1Hero` when hero). Dark: no shadow.
 `DkSummaryTile({required String label, required String value, IconData? icon, String? hint})`
 - Without icon: label `captionStrong` textTertiary → gap 2 → value `moneyM`.
 - With icon (payment tile): icon tile 40 (surfaceMuted, radius md, icon 22 textPrimary) → gap 12 → column(label `"Наличные · 38%"` captionStrong textTertiary, value `moneyM`).
+- The label is **one line**: in a narrow tile it scales down to fit instead of wrapping the share onto a second line.
 
 ### DkSplitBar
 `DkSplitBar({required int cash, required int card})` — height 8, gap 3, each segment radius xs,
@@ -239,7 +240,7 @@ Payment card = DkCard(padding 16, gap 14): Row of two payment DkSummaryTiles (gr
 `DkTripTile({required String timeRange, required bool endsNextDay, required String meta, required String amount, required String commission, required PaymentMethod method, bool highlighted = false})`
 - min height 72, padding 12/16, gap 12.
 - icon tile 40 (surfaceMuted; `surface` when highlighted) with banknote / credit-card.
-- center: timeRange `bodyStrong` (+ `superscript` "+1" if endsNextDay) / meta `bodyS` textSecondary (`"22 мин · Карта"`).
+- center: timeRange `bodyStrong` (+ `superscript` "+1" if endsNextDay) / meta `bodyS` textSecondary (`"22 мин · Карта"`), one line (scales down to fit, never wraps).
 - right, end-aligned: amount `bodyStrong` / `"комиссия 360 ₸"` `caption` textTertiary.
 - highlighted: row bg `accentSoft` for ~2 s after the trip is created, then fades.
 - In a list: one DkCard(padding 0, clip), dividers 1px `divider` inset left 68.
@@ -251,7 +252,7 @@ Payment card = DkCard(padding 16, gap 14): Row of two payment DkSummaryTiles (gr
 - left/right: 48×48 icon buttons (radius md, chevron 24). Next disabled (color `iconDisabled`) when date == today.
 - center button (flex): title `titleM` + chevron-down 16 (textTertiary) / subtitle `caption` textTertiary (rules §3).
 - Semantics: «Предыдущий день», «Следующий день», «Выбрать дату, 1 октября 2026».
-- Date picker: Material `showDatePicker` with `locale: ru`, `lastDate: today`.
+- Date picker: `showDkDatePicker` (DkPickerSheet, iOS-style wheel on every platform), `lastDate: today`, header shortcut «Сегодня».
 
 ### DkTextField
 `DkTextField({required String label, required TextEditingController controller, String? helper, String? errorText, Widget? prefixIcon, String? suffix, Widget? trailing, TextStyle? style, TextInputType? keyboardType, bool enabled = true})`
@@ -260,7 +261,7 @@ Payment card = DkCard(padding 16, gap 14): Row of two payment DkSummaryTiles (gr
 - focused: border 2 `accent` + outer ring 4 `accentSoft`, padding h 14.
 - error: border 2 `error`, prefix icon `error` (as in mockup 08); error row = icon `circle-alert` 16 + gap 6 + text `captionStrong` error. Semantics: `aria-invalid` equivalent, error read after label.
 - disabled: bg `surfaceMuted`, border `divider`, text textSecondary.
-- variants: **time** (prefix clock 20 textTertiary, gap 10, style `fieldTime`, opens time picker), **money** (style `moneyL`, suffix `"₸"` 20/700 textTertiary, numeric keyboard, groups digits with U+202F while typing).
+- variants: **time** (prefix clock 20 textTertiary, gap 10, style `fieldTime`, opens `showDkTimePicker`, a DkPickerSheet wheel, 24 h), **money** (style `moneyL`, suffix `"₸"` 20/700 textTertiary, numeric keyboard, groups digits with U+202F while typing).
 - `trailing` slot used for `DkBadge('+1 день')`.
 
 ### DkBadge
@@ -282,7 +283,18 @@ height 24, radius sm, padding h 8, bg `accentSoft`, text `badge` accent.
 ### DkDialog
 `showDkDialog(context, {required IconData icon, required String title, required String message, required String primaryLabel, required VoidCallback onPrimary, String? secondaryLabel, VoidCallback? onSecondary})`
 scrim `scrim`; card `surface` radius xl, padding 24, gap 20, margin h 24, shadow e3;
-icon tile 56 (errorSoft / error, icon 28) → title `titleDialog` + gap 8 + message `bodyMd` textSecondary → buttons stacked full-width, gap 8: primary DkButton, secondary DkButton.secondary.
+max width 400; icon tile 56 (errorSoft / error, icon 28) **centred** → title `titleDialog` + gap 8 + message `bodyMd` textSecondary, both **centred** → buttons stacked full-width, gap 8: primary DkButton, secondary DkButton.secondary.
+
+### DkPickerSheet
+`showDkTimePicker(context, {required int hour, required int minute, String title, String doneLabel})` → `({int hour, int minute})?`
+`showDkDatePicker(context, {required DateTime initialDate, required DateTime firstDate, required DateTime lastDate, String title, String doneLabel, String? todayLabel})` → `DateTime?`
+- Modal bottom sheet, bg `surface`, top radius xl, scrim `scrim`; padding 8 16 8 16 + safe area.
+- Handle 40×4 `border` radius pill → header row (min 48): title `titleM` textPrimary + optional text button shortcut (date: «Сегодня» selects `lastDate`) → `CupertinoDatePicker` wheel 216 high (time: 24 h; date: min/max dates), text `titleM` w500 textPrimary → gap 8 → DkButton primary expand «Готово».
+- The same iOS-style wheel on Android and iOS. Dismissing the sheet (swipe or scrim) = cancel (null).
+
+### DkTodayButton
+`DkTodayButton({required VoidCallback onPressed, String label = 'Сегодня'})`
+Pill bg `accentSoft`, padding 6 12, gap 6: icon `calendar-check` 16 + label `captionStrong` accent; tap area 48 high. Placed in `DkWordmark(trailing: …)`.
 
 ### DkEmptyState / DkErrorState
 `DkEmptyState({required String title, String? message, String? actionLabel, VoidCallback? onAction})`
@@ -304,7 +316,7 @@ Frame 390×844. Content respects `SafeArea` (top inset in mockup = 54, bottom = 
 
 ### 5.1 Day — `01_day_light` / `02_day_dark`
 Column, gap 16, scrollable (`RefreshIndicator` for pull-to-refresh), bottom padding so the last tile clears the FAB:
-1. Header: wordmark row (height 48): 12×12 accent square radius 4, gap 10, «Дневник смен» `wordmark`.
+1. Header: wordmark row (height 48): 12×12 accent square radius 4, gap 10, «Дневник смен» `wordmark`; on the right, `DkTodayButton` «Сегодня» while another day is shown (jumps to today).
 2. gap 8 → DkDaySwitcher.
 3. DkSummaryCard.
 4. Payment card (DkSummaryTile ×2 + DkSplitBar).

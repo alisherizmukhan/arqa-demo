@@ -84,9 +84,16 @@ class DkSummaryTile extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       spacing: context.dkSpacing.s2,
       children: [
-        Text(
-          caption,
-          style: text.captionStrong.copyWith(color: colors.textTertiary),
+        // One line: «Наличные · 17%» shrinks to fit rather than wrapping
+        // the share onto a second line in a narrow tile.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            caption,
+            maxLines: 1,
+            style: text.captionStrong.copyWith(color: colors.textTertiary),
+          ),
         ),
         DkGroupedText(
           value,
