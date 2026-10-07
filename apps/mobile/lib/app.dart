@@ -5,10 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 class App extends StatelessWidget {
-  const new({this.home = const DayScreen(), super.key});
+  const new({
+    this.home = const DayScreen(),
+    this.themeMode = ThemeMode.light,
+    super.key,
+  });
 
   /// The first screen (the Day screen; tests may open another one).
   final Widget home;
+
+  /// Light by default, whatever the phone's setting (the dark theme stays
+  /// available: tests and screenshots pass [ThemeMode.system]).
+  final ThemeMode themeMode;
 
   @override
   Widget build(BuildContext context) {
@@ -17,6 +25,7 @@ class App extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: DkTheme.light(),
       darkTheme: DkTheme.dark(),
+      themeMode: themeMode,
       locale: const Locale('ru'),
       supportedLocales: const [Locale('ru')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,

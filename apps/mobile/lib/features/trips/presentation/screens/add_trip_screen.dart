@@ -272,24 +272,17 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     final zone = ref.read(driverZoneProvider);
     final now = zone.wallClock(ref.read(clockProvider)());
     final current = isStart ? _start : _end;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: current?.hour ?? now.hour,
-        minute: current?.minute ?? now.minute,
-      ),
-      helpText: isStart ? S.startPickerHelp : S.endPickerHelp,
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
-        child: child!,
-      ),
+    final time = await showDkTimePicker(
+      context,
+      hour: current?.hour ?? now.hour,
+      minute: current?.minute ?? now.minute,
+      title: isStart ? S.startPickerHelp : S.endPickerHelp,
     );
     if (!mounted) return;
     final field = isStart ? TripField.start : TripField.end;
     setState(() {
       _touched.add(field);
-      if (picked == null) return;
-      final time = (hour: picked.hour, minute: picked.minute);
+      if (time == null) return;
       if (isStart) {
         _start = time;
       } else {

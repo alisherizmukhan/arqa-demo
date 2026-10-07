@@ -12,6 +12,7 @@ import 'package:driver_diary/features/trips/presentation/models/trip_form.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
 import 'package:driver_diary/features/trips/presentation/screens/add_trip_screen.dart';
 import 'package:driver_diary/features/trips/presentation/screens/day_screen.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -107,7 +108,10 @@ Future<void> pumpDiary(
           clockProvider.overrideWithValue(() => now ?? scenarioNow),
         ],
         retry: (_, _) => null,
-        child: home == null ? const App() : App(home: home),
+        // The theme follows the test device (the app itself is light).
+        child: home == null
+            ? const App(themeMode: ThemeMode.system)
+            : App(home: home, themeMode: ThemeMode.system),
       ),
     ),
   );
@@ -125,7 +129,7 @@ Future<void> selectDay(WidgetTester tester, CalendarDay day) async {
 }
 
 /// Picks [hour]:[minute] in the time field labelled [label] through the
-/// Material time picker (keyboard entry).
+/// wheel sheet (DkPickerSheet): sets the wheel, then taps «Готово».
 Future<void> pickTime(
   WidgetTester tester,
   String label,
@@ -134,13 +138,10 @@ Future<void> pickTime(
 ) async {
   await tester.tap(find.text(label));
   await tester.pumpAndSettle();
-  await tester.tap(find.byIcon(Icons.keyboard_outlined));
-  await tester.pumpAndSettle();
-  final dialog = find.byType(Dialog);
-  final inputs = find.descendant(of: dialog, matching: find.byType(TextField));
-  await tester.enterText(inputs.at(0), '$hour'.padLeft(2, '0'));
-  await tester.enterText(inputs.at(1), '$minute'.padLeft(2, '0'));
-  await tester.tap(find.text('ОК'));
+  tester
+      .widget<CupertinoDatePicker>(find.byType(CupertinoDatePicker))
+      .onDateTimeChanged(DateTime(2000, 1, 1, hour, minute));
+  await tester.tap(find.text('Готово'));
   await tester.pumpAndSettle();
 }
 

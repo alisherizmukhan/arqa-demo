@@ -174,7 +174,7 @@ final class SelectedDayProvider
   }
 }
 
-String _$selectedDayHash() => r'a8e40a697829ed7cf7fd4e72f9f37095561a0063';
+String _$selectedDayHash() => r'75e117e148199d8ec5e2d6202c4de0b1350bf03e';
 
 /// The day the user is looking at. Starts at today; never goes past today.
 
@@ -196,12 +196,14 @@ abstract class _$SelectedDay extends $Notifier<CalendarDay> {
   }
 }
 
-/// Trips of the selected day, ordered by start.
+/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
+/// listener goes; a failed load is not cached.
 
 @ProviderFor(dayTrips)
-final dayTripsProvider = DayTripsProvider._();
+final dayTripsProvider = DayTripsFamily._();
 
-/// Trips of the selected day, ordered by start.
+/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
+/// listener goes; a failed load is not cached.
 
 final class DayTripsProvider
     extends
@@ -211,20 +213,28 @@ final class DayTripsProvider
           FutureOr<List<Trip>>
         >
     with $FutureModifier<List<Trip>>, $FutureProvider<List<Trip>> {
-  /// Trips of the selected day, ordered by start.
-  DayTripsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'dayTripsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+  /// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
+  /// listener goes; a failed load is not cached.
+  DayTripsProvider._({
+    required DayTripsFamily super.from,
+    required CalendarDay super.argument,
+  }) : super(
+         retry: null,
+         name: r'dayTripsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$dayTripsHash();
+
+  @override
+  String toString() {
+    return r'dayTripsProvider'
+        ''
+        '($argument)';
+  }
 
   @$internal
   @override
@@ -233,20 +243,55 @@ final class DayTripsProvider
 
   @override
   FutureOr<List<Trip>> create(Ref ref) {
-    return dayTrips(ref);
+    final argument = this.argument as CalendarDay;
+    return dayTrips(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DayTripsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
   }
 }
 
-String _$dayTripsHash() => r'5cd24dd24453ae5809571d647261dd27775708cd';
+String _$dayTripsHash() => r'cf4ea4929a3bc6caab6ac86da6f1d2c53ad4a1cd';
 
-/// Summary of the selected day, computed from the same trips the list shows,
-/// so the card and the list can never disagree.
+/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
+/// listener goes; a failed load is not cached.
+
+final class DayTripsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<Trip>>, CalendarDay> {
+  DayTripsFamily._()
+    : super(
+        retry: null,
+        name: r'dayTripsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
+  /// listener goes; a failed load is not cached.
+
+  DayTripsProvider call(CalendarDay day) =>
+      DayTripsProvider._(argument: day, from: this);
+
+  @override
+  String toString() => r'dayTripsProvider';
+}
+
+/// Summary of [day], computed from the same trips the list shows, so the
+/// card and the list can never disagree.
 
 @ProviderFor(daySummary)
-final daySummaryProvider = DaySummaryProvider._();
+final daySummaryProvider = DaySummaryFamily._();
 
-/// Summary of the selected day, computed from the same trips the list shows,
-/// so the card and the list can never disagree.
+/// Summary of [day], computed from the same trips the list shows, so the
+/// card and the list can never disagree.
 
 final class DaySummaryProvider
     extends
@@ -256,21 +301,28 @@ final class DaySummaryProvider
           FutureOr<DailySummary>
         >
     with $FutureModifier<DailySummary>, $FutureProvider<DailySummary> {
-  /// Summary of the selected day, computed from the same trips the list shows,
-  /// so the card and the list can never disagree.
-  DaySummaryProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'daySummaryProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+  /// Summary of [day], computed from the same trips the list shows, so the
+  /// card and the list can never disagree.
+  DaySummaryProvider._({
+    required DaySummaryFamily super.from,
+    required CalendarDay super.argument,
+  }) : super(
+         retry: null,
+         name: r'daySummaryProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$daySummaryHash();
+
+  @override
+  String toString() {
+    return r'daySummaryProvider'
+        ''
+        '($argument)';
+  }
 
   @$internal
   @override
@@ -280,11 +332,46 @@ final class DaySummaryProvider
 
   @override
   FutureOr<DailySummary> create(Ref ref) {
-    return daySummary(ref);
+    final argument = this.argument as CalendarDay;
+    return daySummary(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DaySummaryProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
   }
 }
 
-String _$daySummaryHash() => r'41207b0e48f5bf3e13ce711b6cf9590df6c1f514';
+String _$daySummaryHash() => r'c73ddc9acd023a351c87d5d2cc03446903ac6a5a';
+
+/// Summary of [day], computed from the same trips the list shows, so the
+/// card and the list can never disagree.
+
+final class DaySummaryFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<DailySummary>, CalendarDay> {
+  DaySummaryFamily._()
+    : super(
+        retry: null,
+        name: r'daySummaryProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Summary of [day], computed from the same trips the list shows, so the
+  /// card and the list can never disagree.
+
+  DaySummaryProvider call(CalendarDay day) =>
+      DaySummaryProvider._(argument: day, from: this);
+
+  @override
+  String toString() => r'daySummaryProvider';
+}
 
 /// The id of a just-added trip, highlighted in the list for ~2 s
 /// (DESIGN.md §5.5); null otherwise.

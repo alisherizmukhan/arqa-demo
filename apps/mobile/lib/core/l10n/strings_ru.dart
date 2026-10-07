@@ -18,6 +18,7 @@ abstract final class S {
   static const retry = 'Повторить';
   static const saved = 'Поездка добавлена';
   static const pickDateHelp = 'Выберите день';
+  static const today = 'Сегодня';
   static const loading = 'Загрузка';
 
   /// `2 поездки · 37 мин`.

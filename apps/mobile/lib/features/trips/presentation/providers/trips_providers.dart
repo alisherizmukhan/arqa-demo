@@ -44,31 +44,42 @@ class SelectedDay extends _$SelectedDay {
     if (state.isBefore(_today)) state = state.addDays(1);
   }
 
+  void today() => state = _today;
+
   void select(CalendarDay day) => state = day.isAfter(_today) ? _today : day;
 }
 
-/// Trips of the selected day, ordered by start.
+/// How long a viewed day stays cached after the screen leaves it: going
+/// back to it within this time shows it at once (no skeleton).
+const dayCacheTtl = Duration(minutes: 5);
+
+/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
+/// listener goes; a failed load is not cached.
 @riverpod
-Future<List<Trip>> dayTrips(Ref ref) async {
-  final day = ref.watch(selectedDayProvider);
+Future<List<Trip>> dayTrips(Ref ref, CalendarDay day) async {
+  final link = ref.keepAlive();
+  final timer = Timer(dayCacheTtl, link.close);
+  ref.onDispose(timer.cancel);
   final zone = ref.watch(driverZoneProvider);
   final result = await GetDayTrips(ref.watch(tripsRepositoryProvider))(
     day,
     zone,
   );
-  return switch (result) {
-    Ok(:final value) => value,
-    Err(:final failure) => throw failure,
-  };
+  switch (result) {
+    case Ok(:final value):
+      return value;
+    case Err(:final failure):
+      link.close();
+      throw failure;
+  }
 }
 
-/// Summary of the selected day, computed from the same trips the list shows,
-/// so the card and the list can never disagree.
+/// Summary of [day], computed from the same trips the list shows, so the
+/// card and the list can never disagree.
 @riverpod
-Future<DailySummary> daySummary(Ref ref) async {
-  final day = ref.watch(selectedDayProvider);
+Future<DailySummary> daySummary(Ref ref, CalendarDay day) async {
   final zone = ref.watch(driverZoneProvider);
-  final trips = await ref.watch(dayTripsProvider.future);
+  final trips = await ref.watch(dayTripsProvider(day).future);
   return calculateDailySummary(day, trips, zone);
 }
 

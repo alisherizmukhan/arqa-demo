@@ -64,10 +64,11 @@ void main() {
       when(() => repository.tripsForDay(referenceDay, kz))
           .thenAnswer((_) async => Ok([t1, t2]));
       final container = makeContainer();
-      container.read(selectedDayProvider.notifier).select(referenceDay);
 
-      final trips = await container.read(dayTripsProvider.future);
-      final summary = await container.read(daySummaryProvider.future);
+      final trips = await container.read(dayTripsProvider(referenceDay).future);
+      final summary = await container.read(
+        daySummaryProvider(referenceDay).future,
+      );
 
       expect(trips, [t1, t2]);
       expect(
@@ -84,19 +85,47 @@ void main() {
       );
     });
 
-    test('switching the day refetches for the new day', () async {
+    test(
+      'each day is fetched once and stays cached after it is left',
+      () async {
+        final container = makeContainer();
+        final today = CalendarDay(2026, 10, 2);
+        final yesterday = CalendarDay(2026, 10, 1);
+
+        // Viewed and left (no listener), then viewed again.
+        for (final day in [today, yesterday, today, yesterday]) {
+          final sub = container.listen(dayTripsProvider(day), (_, _) {});
+          await container.read(dayTripsProvider(day).future);
+          sub.close();
+          await Future<void>.delayed(Duration.zero);
+        }
+
+        verify(() => repository.tripsForDay(today, kz)).called(1);
+        verify(() => repository.tripsForDay(yesterday, kz)).called(1);
+      },
+    );
+
+    test('a failed day is not cached: the next view refetches', () async {
+      var calls = 0;
+      when(() => repository.tripsForDay(any(), any())).thenAnswer((_) async {
+        calls++;
+        return calls == 1 ? const Err(NetworkFailure()) : Ok([t1]);
+      });
       final container = makeContainer();
-      final subscription = container.listen(dayTripsProvider, (_, _) {});
-      await container.read(dayTripsProvider.future);
 
-      container.read(selectedDayProvider.notifier).previous();
-      await container.read(dayTripsProvider.future);
+      final failing = container.listen(
+        dayTripsProvider(referenceDay),
+        (_, _) {},
+      );
+      await expectLater(
+        container.read(dayTripsProvider(referenceDay).future),
+        throwsA(isA<NetworkFailure>()),
+      );
+      failing.close();
+      await Future<void>.delayed(Duration.zero);
 
-      verify(() => repository.tripsForDay(CalendarDay(2026, 10, 2), kz))
-          .called(1);
-      verify(() => repository.tripsForDay(CalendarDay(2026, 10, 1), kz))
-          .called(1);
-      subscription.close();
+      expect(await container.read(dayTripsProvider(referenceDay).future), [t1]);
+      expect(calls, 2);
     });
 
     test('a failure surfaces as AsyncError with the Failure', () async {
@@ -104,11 +133,17 @@ void main() {
           .thenAnswer((_) async => const Err(NetworkFailure()));
       final container = makeContainer();
 
+      final sub = container.listen(dayTripsProvider(referenceDay), (_, _) {});
+
       await expectLater(
-        container.read(dayTripsProvider.future),
+        container.read(dayTripsProvider(referenceDay).future),
         throwsA(isA<NetworkFailure>()),
       );
-      expect(container.read(dayTripsProvider).error, isA<NetworkFailure>());
+      expect(
+        container.read(dayTripsProvider(referenceDay)).error,
+        isA<NetworkFailure>(),
+      );
+      sub.close();
     });
   });
 
@@ -172,13 +207,16 @@ void main() {
       answerCreate([Ok(t1)]);
       final container = makeContainer();
       final sub = container.listen(addTripControllerProvider, (_, _) {});
-      final tripsSub = container.listen(dayTripsProvider, (_, _) {});
-      await container.read(dayTripsProvider.future);
+      final tripsSub = container.listen(
+        dayTripsProvider(referenceDay),
+        (_, _) {},
+      );
+      await container.read(dayTripsProvider(referenceDay).future);
 
       final result = await container
           .read(addTripControllerProvider.notifier)
           .save(t1);
-      await container.read(dayTripsProvider.future);
+      await container.read(dayTripsProvider(referenceDay).future);
 
       expect(result, isA<Ok<Trip>>());
       expect(container.read(addTripControllerProvider).value, t1);

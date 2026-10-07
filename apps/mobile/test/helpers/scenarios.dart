@@ -189,6 +189,8 @@ final scenarios = <Scenario>[
 /// Mockup 02 is 01 in the dark theme; 07 and 12 have no dark mockup.
 const darkScenarioIds = {
   'r5_discard_confirm',
+  'r6_time_picker',
+  'r6_date_picker',
   '01_day_light',
   '07_add_trip',
   '12_add_trip_conflict_409',
@@ -229,6 +231,23 @@ final stressScenarios = <Scenario>[
 
 /// Stage R5 states without a mockup (screenshots, layout matrix, a11y).
 final behaviourScenarios = <Scenario>[
+  (
+    id: 'r6_time_picker',
+    run: (tester) async {
+      await _form(tester, FakeTripsRepository(), _input(referenceDay));
+      await tester.tap(find.text('Начало'));
+      await tester.pumpAndSettle();
+    },
+  ),
+  (
+    id: 'r6_date_picker',
+    run: (tester) async {
+      await pumpDiary(tester, FakeTripsRepository([t1, t2]));
+      await selectDay(tester, referenceDay);
+      await tester.tap(find.bySemanticsLabel(RegExp('^Выбрать дату')));
+      await tester.pumpAndSettle();
+    },
+  ),
   (
     id: 'r5_discard_confirm',
     run: (tester) async {

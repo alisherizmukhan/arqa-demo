@@ -52,17 +52,25 @@ class _DayScreenState extends ConsumerState<DayScreen> {
   }
 
   _DayView _view(CalendarDay day) {
-    final summary = ref.watch(daySummaryProvider);
-    final trips = ref.watch(dayTripsProvider);
-    // A new day was selected: a skeleton, never the previous day's totals.
-    if (summary.isReloading || trips.isReloading) return const _Loading();
+    // One provider per day: a cached day shows at once; another day's
+    // totals can never be shown for this one.
+    final summary = ref.watch(daySummaryProvider(day));
+    final trips = ref.watch(dayTripsProvider(day));
     // Pull-to-refresh (and a failed refresh) keep the shown data.
-    if ((summary.value, trips.value) case (final s?, final t?)
-        when s.day == day) {
+    if ((summary.value, trips.value) case (final s?, final t?)) {
       return _Loaded(s, t);
     }
     if (summary.hasError) return _Failed(retrying: summary.isLoading);
     return const _Loading();
+  }
+
+  /// Loads the days next to [day] in the background, so stepping to them
+  /// shows data without a skeleton (they stay cached, [dayCacheTtl]).
+  void _prefetchNeighbours(CalendarDay day, CalendarDay today) {
+    for (final neighbour in [day.addDays(-1), day.addDays(1)]) {
+      if (neighbour.isAfter(today)) continue;
+      ref.listen(dayTripsProvider(neighbour), (_, _) {});
+    }
   }
 
   @override
@@ -71,6 +79,7 @@ class _DayScreenState extends ConsumerState<DayScreen> {
     final today = ref.watch(todayProvider);
     final selection = ref.read(selectedDayProvider.notifier);
     final view = _view(day);
+    _prefetchNeighbours(day, today);
     final spacing = context.dkSpacing;
     final gutter = spacing.screenGutter;
     final showFab = switch (view) {
@@ -99,7 +108,11 @@ class _DayScreenState extends ConsumerState<DayScreen> {
                 sliver: SliverList.list(
                   children: [
                     // Kit default = §6 copy («Дневник смен»).
-                    const DkWordmark(),
+                    DkWordmark(
+                      trailing: day == today
+                          ? null
+                          : DkTodayButton(onPressed: selection.today),
+                    ),
                     SizedBox(height: spacing.s8),
                     DkDaySwitcher(
                       date: _date(day),
@@ -125,7 +138,7 @@ class _DayScreenState extends ConsumerState<DayScreen> {
                     title: S.errorTitle,
                     message: S.errorMessage,
                     isRetrying: retrying,
-                    onRetry: () => ref.invalidate(dayTripsProvider),
+                    onRetry: () => ref.invalidate(dayTripsProvider(day)),
                   ),
                 ),
                 _ => SliverPadding(
@@ -187,14 +200,15 @@ class _DayScreenState extends ConsumerState<DayScreen> {
       DateTime(day.year, day.month, day.day);
 
   Future<void> _refresh() async {
+    final day = ref.read(selectedDayProvider);
     try {
-      ref.invalidate(dayTripsProvider);
-      await ref.read(dayTripsProvider.future);
+      ref.invalidate(dayTripsProvider(day));
+      await ref.read(dayTripsProvider(day).future);
       _snack?.close();
     } on Object {
       // No data yet: the error state explains. With data: keep it (§5.4).
-      final shown = ref.read(daySummaryProvider).value?.day;
-      if (!mounted || shown != ref.read(selectedDayProvider)) return;
+      if (!mounted || day != ref.read(selectedDayProvider)) return;
+      if (!ref.read(daySummaryProvider(day)).hasValue) return;
       // Full width, 12 above the FAB: never over it.
       final fab = _fabKey.currentContext?.size?.height ?? 0;
       _snack = showDkSnackbar(
@@ -209,20 +223,20 @@ class _DayScreenState extends ConsumerState<DayScreen> {
         actionLabel: S.retry,
         onAction: () {
           _snack?.close();
-          ref.invalidate(dayTripsProvider);
+          ref.invalidate(dayTripsProvider(day));
         },
       );
     }
   }
 
   Future<void> _pickDay(CalendarDay day, CalendarDay today) async {
-    final picked = await showDatePicker(
-      context: context,
-      locale: const Locale('ru'),
+    final picked = await showDkDatePicker(
+      context,
       initialDate: _date(day),
       firstDate: DateTime(2000),
       lastDate: _date(today),
-      helpText: S.pickDateHelp,
+      title: S.pickDateHelp,
+      todayLabel: S.today,
     );
     if (picked == null) return;
     ref
@@ -240,14 +254,13 @@ class _DayScreenState extends ConsumerState<DayScreen> {
     );
     if (trip == null || !mounted) return;
     // §5.5: show the day the trip starts on, with the new row highlighted.
-    ref
-        .read(selectedDayProvider.notifier)
-        .select(ref.read(driverZoneProvider).dayOf(trip.start));
+    final tripDay = ref.read(driverZoneProvider).dayOf(trip.start);
+    ref.read(selectedDayProvider.notifier).select(tripDay);
     // Wait for the reloaded day: the row must be visible for the 2 s
     // highlight, and the FAB (absent while the day was empty) must be laid
     // out before the snackbar is placed beside or above it.
     try {
-      await ref.read(daySummaryProvider.future);
+      await ref.read(daySummaryProvider(tripDay).future);
     } on Object {
       // The error state shows instead (no FAB to avoid).
     }
