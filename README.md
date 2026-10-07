@@ -23,7 +23,7 @@
 | Клиент: итоги дня, список поездок, переключение дней | ✅ | `apps/mobile/lib/features/trips/presentation/screens/day_screen.dart`, `apps/mobile/lib/features/trips/domain/entities/daily_summary.dart`, `apps/mobile/lib/features/trips/presentation/providers/trips_providers.dart` | `apps/mobile/test/features/trips/domain/domain_test.dart` («reference case 2026-10-01»); `apps/mobile/test/features/trips/presentation/screens_test.dart` («renders the reference day»); `apps/mobile/test/features/trips/presentation/providers_test.dart` («each day is fetched once…») |
 | Создание поездки с валидацией (сумма > 0, конец позже начала) | ✅ | `apps/mobile/lib/features/trips/presentation/screens/add_trip_screen.dart`, `apps/mobile/lib/features/trips/domain/entities/trip_rules.dart`, `backend/app/domain/trip.py` | `apps/mobile/test/features/trips/presentation/trip_form_test.dart`; `backend/tests/unit/domain/test_trip.py::test_invalid_trip_is_rejected`; `backend/tests/integration/test_api_validation.py` |
 | Нет дублей при повторной отправке | ✅ | `backend/app/infrastructure/repository.py` (`INSERT … ON CONFLICT (id) DO NOTHING`), `backend/app/application/use_cases.py`; в клиенте `AddTripController` в `trips_providers.dart` и повторы в `add_trip_screen.dart` | `backend/tests/integration/test_idempotency.py` (повтор → 200, гонка параллельных POST → одна строка, другие данные → 409); `providers_test.dart` («retrying the same trip after a network error reuses its id»); `apps/mobile/test/features/trips/presentation/form_behaviour_test.dart` («resent with the same id») |
-| Тесты на итоги и на дубли | ✅ | `backend/tests/`, `apps/mobile/test/`, CI в `.github/workflows/ci.yml` | бэкенд: 194 теста; приложение: 207; дизайн-кит: 170. Все проходят в CI |
+| Тесты на итоги и на дубли | ✅ | `backend/tests/`, `apps/mobile/test/`, CI в `.github/workflows/ci.yml` | бэкенд: 194 теста; приложение: 220; дизайн-кит: 177. Все проходят в CI |
 | README, деплой, скриншоты | ✅ | `README.md`, `backend/Dockerfile`, `railway.json`, `docs/screenshots/` | `GET /health` на Railway отвечает 200; скриншоты рендерит `apps/mobile/test/screens/screenshots_test.dart` |
 
 ---
@@ -175,6 +175,11 @@ curl -i -X POST $API/trips -H 'Content-Type: application/json' \
   - При обрыве связи, таймауте или 5xx форма повторяет **ту же поездку с тем же `id`**: через 2, 4 и 8 с, затем каждые 30 с.
   - Кнопка «Повторить» отправляет сразу.
   - Ответ 4xx не повторяется: 422 показывается под полем, 409 открывает диалог.
+- **Удобство на экране дня.**
+  - Кнопка «Сегодня» в шапке.
+  - Выбор даты и времени — колесо в стиле iOS на обеих платформах.
+  - Сортировка поездок: по времени (по умолчанию — сначала ранние) или по сумме.
+  - После сохранения список прокручивается к новой поездке и подсвечивает её.
 - **Голдены и скриншоты.** Голдены кита и экрана дня есть в двух темах. Скриншоты всех состояний рендерятся тестами.
 - **Доступность.**
   - Цели нажатия не меньше 48 dp, у всех элементов есть подписи для скринридера.
