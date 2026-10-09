@@ -101,3 +101,29 @@ Allowed during stages 2–4 only with `AUTH_REQUIRED=false` (DECISIONS.md, «Bra
 | `POST /auth/logout` (user_2, admin), then `/auth/me` | 204, then 401 |
 
 Database after the checks: revision `0003`, 133 trips, 2 sessions (both from these checks, both revoked), 0 login failures.
+
+## Fixes after stage 2: login lock per IP, protected demo accounts (2026-10-09)
+
+Deployed from `main` with `AUTH_REQUIRED=false` (CI green each time). Final deployment `dd688105-b192-421d-8353-c3271bba4c54`: **SUCCESS**; migration `0003 -> 0004` (login_failures.client_ip); seed `0 created, 0 passwords reset, 0 unblocked`.
+
+Variables on `api` (names): `AUTH_REQUIRED` (false), `CLIENT_IP_HEADER` (x-real-ip), `DATABASE_URL`; all declared in `.railway/railway.ts` (`railway config plan`: up to date).
+
+**How the client IP was verified** (probes with a made-up login, so no demo account was affected):
+
+| Probe | X-Forwarded-For seen by the API | X-Real-IP seen by the API |
+|---|---|---|
+| my machine, sent `X-Forwarded-For: 1.2.3.4` | `1.2.3.4, 152.233.12.245` (Railway's internal hop) | `147.30.27.152` = my public IP |
+| inside the API container (its egress IP `152.55.186.0`) | `1.2.3.4, 152.233.12.241` | `152.55.186.0` |
+| my machine, sent `X-Real-IP: 9.9.9.9` | — | `147.30.27.152` (forged value overwritten) |
+
+So Railway's `X-Forwarded-For` never contains the client and `X-Real-IP` does → `CLIENT_IP_HEADER=x-real-ip` (TRUSTED_PROXY_HOPS removed).
+
+| Check | Result |
+|---|---|
+| 11 failed logins for `lock-probe` from my machine (with forged `X-Forwarded-For` and `X-Real-IP`) | 401 ×10, then **429**; logged as `147.30.27.152` |
+| the same login from the API container | **401** (not locked) |
+| admin blocks user_2 / revokes user_2's sessions | **409 `demo_account_protected`** both |
+| `GET /health` | 200 |
+| `GET /summary?date=2026-10-01` without a token | 3 900 / 585 / 3 315, cash 1 500 / card 2 400 — exact |
+
+The `lock-probe` and `xff-probe*` failure rows expire on their own within 15 minutes (old rows are deleted as new failures are recorded).
