@@ -2,8 +2,6 @@
 *
 !backend/
 !data/trips.json
-# Railway applies this file to the upload too; it must still see its build config.
-!railway.json
 backend/.venv
 backend/tests
 **/__pycache__

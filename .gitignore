@@ -49,3 +49,6 @@ coverage/
 
 # Golden-test failure diffs (flutter_test writes them next to the test)
 **/test/**/failures/
+
+# Railway IaC SDK (npm, repo root)
+node_modules/

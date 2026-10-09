@@ -1,4 +1,9 @@
-# `railway up` uploads from the repo root; the API image only needs backend/, data/ and railway.json.
+# `railway up` uploads from the repo root; the API image only needs backend/ and data/.
+# Railway config lives in .railway/railway.ts (applied with `railway config apply`).
+node_modules/
+package.json
+package-lock.json
+.railway/
 apps/
 packages/
 docs/
