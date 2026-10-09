@@ -28,6 +28,11 @@ from app.domain.errors import DomainValidationError, ErrorCode
 
 logger = logging.getLogger(__name__)
 
+# FastAPI raises HTTPException(400) with this detail when the body cannot be
+# read at all (e.g. bytes that are not UTF-8); broken JSON in valid UTF-8 is a
+# validation error instead. Both are "not valid JSON" for the client.
+FASTAPI_BODY_PARSE_ERROR = "There was an error parsing the body"
+
 
 class ApiErrorCode(StrEnum):
     MISSING_FIELD = "missing_field"
@@ -189,6 +194,15 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+        if (
+            exc.status_code == status.HTTP_400_BAD_REQUEST
+            and exc.detail == FASTAPI_BODY_PARSE_ERROR
+        ):
+            return error_response(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                ApiErrorCode.INVALID_JSON,
+                "the request body must be valid JSON in UTF-8",
+            )
         code = {
             status.HTTP_404_NOT_FOUND: ApiErrorCode.NOT_FOUND,
             status.HTTP_405_METHOD_NOT_ALLOWED: ApiErrorCode.METHOD_NOT_ALLOWED,

@@ -1,10 +1,13 @@
+from pathlib import Path
 from typing import Any
 
+import fastapi.routing
 import pytest
 from httpx import AsyncClient, Response
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from tests.integration.conftest import count_trips, trip_payload
+from app.api.errors import FASTAPI_BODY_PARSE_ERROR
+from tests.integration.conftest import bearer, count_trips, trip_payload
 
 START = "2026-10-01T10:00:00+05:00"
 
@@ -113,3 +116,44 @@ async def test_unknown_route_uses_error_shape(client: AsyncClient) -> None:
 
 async def test_wrong_method_uses_error_shape(client: AsyncClient) -> None:
     assert_error(await client.put("/trips", json={}), 405, "method_not_allowed", None)
+
+
+# Bodies that are not JSON at all: invalid UTF-8 bytes, or broken JSON. Every
+# JSON endpoint answers 422 invalid_json in the error shape, never a 400.
+BROKEN_BODIES = {
+    "invalid-utf8": b'{"reason": "\xcf\xf0\xee\xe2\xe5\xf0\xea\xe0"}',  # cp1251 text
+    "broken-json": b'{"id": "x", "amount": ',
+    "not-json": b"amount=100",
+}
+
+
+@pytest.mark.parametrize("body", BROKEN_BODIES.values(), ids=BROKEN_BODIES.keys())
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/trips",
+        "/withdrawals",
+        "/admin/withdrawals/5b7f3a2e-1c4d-4e8f-9a0b-6c2d1e3f4a5b/reject",
+        "/auth/login",
+    ],
+)
+async def test_unreadable_body_is_422_invalid_json(
+    anonymous: AsyncClient, path: str, body: bytes
+) -> None:
+    login = "admin" if "admin" in path else "user_1"
+    response = await anonymous.post(
+        path,
+        content=body,
+        headers={**bearer(login), "Content-Type": "application/json"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_json"
+    assert set(response.json()["error"]) == {"code", "message", "field"}
+
+
+def test_fastapi_still_uses_the_body_parse_message() -> None:
+    """The mapping above relies on FastAPI's exact message (fastapi/routing.py)."""
+    source = Path(fastapi.routing.__file__).read_text(encoding="utf-8")
+
+    assert f'detail="{FASTAPI_BODY_PARSE_ERROR}"' in source

@@ -251,6 +251,7 @@ The audit is in `docs/PROD_AUDIT.md` (findings F1–F8). Decisions approved afte
 - **Approve / reject are idempotent** and lock the withdrawal row (`FOR UPDATE`). Repeating the same decision returns the current state (a repeated reject keeps the first reason). Deciding the other way → 409 `withdrawal_already_decided`. A reject needs a non-empty reason (≤ 500 characters after trimming) → otherwise 422 `invalid_reason`. Only admins decide (403 otherwise); unknown id → 404.
 - **Scoping as for trips:** a driver gets their own balance and withdrawals, and any `driver_id` from a driver is 403. An admin gets all drivers (balances summed) or one driver; `GET /withdrawals?status=` filters, newest first. Only drivers create withdrawals.
 - **Balance tests run on a clean seed** with only `t1`, `t2`, `u2-t1`, `u2-t2` (user_1 = 1 815 ₸, user_2 = 2 280 ₸). On prod, user_1 owns the demo history, and `GET /balance` must equal the SQL formula (200 327 ₸ before any withdrawal).
+- **A body that is not valid JSON is always 422 `invalid_json`** — broken JSON, and also bytes that are not UTF-8 (FastAPI raises a 400 for those; the error handler maps exactly that case). → One error shape and one status for "the client sent something unreadable", on every endpoint.
 - **No new migration:** the `withdrawals` table (with `CHECK amount > 0` and the status check) was created in stage 1.
 
 ## Post-redesign UI fixes (user feedback)
