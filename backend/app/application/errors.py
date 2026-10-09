@@ -46,3 +46,11 @@ class ForbiddenError(DomainError):
 
 class NotFoundError(DomainError):
     pass
+
+
+class DemoAccountProtectedError(DomainError):
+    """Demo mode: visitors must not be able to break the shared demo accounts."""
+
+    def __init__(self, login: str) -> None:
+        super().__init__(f"{login!r} is a demo account and cannot be blocked or signed out")
+        self.login = login

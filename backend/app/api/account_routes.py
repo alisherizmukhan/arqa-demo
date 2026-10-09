@@ -36,6 +36,12 @@ _ADMIN_ERRORS: dict[int | str, dict[str, Any]] = {
     **error_example(status.HTTP_403_FORBIDDEN, "Not an admin", "forbidden", "admin only"),
     **error_example(status.HTTP_404_NOT_FOUND, "No such user", "not_found", "user … not found"),
     **error_example(
+        status.HTTP_409_CONFLICT,
+        "Demo mode: demo accounts cannot be blocked or signed out",
+        "demo_account_protected",
+        "'user_1' is a demo account and cannot be blocked or signed out",
+    ),
+    **error_example(
         status.HTTP_422_UNPROCESSABLE_CONTENT,
         "Validation error (bad user id or body)",
         "invalid_type",

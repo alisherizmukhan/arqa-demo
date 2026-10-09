@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.schemas import ErrorBody, ErrorResponse
 from app.application.errors import (
     AccountDisabledError,
+    DemoAccountProtectedError,
     ForbiddenError,
     InvalidCredentialsError,
     NotAuthenticatedError,
@@ -39,6 +40,7 @@ class ApiErrorCode(StrEnum):
     ACCOUNT_DISABLED = "account_disabled"
     RATE_LIMITED = "rate_limited"
     FORBIDDEN = "forbidden"
+    DEMO_ACCOUNT_PROTECTED = "demo_account_protected"
     NOT_FOUND = "not_found"
     METHOD_NOT_ALLOWED = "method_not_allowed"
     HTTP_ERROR = "http_error"
@@ -143,6 +145,12 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ForbiddenError)
     async def _forbidden(_: Request, exc: ForbiddenError) -> JSONResponse:
         return error_response(status.HTTP_403_FORBIDDEN, ApiErrorCode.FORBIDDEN, str(exc))
+
+    @app.exception_handler(DemoAccountProtectedError)
+    async def _demo_protected(_: Request, exc: DemoAccountProtectedError) -> JSONResponse:
+        return error_response(
+            status.HTTP_409_CONFLICT, ApiErrorCode.DEMO_ACCOUNT_PROTECTED, str(exc)
+        )
 
     @app.exception_handler(NotFoundError)
     async def _not_found(_: Request, exc: NotFoundError) -> JSONResponse:

@@ -105,7 +105,9 @@ class PasswordHasher(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class Accounts:
-    """The stores account use cases work with together."""
+    """The stores account use cases work with together, and which accounts are
+    the protected demo accounts (empty outside demo mode)."""
 
     users: UserRepository
     sessions: SessionRepository
+    demo_logins: frozenset[str] = frozenset()

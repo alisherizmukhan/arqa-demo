@@ -56,8 +56,18 @@ def get_now() -> datetime:
 NowDep = Annotated[datetime, Depends(get_now)]
 
 
-def get_accounts(session: SessionDep) -> Accounts:
-    return Accounts(users=SqlUserRepository(session), sessions=SqlSessionRepository(session))
+def get_accounts(session: SessionDep, settings: SettingsDep) -> Accounts:
+    # Demo mode (SEED_ON_STARTUP): the shared demo accounts are protected.
+    demo = (
+        frozenset(a.login for a in settings.demo_accounts)
+        if settings.seed_on_startup
+        else frozenset()
+    )
+    return Accounts(
+        users=SqlUserRepository(session),
+        sessions=SqlSessionRepository(session),
+        demo_logins=demo,
+    )
 
 
 AccountsDep = Annotated[Accounts, Depends(get_accounts)]

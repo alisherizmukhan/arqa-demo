@@ -70,9 +70,10 @@ async def _seed(app: FastAPI, settings: Settings) -> None:
         users = SqlUserRepository(session)
         accounts = await seed_accounts(users, Argon2PasswordHasher(), settings.demo_accounts)
         logger.info(
-            "seed: %d demo accounts created, %d passwords reset",
+            "seed: %d demo accounts created, %d passwords reset, %d unblocked",
             accounts.created,
             accounts.passwords_updated,
+            accounts.reactivated,
         )
         if not settings.seed_file.is_file():
             logger.warning("seed file %s not found, skipping seed trips", settings.seed_file)

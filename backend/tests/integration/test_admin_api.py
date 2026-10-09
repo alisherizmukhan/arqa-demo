@@ -1,4 +1,5 @@
 import pytest
+from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -119,3 +120,43 @@ async def test_patch_validation_is_422(anonymous: AsyncClient, users: dict[str, 
     for body in ({}, {"is_active": "nope"}, {"is_active": True, "role": "admin"}):
         response = await anonymous.patch(url, json=body, headers=bearer("admin"))
         assert response.status_code == 422
+
+
+@pytest.fixture
+def demo_mode(app: FastAPI) -> None:
+    """SEED_ON_STARTUP on: the demo accounts are protected."""
+    app.state.settings = app.state.settings.model_copy(update={"seed_on_startup": True})
+
+
+@pytest.mark.usefixtures("demo_mode")
+@pytest.mark.parametrize("login", ["user_1", "user_2"])
+async def test_demo_accounts_are_protected(
+    anonymous: AsyncClient, users: dict[str, User], login: str
+) -> None:
+    user_id = users[login].id
+
+    blocked = await anonymous.patch(
+        f"/admin/users/{user_id}", json={"is_active": False}, headers=bearer("admin")
+    )
+    revoked = await anonymous.post(
+        f"/admin/users/{user_id}/revoke-sessions", headers=bearer("admin")
+    )
+
+    for response in (blocked, revoked):
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "demo_account_protected"
+    # Still active and still signed in.
+    assert (await anonymous.get("/auth/me", headers=bearer(login))).status_code == 200
+    listed = (await anonymous.get("/admin/users", headers=bearer("admin"))).json()
+    assert next(u for u in listed if u["login"] == login)["is_active"] is True
+
+
+@pytest.mark.usefixtures("demo_mode")
+async def test_unblocking_a_demo_account_is_allowed(
+    anonymous: AsyncClient, users: dict[str, User]
+) -> None:
+    response = await anonymous.patch(
+        f"/admin/users/{users['user_1'].id}", json={"is_active": True}, headers=bearer("admin")
+    )
+
+    assert response.status_code == 200

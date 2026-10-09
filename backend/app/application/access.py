@@ -4,7 +4,7 @@ entry point gets the same rules."""
 from datetime import datetime
 from uuid import UUID
 
-from app.application.errors import ForbiddenError, NotFoundError
+from app.application.errors import DemoAccountProtectedError, ForbiddenError, NotFoundError
 from app.application.ports import Accounts, UserRepository
 from app.domain.user import Role, User
 
@@ -51,10 +51,16 @@ async def set_user_active(
 ) -> User:
     """Block or unblock an account. Blocking also ends all its sessions, so
     unblocking later does not revive old tokens. An admin cannot block
-    themselves (that could lock everyone out)."""
+    themselves (that could lock everyone out), and in demo mode nobody can
+    block a demo account (409)."""
     require_admin(actor)
-    if user_id == actor.id and not is_active:
+    target = await accounts.users.get(user_id)
+    if target is None:
+        raise NotFoundError(f"user {user_id} not found")
+    if not is_active and user_id == actor.id:
         raise ForbiddenError("admins cannot block their own account")
+    if not is_active and target.login in accounts.demo_logins:
+        raise DemoAccountProtectedError(target.login)
     updated = await accounts.users.set_active(user_id, is_active)
     if updated is None:
         raise NotFoundError(f"user {user_id} not found")
@@ -67,6 +73,9 @@ async def revoke_user_sessions(
     accounts: Accounts, actor: User, user_id: UUID, *, now: datetime
 ) -> int:
     require_admin(actor)
-    if await accounts.users.get(user_id) is None:
+    target = await accounts.users.get(user_id)
+    if target is None:
         raise NotFoundError(f"user {user_id} not found")
+    if target.login in accounts.demo_logins:
+        raise DemoAccountProtectedError(target.login)
     return await accounts.sessions.revoke_all(user_id, now)

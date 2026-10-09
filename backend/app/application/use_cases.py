@@ -62,18 +62,21 @@ async def seed_trips(repo: TripRepository, trips: Sequence[Trip]) -> int:
 class SeedAccountsResult:
     created: int
     passwords_updated: int
+    reactivated: int = 0
 
 
 async def seed_accounts(
     users: UserRepository, hasher: PasswordHasher, accounts: Sequence[DemoAccount]
 ) -> SeedAccountsResult:
     """Create the demo accounts that are missing; reset a password that no
-    longer matches the configured one (so production changes it via env).
+    longer matches the configured one (so production changes it via env);
+    unblock a demo account that was blocked. Runs on every start in demo mode,
+    so the shared demo accounts always work.
 
     Plaintext passwords only pass through here: they are hashed, never stored
     or logged.
     """
-    created = updated = 0
+    created = updated = reactivated = 0
     for account in accounts:
         if await users.insert_if_absent(
             login=account.login,
@@ -87,4 +90,8 @@ async def seed_accounts(
         if stored is None or not hasher.verify(stored, account.password):
             await users.set_password_hash(account.login, hasher.hash(account.password))
             updated += 1
-    return SeedAccountsResult(created=created, passwords_updated=updated)
+        user = await users.get_by_login(account.login)
+        if user is not None and not user.is_active:
+            await users.set_active(user.id, True)
+            reactivated += 1
+    return SeedAccountsResult(created=created, passwords_updated=updated, reactivated=reactivated)

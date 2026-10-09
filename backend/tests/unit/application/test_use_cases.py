@@ -160,3 +160,15 @@ async def test_drivers_only_list_their_own_trips() -> None:
 
     assert [t.id for t in await get_trips_for_day(mine, OCT_1)] == ["a"]
     assert [t.id for t in await get_trips_for_day(theirs, OCT_1)] == ["b"]
+
+
+async def test_seed_accounts_unblocks_a_blocked_demo_account() -> None:
+    users = InMemoryUserRepository()
+    await seed_accounts(users, PlainTextHasher(), ACCOUNTS)
+    await users.set_active(users.users["user_1"].id, False)
+
+    result = await seed_accounts(users, PlainTextHasher(), ACCOUNTS)
+
+    assert result.reactivated == 1
+    assert users.users["user_1"].is_active
+    assert (await seed_accounts(users, PlainTextHasher(), ACCOUNTS)).reactivated == 0

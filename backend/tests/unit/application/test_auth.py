@@ -5,6 +5,7 @@ import pytest
 from app.application import access, auth
 from app.application.errors import (
     AccountDisabledError,
+    DemoAccountProtectedError,
     ForbiddenError,
     InvalidCredentialsError,
     NotAuthenticatedError,
@@ -223,3 +224,34 @@ async def test_revoke_sessions(world: World) -> None:
     assert await access.revoke_user_sessions(world.accounts, admin, driver.id, now=NOW) == 0
     with pytest.raises(ForbiddenError):
         await access.revoke_user_sessions(world.accounts, driver, admin.id, now=NOW)
+
+
+async def test_demo_accounts_cannot_be_blocked_or_signed_out(world: World) -> None:
+    admin = await world.user("admin")
+    driver = await world.user("user_1")
+    demo = Accounts(
+        users=world.users,
+        sessions=world.sessions,
+        demo_logins=frozenset({"admin", "user_1", "user_2"}),
+    )
+    token = (await world.login("user_1", "password_1")).token
+
+    with pytest.raises(DemoAccountProtectedError):
+        await access.set_user_active(demo, admin, driver.id, is_active=False, now=NOW)
+    with pytest.raises(DemoAccountProtectedError):
+        await access.revoke_user_sessions(demo, admin, driver.id, now=NOW)
+
+    # Nothing changed, and unblocking stays allowed (it is harmless).
+    assert (await world.user("user_1")).is_active
+    await auth.authenticate(sessions=world.sessions, token=token, now=NOW)
+    await access.set_user_active(demo, admin, driver.id, is_active=True, now=NOW)
+
+
+async def test_other_accounts_are_not_protected_in_demo_mode(world: World) -> None:
+    admin = await world.user("admin")
+    extra = await world.add("driver_3", "pw3")
+    demo = Accounts(users=world.users, sessions=world.sessions, demo_logins=frozenset({"user_1"}))
+
+    blocked = await access.set_user_active(demo, admin, extra.id, is_active=False, now=NOW)
+
+    assert not blocked.is_active

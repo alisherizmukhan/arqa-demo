@@ -160,3 +160,22 @@ async def test_seed_file_with_an_unknown_driver_stops_startup(
     with pytest.raises(RuntimeError, match="unknown driver 'nobody'"):
         async with LifespanManager(app, startup_timeout=STARTUP_TIMEOUT):
             pass
+
+
+async def test_restart_unblocks_demo_accounts_and_restores_passwords(
+    database_url: str, sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _clear(sessionmaker)
+    await _start(database_url)
+    async with sessionmaker() as session:
+        await session.execute(
+            text("UPDATE users SET is_active = false, password_hash = '!' WHERE login = 'user_1'")
+        )
+        await session.commit()
+
+    await _start(database_url)
+
+    async with sessionmaker() as session:
+        active = await session.scalar(select(UserRow.is_active).where(UserRow.login == "user_1"))
+    assert active is True
+    assert Argon2PasswordHasher().verify((await _hashes(sessionmaker))["user_1"], "password_1")
