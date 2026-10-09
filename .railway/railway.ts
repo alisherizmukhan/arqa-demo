@@ -10,7 +10,12 @@ export default defineRailway(() => {
     healthcheckTimeout: 120,
     replicas: { "europe-west4-drams3a": 1 },
     deploy: { restartPolicyMaxRetries: 5 },
-    env: { DATABASE_URL: preserve() },
+    env: {
+      DATABASE_URL: preserve(),
+      // Requests without a token act as user_1 until the app supports login
+      // (end of stage 5); then "true" together with the app release.
+      AUTH_REQUIRED: "false",
+    },
   });
 
   return project("driver-shift-diary", {
