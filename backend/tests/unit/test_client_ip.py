@@ -1,11 +1,17 @@
+import logging
+
 import pytest
 from starlette.requests import Request
 
 from app.api.client_ip import UNKNOWN_CLIENT, client_ip
 
 
-def _request(forwarded_for: str | None = None, peer: str | None = "10.0.0.5") -> Request:
+def _request(
+    forwarded_for: str | None = None, peer: str | None = "10.0.0.5", real_ip: str | None = None
+) -> Request:
     headers = [] if forwarded_for is None else [(b"x-forwarded-for", forwarded_for.encode())]
+    if real_ip is not None:
+        headers.append((b"x-real-ip", real_ip.encode()))
     scope = {
         "type": "http",
         "headers": headers,
@@ -39,3 +45,22 @@ def test_without_forwarded_entries_falls_back_to_the_peer(header: str | None) ->
 
 def test_no_peer_at_all() -> None:
     assert client_ip(_request(None, peer=None), trusted_hops=0) == UNKNOWN_CLIENT
+
+
+def test_agreement_with_x_real_ip_is_silent(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING):
+        ip = client_ip(_request("1.2.3.4, 203.0.113.7", real_ip="203.0.113.7"), trusted_hops=1)
+
+    assert ip == "203.0.113.7"
+    assert not caplog.records
+
+
+@pytest.mark.parametrize("real_ip", ["198.51.100.9", None])
+def test_disagreement_with_x_real_ip_is_logged(
+    caplog: pytest.LogCaptureFixture, real_ip: str | None
+) -> None:
+    with caplog.at_level(logging.WARNING):
+        ip = client_ip(_request("1.2.3.4, 203.0.113.7", real_ip=real_ip), trusted_hops=1)
+
+    assert ip == "203.0.113.7"  # still the trusted hop, never the header's choice
+    assert "check TRUSTED_PROXY_HOPS" in caplog.text
