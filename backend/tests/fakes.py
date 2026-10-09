@@ -37,13 +37,13 @@ class InMemoryTripRepository:
         """All stored trips by id (any driver)."""
         return {trip_id: owned.trip for trip_id, owned in self._store.items()}
 
-    async def list_started_between(self, start: datetime, end: datetime) -> list[Trip]:
+    async def list_started_between(self, start: datetime, end: datetime) -> list[OwnedTrip]:
         found = [
-            owned.trip
+            owned
             for owned in self._store.values()
             if owned.driver_id == self.driver_id and start <= owned.trip.start < end
         ]
-        return sorted(found, key=lambda t: (t.start, t.id))
+        return sorted(found, key=lambda o: (o.trip.start, o.trip.id))
 
     async def get(self, trip_id: str) -> OwnedTrip | None:
         return self._store.get(trip_id)

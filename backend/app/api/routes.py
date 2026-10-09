@@ -79,7 +79,7 @@ async def list_trips(window: DayWindowDep, repo: ReadScopeDep) -> DayTripsOut:
     return DayTripsOut(
         date=window.day,
         tz=format_utc_offset(window.tz),
-        trips=[TripOut.from_domain(t, window.tz) for t in trips],
+        trips=[TripOut.from_domain(o.trip, window.tz, o.driver_id) for o in trips],
     )
 
 
@@ -157,4 +157,4 @@ async def create_trip(
     result = await use_cases.create_trip(repo, trip_in.to_domain(), driver_id)
     response.status_code = status.HTTP_201_CREATED if result.created else status.HTTP_200_OK
     # Echo timestamps in the offset the client used for this request.
-    return TripOut.from_domain(result.trip, trip_in.start.tzinfo or UTC)
+    return TripOut.from_domain(result.trip, trip_in.start.tzinfo or UTC, driver_id)

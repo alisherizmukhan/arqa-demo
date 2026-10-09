@@ -74,6 +74,7 @@ class TripIn(BaseModel):
 
 class TripOut(BaseModel):
     id: str
+    driver_id: UUID = Field(description="The trip's driver")
     start: datetime = Field(description="In the requested timezone")
     end: datetime
     amount: int
@@ -82,9 +83,10 @@ class TripOut(BaseModel):
     net: int = Field(description="amount - commission")
 
     @classmethod
-    def from_domain(cls, trip: Trip, tz: tzinfo) -> "TripOut":
+    def from_domain(cls, trip: Trip, tz: tzinfo, driver_id: UUID) -> "TripOut":
         return cls(
             id=trip.id,
+            driver_id=driver_id,
             start=trip.start.astimezone(tz),
             end=trip.end.astimezone(tz),
             amount=trip.amount,

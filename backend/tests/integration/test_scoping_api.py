@@ -70,6 +70,20 @@ async def test_admin_sees_all_drivers(anonymous: AsyncClient) -> None:
     assert await _trip_ids(anonymous, "admin") == ["t1", "t2", "u2-t1", "u2-t2"]
 
 
+async def test_listed_trips_carry_their_driver(
+    anonymous: AsyncClient, users: dict[str, User]
+) -> None:
+    response = await anonymous.get("/trips", params=DAY, headers=bearer("admin"))
+
+    owners = {t["id"]: t["driver_id"] for t in response.json()["trips"]}
+    assert owners == {
+        "t1": str(users["user_1"].id),
+        "t2": str(users["user_1"].id),
+        "u2-t1": str(users["user_2"].id),
+        "u2-t2": str(users["user_2"].id),
+    }
+
+
 async def test_admin_can_pick_one_driver(anonymous: AsyncClient, users: dict[str, User]) -> None:
     assert await _summary(anonymous, "admin", driver_id=str(users["user_2"].id)) == USER_2
     assert await _trip_ids(anonymous, "admin", driver_id=str(users["user_1"].id)) == ["t1", "t2"]

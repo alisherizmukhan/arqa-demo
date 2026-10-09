@@ -18,8 +18,9 @@ class OwnedTrip:
 class TripRepository(Protocol):
     """Trips of one driver, or of all drivers (admin scope)."""
 
-    async def list_started_between(self, start: datetime, end: datetime) -> list[Trip]:
-        """Trips with start in [start, end), ordered by start then id."""
+    async def list_started_between(self, start: datetime, end: datetime) -> list[OwnedTrip]:
+        """Trips with start in [start, end), ordered by start then id, with
+        their drivers."""
         ...
 
     async def get(self, trip_id: str) -> OwnedTrip | None:

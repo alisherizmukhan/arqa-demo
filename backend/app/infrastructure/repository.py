@@ -22,7 +22,7 @@ class SqlTripRepository:
         self._session = session
         self._driver_id = driver_id
 
-    async def list_started_between(self, start: datetime, end: datetime) -> list[Trip]:
+    async def list_started_between(self, start: datetime, end: datetime) -> list[OwnedTrip]:
         stmt = (
             select(TripRow)
             .where(TripRow.start_at >= start, TripRow.start_at < end)
@@ -30,7 +30,10 @@ class SqlTripRepository:
         )
         if self._driver_id is not None:
             stmt = stmt.where(TripRow.driver_id == self._driver_id)
-        return [_to_domain(row) for row in await self._session.scalars(stmt)]
+        return [
+            OwnedTrip(trip=_to_domain(row), driver_id=row.driver_id)
+            for row in await self._session.scalars(stmt)
+        ]
 
     async def get(self, trip_id: str) -> OwnedTrip | None:
         row = await self._session.scalar(select(TripRow).where(TripRow.id == trip_id))

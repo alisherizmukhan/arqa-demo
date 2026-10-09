@@ -3,19 +3,20 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.application.errors import TripConflictError
-from app.application.ports import PasswordHasher, TripRepository, UserRepository
+from app.application.ports import OwnedTrip, PasswordHasher, TripRepository, UserRepository
 from app.domain.day import DayWindow
 from app.domain.summary import DailySummary, calculate_daily_summary
 from app.domain.trip import Trip
 from app.domain.user import DemoAccount
 
 
-async def get_trips_for_day(repo: TripRepository, window: DayWindow) -> list[Trip]:
+async def get_trips_for_day(repo: TripRepository, window: DayWindow) -> list[OwnedTrip]:
     return await repo.list_started_between(window.start_utc, window.end_utc)
 
 
 async def get_daily_summary(repo: TripRepository, window: DayWindow) -> DailySummary:
-    return calculate_daily_summary(window, await get_trips_for_day(repo, window))
+    owned = await get_trips_for_day(repo, window)
+    return calculate_daily_summary(window, [o.trip for o in owned])
 
 
 @dataclass(frozen=True, slots=True)

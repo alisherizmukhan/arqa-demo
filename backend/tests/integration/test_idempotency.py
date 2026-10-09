@@ -11,14 +11,16 @@ from tests.integration.conftest import count_trips, trip_payload
 
 
 async def test_new_trip_is_created(
-    client: AsyncClient, sessionmaker: async_sessionmaker[AsyncSession]
+    client: AsyncClient,
+    sessionmaker: async_sessionmaker[AsyncSession],
+    users: dict[str, User],
 ) -> None:
     payload = trip_payload()
 
     response = await client.post("/trips", json=payload)
 
     assert response.status_code == 201
-    assert response.json() == {**payload, "net": 1870}
+    assert response.json() == {**payload, "net": 1870, "driver_id": str(users["user_1"].id)}
     assert await count_trips(sessionmaker, payload["id"]) == 1
 
 

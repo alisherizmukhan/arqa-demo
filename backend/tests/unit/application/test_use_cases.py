@@ -30,7 +30,7 @@ async def test_trips_for_day_are_sorted_and_bounded() -> None:
 
     trips = await get_trips_for_day(repo, OCT_1)
 
-    assert [t.id for t in trips] == ["t1", "t2"]
+    assert [o.trip.id for o in trips] == ["t1", "t2"]
 
 
 async def test_daily_summary_reference_case() -> None:
@@ -158,8 +158,8 @@ async def test_drivers_only_list_their_own_trips() -> None:
     theirs = mine.for_driver(DRIVER_2)
     await create_trip(theirs, make_trip(id="b", amount=1000), DRIVER_2)
 
-    assert [t.id for t in await get_trips_for_day(mine, OCT_1)] == ["a"]
-    assert [t.id for t in await get_trips_for_day(theirs, OCT_1)] == ["b"]
+    assert [o.trip.id for o in await get_trips_for_day(mine, OCT_1)] == ["a"]
+    assert [o.trip.id for o in await get_trips_for_day(theirs, OCT_1)] == ["b"]
 
 
 async def test_seed_accounts_unblocks_a_blocked_demo_account() -> None:
