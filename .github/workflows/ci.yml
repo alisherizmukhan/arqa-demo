@@ -102,6 +102,18 @@ jobs:
             echo "::error::Use design kit tokens (context.dkColors / context.dkText) in apps/mobile"
             exit 1
           fi
+      - name: No Cyrillic literals outside the localizations (texts live in ARB files)
+        env:
+          LC_ALL: C.UTF-8
+        run: |
+          hits=$(grep -RnP '[\x{0400}-\x{04FF}]' apps/mobile/lib packages/design_kit/lib --include='*.dart' \
+            | grep -v '^apps/mobile/lib/l10n/gen/' \
+            | grep -vP '^[^:]+:\d+:\s*//' || true)
+          if [ -n "$hits" ]; then
+            echo "$hits"
+            echo "::error::Move user-visible text to apps/mobile/lib/l10n/app_ru.arb / app_kk.arb (the kit takes texts as parameters)"
+            exit 1
+          fi
       - name: Analyze
         run: flutter analyze --fatal-infos apps/mobile
       - name: Format
