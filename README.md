@@ -38,7 +38,7 @@ https://github.com/user-attachments/assets/44a51387-0f43-486c-87e7-9e07c062bf56
 | Создание поездки с валидацией (сумма > 0, конец позже начала) | ✅ | `apps/mobile/lib/features/trips/presentation/screens/add_trip_screen.dart`, `apps/mobile/lib/features/trips/domain/entities/trip_rules.dart`, `backend/app/domain/trip.py` | `apps/mobile/test/features/trips/presentation/trip_form_test.dart`; `backend/tests/unit/domain/test_trip.py::test_invalid_trip_is_rejected`; `backend/tests/integration/test_api_validation.py` |
 | Нет дублей при повторной отправке | ✅ | `backend/app/infrastructure/repository.py` (`INSERT … ON CONFLICT (id) DO NOTHING`), `backend/app/application/use_cases.py`; в клиенте `AddTripController` в `trips_providers.dart` и повторы в `add_trip_screen.dart` | `backend/tests/integration/test_idempotency.py` (повтор → 200, гонка параллельных POST → одна строка, другие данные → 409); `providers_test.dart` («retrying the same trip after a network error reuses its id»); `apps/mobile/test/features/trips/presentation/form_behaviour_test.dart` («resent with the same id») |
 | Тесты на итоги и на дубли | ✅ | `backend/tests/`, `apps/mobile/test/`, CI в `.github/workflows/ci.yml` | бэкенд: 194 теста; приложение: 220; дизайн-кит: 177. Все проходят в CI |
-| README, деплой, скриншоты | ✅ | `README.md`, `backend/Dockerfile`, `railway.json`, `docs/screenshots/` | `GET /health` на Railway отвечает 200; скриншоты рендерит `apps/mobile/test/screens/screenshots_test.dart` |
+| README, деплой, скриншоты | ✅ | `README.md`, `backend/Dockerfile`, `.railway/railway.ts`, `docs/screenshots/` | `GET /health` на Railway отвечает 200; скриншоты рендерит `apps/mobile/test/screens/screenshots_test.dart` |
 
 ---
 
@@ -53,7 +53,7 @@ docker compose up -d db          # PostgreSQL 16 на localhost:5433 (+ база
 cd backend
 uv sync
 uv run alembic upgrade head      # создать схему
-uv run python -m app             # http://127.0.0.1:8000/docs; пустая база заполняется из data/trips.json
+uv run python -m app             # http://127.0.0.1:8000/docs; при старте создаются демо-аккаунты и поездки из data/trips.json
 ```
 
 Весь стек в Docker: `docker compose --profile full up --build`, API на http://localhost:8000/docs.
@@ -62,11 +62,44 @@ uv run python -m app             # http://127.0.0.1:8000/docs; пустая ба
 
 | Переменная | Значение |
 |---|---|
-| `DATABASE_URL` | Строка подключения к PostgreSQL |
+| `APP_ENV` | `local` (по умолчанию), `test` или `production`. Docker-образ задаёт `production` |
+| `DATABASE_URL` | Строка подключения к PostgreSQL. При `APP_ENV=production` обязательна: без неё API не запустится. Локально по умолчанию — база из docker compose |
 | `PORT` | Порт API |
-| `SEED_ON_STARTUP` | Заполнять пустую базу при старте (по умолчанию `true`) |
-| `SEED_FILE` | Файл с данными для заполнения |
+| `SEED_ON_STARTUP` | Один переключатель для всех демо-данных: демо-аккаунты и поездки из `SEED_FILE` (по умолчанию `true`). Добавляет только то, чего нет; существующие данные не трогает |
+| `SEED_FILE` | Файл с поездками для заполнения |
+| `SEED_ADMIN_PASSWORD`, `SEED_USER1_PASSWORD`, `SEED_USER2_PASSWORD` | Пароли демо-аккаунтов (см. ниже) |
 | `CORS_ORIGINS` | Разрешённые источники (по умолчанию `["*"]`) |
+
+#### Демо-аккаунты
+
+> **Это демо-доступы, а не настоящие пароли.** В продакшене задайте свои через переменные окружения.
+
+| Логин | Пароль по умолчанию | Роль | Переменная для пароля |
+|---|---|---|---|
+| `user_1` | `password_1` | водитель («Водитель 1») | `SEED_USER1_PASSWORD` |
+| `user_2` | `password_2` | водитель («Водитель 2») | `SEED_USER2_PASSWORD` |
+| `admin` | `admin` | администратор | `SEED_ADMIN_PASSWORD` |
+
+- В базе хранится только хеш пароля (argon2id). Пароли не пишутся в логи.
+- Если пароль в переменной изменился, при следующем старте хеш обновится.
+- Поездки без поля `driver` в `data/trips.json` принадлежат `user_1`. У `user_2` две поездки за 2026-10-01: `u2-t1`, `u2-t2`.
+- Вход и роли появятся на этапе 2. Пока API работает от имени `user_1`.
+
+#### Railway как код
+
+Настройки сервисов описаны в `.railway/railway.ts` (вместо устаревшего `railway.json`): сборка по `backend/Dockerfile`, healthcheck `/health`, Postgres и его том.
+
+```bash
+npm install                      # SDK railway/iac (только для этих команд)
+railway config plan              # что изменится на Railway
+railway config apply             # применить
+```
+
+На Windows с CLI из npm команда падает с «requires Railway CLI 5.42.1 or newer». SDK запускает CLI по переменной `_`, а npm-обёртку Node не запускает. Выполните команду в PowerShell, указав настоящий файл CLI:
+
+```powershell
+$env:_ = "$env:APPDATA\npm\node_modules\@railway\cli\bin\railway.exe"; railway config plan
+```
 
 ### Мобильное приложение
 

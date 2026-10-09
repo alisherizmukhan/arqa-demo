@@ -68,11 +68,11 @@ Stage 1 therefore needs **no new Postgres** — only verification of the link (a
 
 ## 5. Checklist for stage 6
 
-- [ ] F1 — one named timezone constant in the app (`AppConfig` default from `DriverZone.kazakhstan`).
-- [ ] F2 — production fails fast without `DATABASE_URL` (no localhost default outside local/test).
-- [ ] F3 — CORS decision recorded in DECISIONS.md and the deployed value set accordingly.
+- [x] F1 — one named timezone constant in the app (`AppConfig` default from `DriverZone.kazakhstan`). *(stage 1, `test/core/time_test.dart`)*
+- [x] F2 — production fails fast without `DATABASE_URL` (no localhost default outside local/test). *(stage 1: `APP_ENV=production` in the image; `tests/unit/test_settings.py`)*
+- [x] F3 — CORS decision recorded in DECISIONS.md and the deployed value set accordingly. *(kept `*`: bearer tokens, no cookies)*
 - [ ] F4 — Railway config-as-code migration or a documented decision before 2026-12-01.
-- [ ] F5 — user_2 seed trips use ids that don't collide with `data/trips.json`.
+- [x] F5 — user_2 seed trips use ids that don't collide with `data/trips.json`. *(`u2-t1`, `u2-t2`)*
 - [ ] F6 — seed/backfill and the expected balances agree (decision pending).
-- [ ] F7 — one seed switch, documented in README.
+- [x] F7 — one seed switch, documented in README. *(`SEED_ON_STARTUP`)*
 - [ ] F8 — auth + role scoping on every endpoint, tested and checked on the deployed URL.
