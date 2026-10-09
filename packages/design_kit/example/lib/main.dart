@@ -1,4 +1,5 @@
 import 'package:design_kit/design_kit.dart';
+import 'package:design_kit_example/accounts_preview.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -68,7 +69,7 @@ class ShowcasePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
     return DefaultTabController(
-      length: 2,
+      length: 3,
       initialIndex: initialTab,
       child: Scaffold(
         appBar: AppBar(
@@ -86,6 +87,7 @@ class ShowcasePage extends StatelessWidget {
             tabs: [
               Tab(text: 'Компоненты'),
               Tab(text: 'Токены'),
+              Tab(text: 'Аккаунты'),
             ],
           ),
         ),
@@ -139,6 +141,7 @@ class ShowcasePage extends StatelessWidget {
                 ),
               ],
             ),
+            const AccountsPreviewList(),
           ],
         ),
       ),
