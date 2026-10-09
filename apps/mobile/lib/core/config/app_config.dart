@@ -12,10 +12,13 @@ final class AppConfig {
       'API_URL',
       defaultValue: defaultApiUrl,
     ),
-    driverZone: DriverZone.parse(
-      const String.fromEnvironment('DRIVER_TZ', defaultValue: '+05:00'),
-    ),
+    driverZone: zoneFrom(const String.fromEnvironment('DRIVER_TZ')),
   );
+
+  /// The `DRIVER_TZ` define, or [DriverZone.kazakhstan] (the one named
+  /// default, +05:00) when it is not given.
+  static DriverZone zoneFrom(String define) =>
+      define.isEmpty ? DriverZone.kazakhstan : DriverZone.parse(define);
 
   /// The deployed API on Railway.
   static const defaultApiUrl = 'https://api-production-6e8b.up.railway.app';

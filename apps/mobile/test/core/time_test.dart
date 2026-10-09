@@ -1,3 +1,4 @@
+import 'package:driver_diary/core/config/app_config.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,6 +63,17 @@ void main() {
         kz.formatIso(DateTime.utc(2026, 9, 30, 19)),
         '2026-10-01T00:00:00+05:00',
       );
+    });
+  });
+
+  group('AppConfig.zoneFrom', () {
+    test('no DRIVER_TZ: the named Kazakhstan default (+05:00)', () {
+      expect(AppConfig.zoneFrom(''), DriverZone.kazakhstan);
+      expect(AppConfig.zoneFrom('').isoOffset, '+05:00');
+    });
+
+    test('DRIVER_TZ given: parsed', () {
+      expect(AppConfig.zoneFrom('+03:00'), DriverZone.parse('+03:00'));
     });
   });
 }
