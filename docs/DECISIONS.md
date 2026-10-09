@@ -205,6 +205,13 @@ The audit is in `docs/PROD_AUDIT.md` (findings F1–F8). Decisions approved afte
 - **One named timezone default in the app (F1):** `AppConfig.zoneFrom` uses `DriverZone.kazakhstan` when `DRIVER_TZ` is not given.
 - **Railway config as code moved to `.railway/railway.ts` (F4).** → `railway config migrate` would have dropped the Dockerfile path and builder (it emitted them as comments) and the restart policy, so the file was imported from the live project with `railway config pull` instead; `railway config plan` reports it already matches Railway. Postgres and its volume stay in the file exactly as imported: removing a resource from an IaC file can mean deleting it. `railway.json` is removed. The SDK (`railway` on npm) is a root dev dependency, excluded from Railway uploads. *Note: the original assignment asked for `railway.json`; the settings it held now live in `.railway/railway.ts`.*
 
+### Branches and deploys (from stage 2 on)
+
+- **Tag `v1.0` on `9adc869` marks the submission-ready redesign.** → Everything after it can be compared with, or rolled back to, the version that was submitted.
+- **Stage 1 stays on `main`.** → It is backward compatible: the API contract did not change and the app works unchanged, so `main` remains a working submission.
+- **From stage 2 on, all work happens on `feature/accounts` (created from `main`).** → Stage 2 makes the API require login. That must not reach prod or `main` until the mobile app supports login too (end of stage 5), or the deployed app would stop working. Branch work is tested locally with docker-compose; `railway up` is never run from the branch.
+- **Prod is deployed only from `main`, and only after the merge is approved:** a PR `feature/accounts` → `main` with green CI, approved by the owner. The Railway service is not linked to GitHub, so a push never deploys; deploying is always an explicit `railway up` from `main`.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.

@@ -33,6 +33,50 @@ Result:
 - trips: **139 → 131**, checked again from a new connection; none of the 8 ids remains;
 - the remaining 131 trips are exactly the trips of `data/trips.json` that belong to user_1 (the file's other 2 are user_2's new `u2-t1` / `u2-t2`, added by the stage 1 seed).
 
-### Not done yet
+## Stage 1 — deploy (2026-10-09)
 
-- Deploying stage 1 (`railway up`) — waiting for approval.
+- Tag `v1.0` (annotated, «Redesign complete, submission-ready») points at `9adc869` — the submission before the accounts iteration.
+- Deployed from `main` at `6c11ab4` with `railway up --service api --ci`. Deployment `7f07e6a7-cb44-4aa4-856a-2702e4585c3f`: **SUCCESS** (healthcheck passed; the previous deployment was removed).
+- Deploy log:
+  ```
+  Running upgrade 0001 -> 0002, accounts: users, sessions, withdrawals; trips get an owner (driver_id)
+  seed: 2 demo accounts created, 1 passwords reset
+  seed: inserted 2 of 133 trips from /app/data/trips.json
+  ```
+  (user_1 was created by the migration with the placeholder hash, then given its password by the seed.)
+
+### API
+
+| Check | Result |
+|---|---|
+| `GET /health` | 200 `{"status":"ok","database":"ok"}` |
+| `GET /summary?date=2026-10-01&tz=%2B05:00` | 200: 2 trips, revenue 3 900, commission 585, net 3 315, cash 1 500, card 2 400 — **exact** |
+| `GET /trips?date=2026-10-01` | `t1`, `t2` only (the API acts as user_1 until stage 2; user_2's trips are not mixed in) |
+
+### Database (`railway ssh --service Postgres`, psql)
+
+| Check | Result |
+|---|---|
+| Alembic revision | `0002` |
+| Trips | 133 total, 0 without a driver |
+| Accounts | `admin` (admin, «Администратор»), `user_1` (driver, «Водитель 1»), `user_2` (driver, «Водитель 2»); all active; every `password_hash` starts with `$argon2id$` (only the 10-character prefix was printed) |
+| Trips per driver | user_1: 131, user_2: 2, admin: 0 |
+| user_2's trips | `u2-t1` 2026-10-01 10:00, 3 000 ₸ card, commission 450; `u2-t2` 2026-10-01 12:15, 1 800 ₸ cash, commission 270 |
+| 2026-10-01 per driver | user_1: 2 trips, 3 900 / 585; user_2: 2 trips, 4 800 / 720 |
+| Sessions, withdrawals | 0, 0 |
+
+**user_1's balance by the formula** (Σcard − Σcommission over all of user_1's trips − Σ withdrawals in `pending` or `paid`), computed in SQL:
+
+```sql
+WITH d AS (SELECT id FROM users WHERE login = 'user_1'),
+     tr AS (SELECT coalesce(sum(amount) FILTER (WHERE payment = 'card'), 0) AS card_sum,
+                   coalesce(sum(commission), 0) AS commission_sum
+            FROM trips WHERE driver_id = (SELECT id FROM d)),
+     w AS (SELECT coalesce(sum(amount), 0) AS withdrawn_sum FROM withdrawals
+           WHERE driver_id = (SELECT id FROM d) AND status IN ('pending', 'paid'))
+SELECT card_sum, commission_sum, withdrawn_sum,
+       card_sum - commission_sum - withdrawn_sum AS user_1_available_balance
+FROM tr, w;
+```
+
+Result: 258 450 − 58 123 − 0 = **200 327 ₸** — the same as computed from `data/trips.json` in the stage 0 audit (F6), so the deployed data is exactly the seed. The balance endpoint (stage 3) must return this value for user_1.
