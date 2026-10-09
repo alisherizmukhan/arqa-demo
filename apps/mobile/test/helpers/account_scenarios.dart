@@ -1,3 +1,4 @@
+import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/core/error/failure.dart';
 import 'package:driver_diary/core/error/result.dart';
 import 'package:driver_diary/features/admin/presentation/screens/admin_screen.dart';
@@ -83,6 +84,17 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 400));
 }
 
+/// Types the credentials and taps «Войти» once it is enabled (the button
+/// rebuilds only after a frame).
+Future<void> _signIn(WidgetTester tester, String login, String password) async {
+  await tester.enterText(find.byType(TextField).at(0), login);
+  await tester.enterText(find.byType(TextField).at(1), password);
+  await tester.pump();
+  expect(tapEnabled(tester, tr.signIn), isTrue);
+  await tester.tap(find.text(tr.signIn).last);
+  await _settle(tester);
+}
+
 Future<void> _withdraw(
   WidgetTester tester,
   FakeWithdrawalsRepository withdrawals, {
@@ -128,10 +140,8 @@ final accountScenarios = <Scenario>[
     run: (tester) async {
       await pumpDiary(tester, FakeTripsRepository(), user: null);
       await tester.pump();
-      await tester.enterText(find.byType(TextField).at(0), 'user_1');
-      await tester.enterText(find.byType(TextField).at(1), 'secret');
-      await tester.tap(find.text(tr.signIn).last);
-      await _settle(tester);
+      await _signIn(tester, 'user_1', 'secret');
+      expect(find.text(tr.errInvalidCredentials), findsOneWidget);
     },
   ),
   (
@@ -141,10 +151,8 @@ final accountScenarios = <Scenario>[
         ..onLogin = (_, _) async => const Err(RateLimitedFailure());
       await pumpDiary(tester, FakeTripsRepository(), user: null, auth: auth);
       await tester.pump();
-      await tester.enterText(find.byType(TextField).at(0), 'user_1');
-      await tester.enterText(find.byType(TextField).at(1), 'secret');
-      await tester.tap(find.text(tr.signIn).last);
-      await _settle(tester);
+      await _signIn(tester, 'user_1', 'secret');
+      expect(find.text(tr.errRateLimited), findsOneWidget);
     },
   ),
   (
@@ -154,10 +162,8 @@ final accountScenarios = <Scenario>[
         ..onLogin = (_, _) async => const Err(NetworkFailure());
       await pumpDiary(tester, FakeTripsRepository(), user: null, auth: auth);
       await tester.pump();
-      await tester.enterText(find.byType(TextField).at(0), 'user_1');
-      await tester.enterText(find.byType(TextField).at(1), 'password_1');
-      await tester.tap(find.text(tr.signIn).last);
-      await _settle(tester);
+      await _signIn(tester, 'user_1', 'password_1');
+      expect(find.text(tr.loginOffline), findsOneWidget);
     },
   ),
   (
@@ -174,9 +180,12 @@ final accountScenarios = <Scenario>[
   ),
   (
     id: 'a06_day_header',
+    // Today (1 October): the header has only the menu button (01_day_light
+    // shows a past day, with «Сегодня» next to it).
     run: (tester) async {
-      await pumpDiary(tester, FakeTripsRepository([t1, t2]));
-      await selectDay(tester, referenceDay);
+      await pumpDiary(tester, FakeTripsRepository([t1, t2]), now: at(12, 0));
+      await tester.pump();
+      expect(find.byType(DkTodayButton), findsNothing);
     },
   ),
   (
@@ -270,8 +279,21 @@ final accountScenarios = <Scenario>[
     id: 'a17_admin_trips_driver',
     run: (tester) async {
       await _admin(tester);
-      await tester.tap(find.text(driver2.displayName).first);
+      // The chip may sit past the edge of the scrolling row (kk: the «all
+      // drivers» chip is wider): scroll it into view first.
+      final chip = find.text(driver2.displayName).first;
+      final row = tester.state<ScrollableState>(
+        find.byWidgetPredicate(
+          (w) =>
+              w is Scrollable &&
+              axisDirectionToAxis(w.axisDirection) == Axis.horizontal,
+        ),
+      );
+      row.position.jumpTo(row.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      await tester.tap(chip);
       await _settle(tester);
+      expect(find.text(DkMoney.format(4080)), findsOneWidget);
     },
   ),
   (

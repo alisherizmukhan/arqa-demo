@@ -11,6 +11,7 @@ import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
 import 'package:driver_diary/features/admin/presentation/admin_providers.dart';
 import 'package:driver_diary/features/auth/domain/entities/app_user.dart';
+import 'package:driver_diary/features/auth/domain/repositories/auth_repository.dart';
 import 'package:driver_diary/features/auth/presentation/providers/session_providers.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/repositories/trips_repository.dart';
@@ -127,7 +128,7 @@ Future<void> pumpDiary(
   DateTime? now,
   AppUser? user = driver1,
   String? locale,
-  FakeAuthRepository? auth,
+  AuthRepository? auth,
   MemoryTokenStore? tokens,
   MemoryLocaleStore? locales,
   FakeWithdrawalsRepository? withdrawals,

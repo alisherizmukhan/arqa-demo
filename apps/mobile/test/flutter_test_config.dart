@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:alchemist/alchemist.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// Goldens (alchemist):
 /// - CI goldens (`goldens/ci/`): text drawn as blocks. Generated on Linux with
@@ -17,6 +18,9 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) {
       ciGoldensConfig: CiGoldensConfig(enabled: onCi),
     ),
     run: () async {
+      // A tap that misses its widget (off screen, covered) fails the test
+      // instead of printing a warning: it once hid two wrong screenshots.
+      WidgetController.hitTestWarningShouldBeFatal = true;
       await testMain();
     },
   );

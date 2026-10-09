@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:driver_diary/core/config/app_config.dart';
@@ -11,42 +9,12 @@ import 'package:driver_diary/core/network/failure_mapper.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Answers every request with [status]; records the request headers.
-class _Adapter implements HttpClientAdapter {
-  new(this.status);
-
-  int status;
-  Map<String, Object?> body = const {};
-  final List<Map<String, dynamic>> headers = [];
-
-  /// While set, answers wait for it.
-  Completer<void>? hold;
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) async {
-    headers.add(Map.of(options.headers));
-    await hold?.future;
-    return ResponseBody.fromString(
-      jsonEncode(body),
-      status,
-      headers: {
-        Headers.contentTypeHeader: [Headers.jsonContentType],
-      },
-    );
-  }
-
-  @override
-  void close({bool force = false}) {}
-}
+import '../helpers/http_stub.dart';
 
 void main() {
   late AuthGate gate;
   late Dio dio;
-  late _Adapter adapter;
+  late StubAdapter adapter;
   late List<void> expired;
   late StreamSubscription<void> subscription;
 
@@ -56,7 +24,7 @@ void main() {
       const AppConfig(apiUrl: 'http://api', driverZone: DriverZone.kazakhstan),
       gate,
     );
-    adapter = _Adapter(200);
+    adapter = StubAdapter(200);
     dio.httpClientAdapter = adapter;
     expired = [];
     subscription = gate.expired.listen(expired.add);
@@ -72,8 +40,8 @@ void main() {
     gate.token = 'secret-token';
     await dio.get<void>('/b');
 
-    expect(adapter.headers[0].containsKey('Authorization'), isFalse);
-    expect(adapter.headers[1]['Authorization'], 'Bearer secret-token');
+    expect(adapter.requestHeaders[0].containsKey('Authorization'), isFalse);
+    expect(adapter.requestHeaders[1]['Authorization'], 'Bearer secret-token');
   });
 
   test('a 401 for the token in use ends the session', () async {
@@ -92,7 +60,7 @@ void main() {
       ..hold = Completer<void>();
     final late = dio.get<void>('/trips');
     await pumpEventQueue();
-    expect(adapter.headers.single['Authorization'], 'Bearer old');
+    expect(adapter.requestHeaders.single['Authorization'], 'Bearer old');
     gate.token = 'new'; // signed in again while the request was in flight
     adapter.hold!.complete();
     adapter.hold = null;

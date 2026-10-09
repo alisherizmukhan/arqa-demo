@@ -4,6 +4,7 @@ library;
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,9 +55,7 @@ void main() {
           return data!.buffer.asUint8List();
         });
         debugDisableShadows = true;
-        File('$dir/$name.png')
-          ..createSync(recursive: true)
-          ..writeAsBytesSync(png!);
+        _save('$dir/$name.png', png!);
         await disposeApp(tester);
       });
     }
@@ -101,12 +100,41 @@ void main() {
             return data!.buffer.asUint8List();
           });
           debugDisableShadows = true;
-          File('$dir/accounts/$name.png')
-            ..createSync(recursive: true)
-            ..writeAsBytesSync(png!);
+          _save('$dir/accounts/$name.png', png!);
           await disposeApp(tester);
         });
       }
     }
   }
+}
+
+/// States that look the same on purpose.
+bool _sameByDesign(String a, String b) {
+  const pairs = {
+    // An automatic resend changes nothing on screen: the form stays
+    // editable and Save keeps its label (DESIGN.md §5.9, mockup 10).
+    {'r5_offline_resending', '10_add_trip_offline'},
+  };
+  String id(String path) => path.split('/').last.replaceAll('.png', '');
+  return pairs.any((p) => p.containsAll({id(a), id(b)}));
+}
+
+/// Every image written in this run, by path.
+final _written = <String, Uint8List>{};
+
+/// Writes [png] to [path] and fails when another state rendered the very
+/// same image: two different states that look identical mean a scenario
+/// did not reach its state (a missed tap, a disabled button).
+void _save(String path, Uint8List png) {
+  for (final MapEntry(key: other, value: bytes) in _written.entries) {
+    if (listEquals(bytes, png) && !_sameByDesign(path, other)) {
+      fail(
+        '$path is identical to $other: the scenario did not reach its state',
+      );
+    }
+  }
+  _written[path] = png;
+  File(path)
+    ..createSync(recursive: true)
+    ..writeAsBytesSync(png);
 }

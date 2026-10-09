@@ -121,3 +121,6 @@ jobs:
       - name: Tests
         working-directory: apps/mobile
         run: flutter test
+      - name: Screenshots (every state renders, no two states look the same)
+        working-directory: apps/mobile
+        run: SCREENSHOTS_DIR=build/screens flutter test test/screens/screenshots_test.dart
