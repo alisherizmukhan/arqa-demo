@@ -162,3 +162,13 @@ The `lock-probe` and `xff-probe*` failure rows expire on their own within 15 min
 - Deleted: `345e8474-e0bc-4e74-a969-8c051f5bb4c2` (1 000, paid) and `b8f3b52f-50d1-43a8-970e-7137684dfeff` (500, rejected). Withdrawals: **2 → 0**, checked again from a new connection.
 - After: user_2 `GET /balance` → available **2 280** (card 3 000, commission 720, withdrawn 0), `GET /withdrawals` → `[]`; user_1 still 200 327.
 
+
+## Fix: unreadable bodies are 422 invalid_json (2026-10-09)
+
+Deployed from `main` at `547c279` (CI green), `AUTH_REQUIRED=false`. Deployment `f16f9018-4b39-4d07-bb65-727c8af70277`: **SUCCESS**.
+
+| Check | Result |
+|---|---|
+| `GET /health` | 200 |
+| `GET /summary?date=2026-10-01` without a token | 3 900 / 585 / 3 315, cash 1 500 / card 2 400 — exact |
+| `POST /trips` with a body that is not UTF-8 | 422 `{"error":{"code":"invalid_json",…}}` (was 400 `http_error`) |
