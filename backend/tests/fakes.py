@@ -134,13 +134,13 @@ class InMemorySessionRepository:
 
 class InMemoryLoginAttempts:
     def __init__(self) -> None:
-        self.failures: dict[str, list[datetime]] = {}
+        self.failures: dict[tuple[str, str], list[datetime]] = {}
 
-    async def failures_since(self, login: str, since: datetime) -> list[datetime]:
-        return sorted(t for t in self.failures.get(login, []) if t > since)
+    async def failures_since(self, login: str, client_ip: str, since: datetime) -> list[datetime]:
+        return sorted(t for t in self.failures.get((login, client_ip), []) if t > since)
 
-    async def record_failure(self, login: str, now: datetime) -> None:
-        self.failures.setdefault(login, []).append(now)
+    async def record_failure(self, login: str, client_ip: str, now: datetime) -> None:
+        self.failures.setdefault((login, client_ip), []).append(now)
 
 
 class PlainTextHasher:

@@ -230,3 +230,36 @@ async def test_last_used_at_is_updated_at_most_hourly(
         assert await last_used() == clock["now"]
     finally:
         app.dependency_overrides.pop(get_now)
+
+
+@pytest.mark.usefixtures("real_passwords")
+async def test_the_lock_is_per_client_ip_behind_the_proxy(
+    app: FastAPI, anonymous: AsyncClient
+) -> None:
+    app.state.settings = app.state.settings.model_copy(update={"trusted_proxy_hops": 1})
+
+    def from_ip(ip: str) -> dict[str, str]:
+        # A stranger can forge the left part; the proxy appends the real IP.
+        return {"X-Forwarded-For": f"10.9.9.9, {ip}"}
+
+    for _ in range(10):
+        response = await anonymous.post(
+            "/auth/login",
+            json={"login": "user_1", "password": "nope"},
+            headers=from_ip("198.51.100.66"),
+        )
+        assert response.status_code == 401
+
+    stranger = await anonymous.post(
+        "/auth/login",
+        json={"login": "user_1", "password": "password_1"},
+        headers=from_ip("198.51.100.66"),
+    )
+    driver = await anonymous.post(
+        "/auth/login",
+        json={"login": "user_1", "password": "password_1"},
+        headers=from_ip("203.0.113.1"),
+    )
+
+    assert stranger.status_code == 429
+    assert driver.status_code == 200

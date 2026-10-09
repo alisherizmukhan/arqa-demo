@@ -38,4 +38,7 @@ USER app
 EXPOSE 8000
 
 # Migrate, then serve. `exec` makes uvicorn PID 1 so it receives SIGTERM on redeploys.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips='*'"]
+# No --forwarded-allow-ips='*': uvicorn would then take the leftmost
+# X-Forwarded-For entry (set by the client) as the client address. The app reads
+# the client IP itself, trusting only TRUSTED_PROXY_HOPS proxies.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

@@ -7,6 +7,7 @@ revoked at all, see DECISIONS.md).
 """
 
 import hashlib
+import logging
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -25,6 +26,8 @@ from app.application.ports import (
 )
 from app.domain.user import User
 
+logger = logging.getLogger(__name__)
+
 TOKEN_BYTES = 32
 MAX_FAILED_LOGINS = 10
 FAILED_LOGIN_WINDOW = timedelta(minutes=15)
@@ -41,6 +44,7 @@ def hash_token(token: str) -> str:
 class LoginRequest:
     login: str
     password: str
+    client_ip: str
     user_agent: str | None = None
 
 
@@ -59,15 +63,22 @@ async def login(
 ) -> LoginResult:
     """Check the password and open a session.
 
-    - 10 failed attempts for one login within 15 minutes → locked until the
-      oldest of them leaves the window (even with the right password);
+    - 10 failed attempts for one login from one IP within 15 minutes → that IP
+      is locked for that login until the oldest failure leaves the window (even
+      with the right password); other IPs can still sign in, so a stranger
+      cannot lock a driver out;
     - unknown login and wrong password fail the same way, in the same time;
     - a blocked account is reported only to someone who knows its password.
     """
     users, sessions = accounts.users, accounts.sessions
-    failures = await attempts.failures_since(request.login, now - FAILED_LOGIN_WINDOW)
+    failures = await attempts.failures_since(
+        request.login, request.client_ip, now - FAILED_LOGIN_WINDOW
+    )
     if len(failures) >= MAX_FAILED_LOGINS:
         unlock_at = failures[-MAX_FAILED_LOGINS] + FAILED_LOGIN_WINDOW
+        logger.warning(
+            "login %r locked for %s until %s", request.login, request.client_ip, unlock_at
+        )
         raise TooManyLoginAttemptsError(retry_after=unlock_at - now)
 
     user = await users.get_by_login(request.login)
@@ -76,7 +87,8 @@ async def login(
         hasher.verify(stored or hasher.dummy_hash(), request.password) and stored is not None
     )
     if user is None or not password_ok:
-        await attempts.record_failure(request.login, now)
+        await attempts.record_failure(request.login, request.client_ip, now)
+        logger.info("failed login for %r from %s", request.login, request.client_ip)
         raise InvalidCredentialsError
     if not user.is_active:
         raise AccountDisabledError

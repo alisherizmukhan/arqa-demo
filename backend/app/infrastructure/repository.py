@@ -185,20 +185,24 @@ class SqlLoginAttemptRepository:
         self._session = session
         self._window = window
 
-    async def failures_since(self, login: str, since: datetime) -> list[datetime]:
+    async def failures_since(self, login: str, client_ip: str, since: datetime) -> list[datetime]:
         rows = await self._session.scalars(
             select(LoginFailureRow.attempted_at)
-            .where(LoginFailureRow.login == login, LoginFailureRow.attempted_at > since)
+            .where(
+                LoginFailureRow.login == login,
+                LoginFailureRow.client_ip == client_ip,
+                LoginFailureRow.attempted_at > since,
+            )
             .order_by(LoginFailureRow.attempted_at)
         )
         return list(rows)
 
-    async def record_failure(self, login: str, now: datetime) -> None:
+    async def record_failure(self, login: str, client_ip: str, now: datetime) -> None:
         # Keep the table small: rows outside the window no longer matter.
         await self._session.execute(
             delete(LoginFailureRow).where(LoginFailureRow.attempted_at <= now - self._window)
         )
-        self._session.add(LoginFailureRow(login=login, attempted_at=now))
+        self._session.add(LoginFailureRow(login=login, client_ip=client_ip, attempted_at=now))
         await self._session.commit()
 
 

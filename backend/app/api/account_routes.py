@@ -6,7 +6,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials
 
-from app.api.deps import AccountsDep, CurrentUserDep, NowDep, SessionDep, bearer_scheme
+from app.api.client_ip import client_ip
+from app.api.deps import (
+    AccountsDep,
+    CurrentUserDep,
+    NowDep,
+    SessionDep,
+    SettingsDep,
+    bearer_scheme,
+)
 from app.api.routes import AUTH_ERRORS
 from app.api.schemas import (
     AdminUserOut,
@@ -58,7 +66,8 @@ def _hasher(request: Request) -> PasswordHasher:
         ),
         **error_example(
             status.HTTP_429_TOO_MANY_REQUESTS,
-            "10 failed attempts for this login in 15 minutes; see Retry-After (seconds)",
+            "10 failed attempts for this login from this IP in 15 minutes; "
+            "see Retry-After (seconds)",
             "rate_limited",
             "too many failed login attempts, try again later",
         ),
@@ -70,11 +79,12 @@ def _hasher(request: Request) -> PasswordHasher:
         ),
     },
 )
-async def login(
+async def login(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     body: LoginIn,
     request: Request,
     session: SessionDep,
     accounts: AccountsDep,
+    settings: SettingsDep,
     now: NowDep,
 ) -> LoginOut:
     """Sign in. Returns an opaque bearer token that stays valid until logout or
@@ -86,6 +96,7 @@ async def login(
         auth.LoginRequest(
             login=body.login,
             password=body.password,
+            client_ip=client_ip(request, settings.trusted_proxy_hops),
             user_agent=request.headers.get("user-agent"),
         ),
         now,

@@ -81,11 +81,13 @@ class SessionRepository(Protocol):
 
 
 class LoginAttemptRepository(Protocol):
-    async def failures_since(self, login: str, since: datetime) -> list[datetime]:
-        """Times of failed logins for this login after `since`, oldest first."""
+    """Failed logins, counted per (login, client IP)."""
+
+    async def failures_since(self, login: str, client_ip: str, since: datetime) -> list[datetime]:
+        """Times of failed logins for this login from this IP after `since`, oldest first."""
         ...
 
-    async def record_failure(self, login: str, now: datetime) -> None: ...
+    async def record_failure(self, login: str, client_ip: str, now: datetime) -> None: ...
 
 
 class PasswordHasher(Protocol):

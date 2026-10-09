@@ -44,12 +44,14 @@ class World:
         assert user is not None
         return user
 
-    async def login(self, login: str, password: str, now: datetime = NOW) -> auth.LoginResult:
+    async def login(
+        self, login: str, password: str, now: datetime = NOW, ip: str = "203.0.113.1"
+    ) -> auth.LoginResult:
         return await auth.login(
             self.accounts,
             self.attempts,
             self.hasher,
-            auth.LoginRequest(login=login, password=password, user_agent="tests"),
+            auth.LoginRequest(login=login, password=password, client_ip=ip, user_agent="tests"),
             now,
         )
 
@@ -97,6 +99,18 @@ async def test_ten_failures_lock_the_login_for_the_window(world: World) -> None:
 
     # The first failure leaves the window at 12:15: one attempt is free again.
     await world.login("user_1", "password_1", NOW + timedelta(minutes=15, seconds=1))
+
+
+async def test_the_lock_is_per_ip(world: World) -> None:
+    for _ in range(10):
+        with pytest.raises(InvalidCredentialsError):
+            await world.login("user_1", "nope", ip="198.51.100.66")
+
+    with pytest.raises(TooManyLoginAttemptsError):
+        await world.login("user_1", "password_1", ip="198.51.100.66")
+    # The driver, from their own IP, is not affected by the stranger.
+    result = await world.login("user_1", "password_1", ip="203.0.113.1")
+    assert result.user.login == "user_1"
 
 
 async def test_nine_failures_do_not_lock(world: World) -> None:
