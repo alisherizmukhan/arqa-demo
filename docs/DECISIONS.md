@@ -254,6 +254,17 @@ The audit is in `docs/PROD_AUDIT.md` (findings F1–F8). Decisions approved afte
 - **A body that is not valid JSON is always 422 `invalid_json`** — broken JSON, and also bytes that are not UTF-8 (FastAPI raises a 400 for those; the error handler maps exactly that case). → One error shape and one status for "the client sent something unreadable", on every endpoint.
 - **No new migration:** the `withdrawals` table (with `CHECK amount > 0` and the status check) was created in stage 1.
 
+## Accounts iteration — stage 4 (design addendum, kit components)
+
+- **DESIGN.md §8 added** (root and kit copy) from the prompt's addendum, plus §8.8 «Kit implementation» mapping each §8.0 item to its API.
+- **New components have no texts of their own** — every label is a parameter — so stage 5 can translate them; the older components still have Russian defaults, removed in stage 5 with the l10n check.
+- **Screen previews live in the kit's example app** (`example/lib/accounts_preview.dart`, «Аккаунты» tab), built only from kit components with static data, not in the mobile app. → Stage 4 must not wire anything; the previews are the reviewable mockups of every state, and `example/test/accounts_screens_test.dart` renders them (light + dark, 390×844 @2x; no overflow at 360 dp × text 1.3). Screenshots: `docs/design/audit/accounts/`.
+- **`DkIconButton` icon is 24 (§8.0)**, was 22. The sort button in the Day header grows by 2 px; the Day goldens (Windows + Linux CI) are regenerated.
+- **Deviation, pending approval: the language switch is 56 high on the login screen too**, not 48 («compact», §8.1). A 48-high track with the 4 px padding gives 40-high segments, below the 48 dp tap target of §1. Width 200 on the login screen stays.
+- **A `DkTextField` trailing widget is now its own semantics node.** → The field merges its label and input for screen readers; the password eye button merged into it and could not be reached. Found by a kit test.
+- **Copy not in §8.7 is marked «proposed» in the previews:** the reject dialog title «Отклонить заявку на 1 000 ₸?» and message «Водитель 2 увидит причину в истории выводов.», the revoke dialog title «Сбросить все сессии?» with the primary «Сбросить», the 409 withdrawal dialog message «История обновлена: там видна сохранённая заявка.», the admin empty state «Заявок нет» / «Новые заявки на вывод появятся здесь.», the admin error state «Не удалось загрузить», and the footer «Версия 0.2.0».
+- **Admin rows use the date without the year** («9 октября, 22:34») so «1 000 ₸ · date» fits one line at 390 dp; the driver's own history keeps the full date as §8.4 shows.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
