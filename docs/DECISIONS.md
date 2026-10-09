@@ -205,12 +205,31 @@ The audit is in `docs/PROD_AUDIT.md` (findings F1–F8). Decisions approved afte
 - **One named timezone default in the app (F1):** `AppConfig.zoneFrom` uses `DriverZone.kazakhstan` when `DRIVER_TZ` is not given.
 - **Railway config as code moved to `.railway/railway.ts` (F4).** → `railway config migrate` would have dropped the Dockerfile path and builder (it emitted them as comments) and the restart policy, so the file was imported from the live project with `railway config pull` instead; `railway config plan` reports it already matches Railway. Postgres and its volume stay in the file exactly as imported: removing a resource from an IaC file can mean deleting it. `railway.json` is removed. The SDK (`railway` on npm) is a root dev dependency, excluded from Railway uploads. *Note: the original assignment asked for `railway.json`; the settings it held now live in `.railway/railway.ts`.*
 
-### Branches and deploys (from stage 2 on)
+### Branches and deploys
 
-- **Tag `v1.0` on `9adc869` marks the submission-ready redesign.** → Everything after it can be compared with, or rolled back to, the version that was submitted.
-- **Stage 1 stays on `main`.** → It is backward compatible: the API contract did not change and the app works unchanged, so `main` remains a working submission.
-- **From stage 2 on, all work happens on `feature/accounts` (created from `main`).** → Stage 2 makes the API require login. That must not reach prod or `main` until the mobile app supports login too (end of stage 5), or the deployed app would stop working. Branch work is tested locally with docker-compose; `railway up` is never run from the branch.
-- **Prod is deployed only from `main`, and only after the merge is approved:** a PR `feature/accounts` → `main` with green CI, approved by the owner. The Railway service is not linked to GitHub, so a push never deploys; deploying is always an explicit `railway up` from `main`.
+- **Tag `v1.0` on `9adc869` marks the submission-ready redesign and is never moved.** → Everything after it can be compared with, or rolled back to, the version that was submitted.
+- **All work goes to `main`; there are no long-lived branches.** (A `feature/accounts` branch was created and then deleted on request.) Every commit on `main` keeps CI green.
+- **`AUTH_REQUIRED` keeps `main` deployable while login is not in the app yet.** Default `true` in code and tests. Production runs with `AUTH_REQUIRED=false` until the mobile app supports login (end of stage 5): a request without a token then acts as user_1 exactly like in stage 1, so the released app and the README curl examples keep working; a token that is sent is still checked. Both modes are tested.
+- **Deploying during stages 2–4 only with `AUTH_REQUIRED=false`, and only when the DEPLOY_CHECK.md checks pass** (`/health`, the 2026-10-01 reference case).
+- **After stage 5, prod switches to `AUTH_REQUIRED=true` together with the app release,** then the full deployed verification of stage 6 runs.
+- **Deploys are always an explicit `railway up` from `main`.** The Railway service is not linked to GitHub, so a push never deploys.
+
+## Accounts iteration — stage 2 (login, roles, scoping)
+
+- **Opaque random tokens, not JWT.** → The prompt wants sessions without expiry that end on logout or when an admin revokes them. A JWT without expiry cannot be revoked (the server would have to keep a deny-list, i.e. sessions anyway), so logout would be fake. A token is 32 random bytes (`secrets.token_urlsafe`), only `sha256(token)` is stored (a DB leak gives no usable tokens), and each request looks the hash up in `sessions` (indexed, unique).
+- **`last_used_at` is written at most once per hour.** → It is informational; writing it on every request would turn every read into a write.
+- **One 401 for unknown login and wrong password (`invalid_credentials`), in the same time:** an unknown login is still checked against a real argon2 hash of a random password (`dummy_hash`), so response time does not reveal which logins exist.
+- **Rate limit: 10 failed attempts per login in a sliding 15-minute window → 429 `rate_limited` with `Retry-After`.** Failures are rows in `login_failures` (migration 0003), so the limit holds across restarts and replicas; old rows are deleted as new ones are written. Unknown logins are counted too. While locked, even the right password gets 429. Success does not reset the counter (the window does): otherwise one success would allow 10 more guesses.
+- **A blocked account is reported (403 `account_disabled`) only to someone who gives its right password;** with a wrong password the answer stays `invalid_credentials`. → The app can say "blocked" instead of "wrong password" without telling strangers which accounts exist.
+- **Every endpoint except `/health` and `/auth/login` needs `Authorization: Bearer <token>`;** missing, unknown, revoked or blocked-user tokens → 401 `unauthorized` with `WWW-Authenticate: Bearer` (RFC 6750). A malformed header (`Basic …`, `Bearer` without a token) is a 401 even with `AUTH_REQUIRED=false`; only a request with no Authorization header at all falls back to user_1.
+- **Scoping lives in the application layer (`app/application/access.py`), not in routes:**
+  - a driver sees and creates only their own trips; **any** `driver_id` parameter from a driver is 403 (even their own id) — one simple rule instead of "ignored sometimes";
+  - an admin sees all drivers (no `driver_id`) or one driver; a `driver_id` that is not a driver is 404 rather than an empty result, so a typo is not mistaken for "no trips";
+  - only drivers create trips: an admin's `POST /trips` is 403.
+- **Trip idempotency is per owner.** Same id from the same driver: 201 / 200 / 409 as before. Same id from another driver: 409 `trip_conflict` with exactly the same body as a payload conflict — no stored values, nothing about the other driver's trip (the 409 never had an `existing` field; see stage 4 of the redesign).
+- **Admin endpoints:** `GET /admin/users` (drivers first; never password hashes), `PATCH /admin/users/{id}` `{is_active}`, `POST /admin/users/{id}/revoke-sessions` → `{revoked: n}`. Blocking also ends all the user's sessions, so unblocking does not revive old tokens. An admin cannot block their own account (403): with one admin that would lock everyone out.
+- **CORS:** allows `PATCH` and the `Authorization` header for the web build; still no credentials mode (F3).
+- **Use-case signatures group what belongs together** (`Accounts` = users + sessions; `LoginRequest` = login, password, user agent) instead of raising the linter's argument limit.
 
 ## Post-redesign UI fixes (user feedback)
 
