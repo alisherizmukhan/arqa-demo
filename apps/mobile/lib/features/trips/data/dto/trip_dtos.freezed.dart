@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TripDto {
 
- String get id; String get start; String get end; int get amount; String get payment; int get commission;
+ String get id; String get start; String get end; int get amount; String get payment; int get commission;@JsonKey(name: 'driver_id') String? get driverId;
 /// Create a copy of TripDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +30,20 @@ $TripDtoCopyWith<TripDto> get copyWith => _$TripDtoCopyWithImpl<TripDto>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as TripDto;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TripDto&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.end, _this.end) || other.end == _this.end)&&(identical(other.amount, _this.amount) || other.amount == _this.amount)&&(identical(other.payment, _this.payment) || other.payment == _this.payment)&&(identical(other.commission, _this.commission) || other.commission == _this.commission));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TripDto&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.start, _this.start) || other.start == _this.start)&&(identical(other.end, _this.end) || other.end == _this.end)&&(identical(other.amount, _this.amount) || other.amount == _this.amount)&&(identical(other.payment, _this.payment) || other.payment == _this.payment)&&(identical(other.commission, _this.commission) || other.commission == _this.commission)&&(identical(other.driverId, _this.driverId) || other.driverId == _this.driverId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TripDto;
-  return Object.hash(runtimeType,_this.id,_this.start,_this.end,_this.amount,_this.payment,_this.commission);
+  return Object.hash(runtimeType,_this.id,_this.start,_this.end,_this.amount,_this.payment,_this.commission,_this.driverId);
 }
 
 @override
 String toString() {
   final _this = this as TripDto;
-  return 'TripDto(id: ${_this.id}, start: ${_this.start}, end: ${_this.end}, amount: ${_this.amount}, payment: ${_this.payment}, commission: ${_this.commission})';
+  return 'TripDto(id: ${_this.id}, start: ${_this.start}, end: ${_this.end}, amount: ${_this.amount}, payment: ${_this.payment}, commission: ${_this.commission}, driverId: ${_this.driverId})';
 }
 
 
@@ -54,7 +54,7 @@ abstract mixin class $TripDtoCopyWith<$Res>  {
   factory $TripDtoCopyWith(TripDto value, $Res Function(TripDto) _then) = _$TripDtoCopyWithImpl;
 @useResult
 $Res call({
- String id, String start, String end, int amount, String payment, int commission
+ String id, String start, String end, int amount, String payment, int commission,@JsonKey(name: 'driver_id') String? driverId
 });
 
 
@@ -71,7 +71,7 @@ class _$TripDtoCopyWithImpl<$Res>
 
 /// Create a copy of TripDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? start = null,Object? end = null,Object? amount = null,Object? payment = null,Object? commission = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? start = null,Object? end = null,Object? amount = null,Object? payment = null,Object? commission = null,Object? driverId = freezed,}) {
   return _then(TripDto(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,start: null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
@@ -79,7 +79,8 @@ as String,end: null == end ? _self.end : end // ignore: cast_nullable_to_non_nul
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as int,payment: null == payment ? _self.payment : payment // ignore: cast_nullable_to_non_nullable
 as String,commission: null == commission ? _self.commission : commission // ignore: cast_nullable_to_non_nullable
-as int,
+as int,driverId: freezed == driverId ? _self.driverId : driverId // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -164,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String start,  String end,  int amount,  String payment,  int commission)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String start,  String end,  int amount,  String payment,  int commission, @JsonKey(name: 'driver_id')  String? driverId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TripDto() when $default != null:
-return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.commission);case _:
+return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.commission,_that.driverId);case _:
   return orElse();
 
 }
@@ -185,10 +186,10 @@ return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String start,  String end,  int amount,  String payment,  int commission)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String start,  String end,  int amount,  String payment,  int commission, @JsonKey(name: 'driver_id')  String? driverId)  $default,) {final _that = this;
 switch (_that) {
 case _TripDto():
-return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.commission);case _:
+return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.commission,_that.driverId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -205,10 +206,10 @@ return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String start,  String end,  int amount,  String payment,  int commission)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String start,  String end,  int amount,  String payment,  int commission, @JsonKey(name: 'driver_id')  String? driverId)?  $default,) {final _that = this;
 switch (_that) {
 case _TripDto() when $default != null:
-return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.commission);case _:
+return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.commission,_that.driverId);case _:
   return null;
 
 }
@@ -220,7 +221,7 @@ return $default(_that.id,_that.start,_that.end,_that.amount,_that.payment,_that.
 @JsonSerializable()
 
 class _TripDto extends TripDto {
-  const _TripDto({required this.id, required this.start, required this.end, required this.amount, required this.payment, required this.commission}): super._();
+  const _TripDto({required this.id, required this.start, required this.end, required this.amount, required this.payment, required this.commission, @JsonKey(name: 'driver_id') this.driverId}): super._();
   factory _TripDto.fromJson(Map<String, dynamic> json) => _$TripDtoFromJson(json);
 
 @override final  String id;
@@ -229,6 +230,7 @@ class _TripDto extends TripDto {
 @override final  int amount;
 @override final  String payment;
 @override final  int commission;
+@override@JsonKey(name: 'driver_id') final  String? driverId;
 
 /// Create a copy of TripDto
 /// with the given fields replaced by the non-null parameter values.
@@ -243,18 +245,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TripDto&&(identical(other.id, id) || other.id == id)&&(identical(other.start, start) || other.start == start)&&(identical(other.end, end) || other.end == end)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.payment, payment) || other.payment == payment)&&(identical(other.commission, commission) || other.commission == commission));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TripDto&&(identical(other.id, id) || other.id == id)&&(identical(other.start, start) || other.start == start)&&(identical(other.end, end) || other.end == end)&&(identical(other.amount, amount) || other.amount == amount)&&(identical(other.payment, payment) || other.payment == payment)&&(identical(other.commission, commission) || other.commission == commission)&&(identical(other.driverId, driverId) || other.driverId == driverId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,start,end,amount,payment,commission);
+    return Object.hash(runtimeType,id,start,end,amount,payment,commission,driverId);
 }
 
 @override
 String toString() {
-    return 'TripDto(id: $id, start: $start, end: $end, amount: $amount, payment: $payment, commission: $commission)';
+    return 'TripDto(id: $id, start: $start, end: $end, amount: $amount, payment: $payment, commission: $commission, driverId: $driverId)';
 }
 
 
@@ -265,7 +267,7 @@ abstract mixin class _$TripDtoCopyWith<$Res> implements $TripDtoCopyWith<$Res> {
   factory _$TripDtoCopyWith(_TripDto value, $Res Function(_TripDto) _then) = __$TripDtoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String start, String end, int amount, String payment, int commission
+ String id, String start, String end, int amount, String payment, int commission,@JsonKey(name: 'driver_id') String? driverId
 });
 
 
@@ -282,7 +284,7 @@ class __$TripDtoCopyWithImpl<$Res>
 
 /// Create a copy of TripDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? start = null,Object? end = null,Object? amount = null,Object? payment = null,Object? commission = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? start = null,Object? end = null,Object? amount = null,Object? payment = null,Object? commission = null,Object? driverId = freezed,}) {
   return _then(_TripDto(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,start: null == start ? _self.start : start // ignore: cast_nullable_to_non_nullable
@@ -290,7 +292,8 @@ as String,end: null == end ? _self.end : end // ignore: cast_nullable_to_non_nul
 as String,amount: null == amount ? _self.amount : amount // ignore: cast_nullable_to_non_nullable
 as int,payment: null == payment ? _self.payment : payment // ignore: cast_nullable_to_non_nullable
 as String,commission: null == commission ? _self.commission : commission // ignore: cast_nullable_to_non_nullable
-as int,
+as int,driverId: freezed == driverId ? _self.driverId : driverId // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

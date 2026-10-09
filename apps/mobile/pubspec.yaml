@@ -1,7 +1,7 @@
 name: driver_diary
 description: Driver Shift Diary — daily trips and payout summary for ride-hailing drivers.
 publish_to: none
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ^3.13.0
@@ -16,10 +16,13 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^3.4.3
+  flutter_secure_storage: ^11.2.0
   freezed_annotation: ^3.1.0
+  intl: ^0.20.2
   json_annotation: ^4.12.0
   meta: ^1.19.0
   riverpod_annotation: ^4.0.7
+  shared_preferences: ^2.5.6
   uuid: ^4.6.0
 
 dev_dependencies:
@@ -34,4 +37,5 @@ dev_dependencies:
   very_good_analysis: ^11.0.0
 
 flutter:
+  generate: true
   uses-material-design: true

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:driver_diary/core/network/guard.dart';
 import 'package:driver_diary/core/network/retry_interceptor.dart';
 import 'package:driver_diary/features/trips/data/dto/trip_dtos.dart';
 
@@ -9,15 +10,18 @@ class TripsRemoteDataSource {
 
   final Dio _dio;
 
+  /// [driverId]: admin only, one driver (null: own trips, or all drivers
+  /// for an admin).
   Future<DayTripsDto> fetchDay({
     required String date,
     required String tz,
+    String? driverId,
   }) async {
     final response = await _dio.get<Map<String, Object?>>(
       '/trips',
-      queryParameters: {'date': date, 'tz': tz},
+      queryParameters: {'date': date, 'tz': tz, 'driver_id': ?driverId},
     );
-    return DayTripsDto.fromJson(_body(response));
+    return DayTripsDto.fromJson(bodyOf(response));
   }
 
   /// Not retried by dio: the form retries on a visible schedule instead.
@@ -27,9 +31,6 @@ class TripsRemoteDataSource {
       data: request.toJson(),
       options: Options(extra: RetryInterceptor.disabled),
     );
-    return TripDto.fromJson(_body(response));
+    return TripDto.fromJson(bodyOf(response));
   }
-
-  Map<String, Object?> _body(Response<Map<String, Object?>> response) =>
-      response.data ?? (throw const FormatException('empty response body'));
 }

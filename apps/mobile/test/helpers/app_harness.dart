@@ -1,23 +1,31 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/app.dart';
 import 'package:driver_diary/core/error/result.dart';
+import 'package:driver_diary/core/l10n/l10n.dart';
+import 'package:driver_diary/core/l10n/locale_providers.dart';
 import 'package:driver_diary/core/providers.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
+import 'package:driver_diary/features/admin/presentation/admin_providers.dart';
+import 'package:driver_diary/features/auth/domain/entities/app_user.dart';
+import 'package:driver_diary/features/auth/presentation/providers/session_providers.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/repositories/trips_repository.dart';
 import 'package:driver_diary/features/trips/presentation/models/trip_form.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
 import 'package:driver_diary/features/trips/presentation/screens/add_trip_screen.dart';
 import 'package:driver_diary/features/trips/presentation/screens/day_screen.dart';
+import 'package:driver_diary/features/withdrawals/presentation/providers/withdrawals_providers.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'fakes.dart';
 import 'fixtures.dart';
 
 /// In-memory repository; [onLoad] / [onCreate] replace the default answers.
@@ -30,15 +38,26 @@ class FakeTripsRepository implements TripsRepository {
   Future<Result<List<Trip>>> Function(CalendarDay day)? onLoad;
   Future<Result<Trip>> Function(Trip trip)? onCreate;
 
+  /// The driver filter of each load (null: own / all drivers).
+  final driverFilters = <String?>[];
+
   @override
   Future<Result<List<Trip>>> tripsForDay(
     CalendarDay day,
-    DriverZone zone,
-  ) async {
+    DriverZone zone, {
+    String? driverId,
+  }) async {
     loads++;
+    driverFilters.add(driverId);
     if (onLoad case final load?) return await load(day);
     return Ok(
-      trips.where((t) => zone.dayOf(t.start) == day).toList()
+      trips
+          .where(
+            (t) =>
+                zone.dayOf(t.start) == day &&
+                (driverId == null || t.driverId == driverId),
+          )
+          .toList()
         ..sort((a, b) => a.start.compareTo(b.start)),
     );
   }
@@ -60,6 +79,13 @@ final GlobalKey shotKey = GlobalKey();
 
 /// "Now" in the scenarios: 2026-10-06 12:00 +05:00 (mockup 03's «Сегодня»).
 final DateTime scenarioNow = at(12, 0, day: 6);
+
+/// The language of the scenarios (`pumpDiary` default); the layout matrix
+/// runs them in `ru` and `kk`.
+String scenarioLocale = 'ru';
+
+/// The texts of [scenarioLocale], for finders.
+AppLocalizations get tr => lookupAppLocalizations(Locale(scenarioLocale));
 
 /// Device and appearance for one run.
 typedef Device = ({
@@ -91,12 +117,21 @@ void useDevice(WidgetTester tester, Device device) {
   addTearDown(tester.platformDispatcher.clearAllTestValues);
 }
 
-/// Pumps the app (Day screen unless [home]) with [repository].
+/// Pumps the app with [repository]: `AppRoot` signed in as [user] (the Day
+/// screen for a driver, the admin screen for an admin, login when null), or
+/// [home]. In [locale] (`ru` / `kk`).
 Future<void> pumpDiary(
   WidgetTester tester,
   FakeTripsRepository repository, {
   Widget? home,
   DateTime? now,
+  AppUser? user = driver1,
+  String? locale,
+  FakeAuthRepository? auth,
+  MemoryTokenStore? tokens,
+  MemoryLocaleStore? locales,
+  FakeWithdrawalsRepository? withdrawals,
+  FakeAdminRepository? admin,
 }) async {
   await tester.pumpWidget(
     RepaintBoundary(
@@ -106,6 +141,22 @@ Future<void> pumpDiary(
           tripsRepositoryProvider.overrideWithValue(repository),
           driverZoneProvider.overrideWithValue(kz),
           clockProvider.overrideWithValue(() => now ?? scenarioNow),
+          authRepositoryProvider.overrideWithValue(
+            auth ?? FakeAuthRepository(signedIn: user),
+          ),
+          tokenStoreProvider.overrideWithValue(
+            tokens ??
+                MemoryTokenStore(user == null ? null : 'token-${user.login}'),
+          ),
+          localeStoreProvider.overrideWithValue(
+            locales ?? MemoryLocaleStore(locale ?? scenarioLocale),
+          ),
+          withdrawalsRepositoryProvider.overrideWithValue(
+            withdrawals ?? FakeWithdrawalsRepository(),
+          ),
+          adminRepositoryProvider.overrideWithValue(
+            admin ?? FakeAdminRepository(),
+          ),
         ],
         retry: (_, _) => null,
         // The theme follows the test device (the app itself is light).
@@ -115,6 +166,8 @@ Future<void> pumpDiary(
       ),
     ),
   );
+  // The saved session is checked (GET /auth/me) before the home shows.
+  if (home == null) await tester.pump();
 }
 
 /// The app's provider container.
@@ -141,7 +194,7 @@ Future<void> pickTime(
   tester
       .widget<CupertinoDatePicker>(find.byType(CupertinoDatePicker))
       .onDateTimeChanged(DateTime(2000, 1, 1, hour, minute));
-  await tester.tap(find.text('Готово'));
+  await tester.tap(find.text(tr.pickerDone));
   await tester.pumpAndSettle();
 }
 
@@ -215,3 +268,24 @@ Future<void> pumpFormOverHost(
   await tester.tap(find.byType(TextButton));
   await tester.pumpAndSettle();
 }
+
+/// Whether the [DkButton] labelled [label] (the first, or the [last]) can
+/// be tapped.
+bool tapEnabled(WidgetTester tester, String label, {bool last = false}) {
+  final buttons = tester.widgetList<DkButton>(
+    find.byWidgetPredicate((w) => w is DkButton && w.label == label),
+  );
+  return (last ? buttons.last : buttons.first).onPressed != null;
+}
+
+/// The icon button labelled [label] («Меню», «Назад», …): a
+/// [DkIconButton], or a button `Semantics` (the modal app bar's).
+Finder iconButton(String label) => find
+    .byWidgetPredicate(
+      (w) =>
+          (w is DkIconButton && w.label == label) ||
+          (w is Semantics &&
+              w.properties.button == true &&
+              w.properties.label == label),
+    )
+    .first;

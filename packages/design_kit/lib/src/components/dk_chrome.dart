@@ -6,12 +6,7 @@ import 'package:flutter/material.dart';
 /// «Дневник смен» in `wordmark`; row min height 48.
 class DkWordmark extends StatelessWidget {
   /// Creates the wordmark.
-  const new({
-    this.title = 'Дневник смен',
-    this.trailing,
-    this.caption,
-    super.key,
-  });
+  const new({required this.title, this.trailing, this.caption, super.key});
 
   /// App title.
   final String title;
@@ -76,7 +71,7 @@ class DkWordmark extends StatelessWidget {
 /// 48 tap target. Shown only while another day is selected.
 class DkTodayButton extends StatelessWidget {
   /// Creates the button.
-  const new({required this.onPressed, this.label = 'Сегодня', super.key});
+  const new({required this.onPressed, required this.label, super.key});
 
   /// Jumps to today.
   final VoidCallback onPressed;
@@ -142,8 +137,8 @@ class DkModalAppBar extends StatelessWidget {
   const new({
     required this.title,
     required this.onClose,
+    required this.closeLabel,
     this.subtitle,
-    this.closeLabel = 'Закрыть',
     this.leadingIcon = DkIcons.close,
     super.key,
   });

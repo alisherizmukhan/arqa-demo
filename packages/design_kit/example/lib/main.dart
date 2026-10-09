@@ -1,5 +1,6 @@
 import 'package:design_kit/design_kit.dart';
 import 'package:design_kit_example/accounts_preview.dart';
+import 'package:design_kit_example/ru.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -274,7 +275,7 @@ class _DaySwitchers extends StatelessWidget {
     return Column(
       spacing: context.dkSpacing.s12,
       children: [
-        DkDaySwitcher(
+        RuDaySwitcher(
           // Explicit day for readability (it equals the default).
           // ignore: avoid_redundant_argument_values
           date: DateTime(2026, 10, 1),
@@ -283,7 +284,7 @@ class _DaySwitchers extends StatelessWidget {
           onNext: () {},
           onPickDate: () {},
         ),
-        DkDaySwitcher(
+        RuDaySwitcher(
           date: today,
           today: today,
           onPrev: () {},
@@ -340,9 +341,28 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     spacing: context.dkSpacing.s16,
     children: const [
-      DkSummaryCard(net: 3315, revenue: 3900, commission: 585, tripsCount: 2),
-      DkPaymentCard(cash: 1500, card: 2400),
-      DkPaymentCard(cash: 0, card: 0),
+      DkSummaryCard(
+        netLabel: 'На руки',
+        revenueLabel: 'Выручка',
+        commissionLabel: 'Комиссия',
+        tripsLabel: 'Поездок',
+        net: 3315,
+        revenue: 3900,
+        commission: 585,
+        tripsCount: 2,
+      ),
+      DkPaymentCard(
+        cashLabel: 'Наличные',
+        cardLabel: 'Карта',
+        cash: 1500,
+        card: 2400,
+      ),
+      DkPaymentCard(
+        cashLabel: 'Наличные',
+        cardLabel: 'Карта',
+        cash: 0,
+        card: 0,
+      ),
     ],
   );
 }
@@ -359,6 +379,7 @@ class _Trips extends StatelessWidget {
       DkTripList(
         children: [
           DkTripTile(
+            nextDayLabel: 'следующий день',
             timeRange: DkFormat.timeRange('08:10', '08:32'),
             endsNextDay: false,
             meta: '22 мин · Карта',
@@ -367,6 +388,7 @@ class _Trips extends StatelessWidget {
             method: DkPaymentMethod.card,
           ),
           DkTripTile(
+            nextDayLabel: 'следующий день',
             timeRange: DkFormat.timeRange('23:50', '00:20'),
             endsNextDay: true,
             meta: '30 мин · Наличные',
@@ -479,10 +501,16 @@ class _TimeFields extends StatelessWidget {
           spacing: spacing.s12,
           children: [
             Expanded(
-              child: DkTimeField(label: 'Начало', value: '23:50', onTap: () {}),
+              child: DkTimeField(
+                emptyValueLabel: 'не выбрано',
+                label: 'Начало',
+                value: '23:50',
+                onTap: () {},
+              ),
             ),
             Expanded(
               child: DkTimeField(
+                emptyValueLabel: 'не выбрано',
                 label: 'Окончание',
                 value: '00:20',
                 onTap: () {},
@@ -501,6 +529,7 @@ class _TimeFields extends StatelessWidget {
               children: [
                 Expanded(
                   child: DkTimeField(
+                    emptyValueLabel: 'не выбрано',
                     label: 'Начало',
                     value: '09:20',
                     onTap: () {},
@@ -508,6 +537,7 @@ class _TimeFields extends StatelessWidget {
                 ),
                 Expanded(
                   child: DkTimeField(
+                    emptyValueLabel: 'не выбрано',
                     label: 'Окончание',
                     value: '09:05',
                     onTap: () {},
@@ -528,6 +558,7 @@ class _TimeFields extends StatelessWidget {
           children: [
             Expanded(
               child: DkTimeField(
+                emptyValueLabel: 'не выбрано',
                 label: 'Начало',
                 value: '08:10',
                 onTap: () {},
@@ -535,7 +566,12 @@ class _TimeFields extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: DkTimeField(label: 'Окончание', value: null, onTap: () {}),
+              child: DkTimeField(
+                emptyValueLabel: 'не выбрано',
+                label: 'Окончание',
+                value: null,
+                onTap: () {},
+              ),
             ),
           ],
         ),
@@ -569,6 +605,7 @@ class _Error extends StatelessWidget {
     children: [
       DkCard(
         child: DkErrorState(
+          retryLabel: 'Повторить',
           title: 'Не удалось загрузить данные',
           message:
               'Проверьте интернет и попробуйте ещё раз. Сохранённые поездки '
@@ -701,11 +738,14 @@ class _Chrome extends StatelessWidget {
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s16),
-          child: const DkWordmark(),
+          child: const DkWordmark(title: 'Дневник смен'),
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s16),
-          child: DkWordmark(trailing: DkTodayButton(onPressed: () {})),
+          child: DkWordmark(
+            title: 'Дневник смен',
+            trailing: DkTodayButton(label: 'Сегодня', onPressed: () {}),
+          ),
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s16),
@@ -720,6 +760,7 @@ class _Chrome extends StatelessWidget {
           ),
         ),
         DkModalAppBar(
+          closeLabel: 'Закрыть',
           title: 'Новая поездка',
           subtitle: '1 октября 2026',
           onClose: () {},

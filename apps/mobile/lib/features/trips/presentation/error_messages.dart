@@ -1,37 +1,36 @@
 import 'package:driver_diary/core/error/failure.dart';
-import 'package:driver_diary/core/l10n/strings_ru.dart';
+import 'package:driver_diary/core/l10n/failure_messages.dart';
+import 'package:driver_diary/core/l10n/l10n.dart';
 
-/// Russian text for a failure shown in a snackbar. Validation codes are
-/// shared by the client-side rules and the server's 422 responses.
-String failureMessage(Failure failure) => switch (failure) {
-  NetworkFailure() => S.offline,
-  ServerFailure() when isTransient(failure) =>
-    'Сервер временно недоступен. Попробуйте чуть позже.',
-  // Other 4xx (400, 401, …): not something a retry fixes.
-  ServerFailure() => 'Что-то пошло не так. Попробуйте ещё раз.',
-  ConflictFailure() => S.conflictTitle,
-  ValidationFailure(:final code) => validationMessage(code),
-  UnexpectedFailure() => 'Что-то пошло не так. Попробуйте ещё раз.',
-};
+export 'package:driver_diary/core/l10n/failure_messages.dart' show isTransient;
 
-/// Whether sending again may succeed: no connection, a timeout, or a 5xx.
-/// 4xx answers (400, 401, 409, 422, …) are final and are never resent.
-bool isTransient(Failure failure) => switch (failure) {
-  NetworkFailure() => true,
-  ServerFailure(:final statusCode) => statusCode != null && statusCode >= 500,
-  _ => false,
-};
+/// Form-only validation codes (the others are shared with the server).
+abstract final class TripFormCode {
+  static const required = 'required';
+  static const notInteger = 'not_integer';
+}
 
-/// Russian text for a validation code (`commission_exceeds_amount`, ...).
-String validationMessage(String code) => switch (code) {
-  'invalid_amount' => S.errAmount,
-  'amount_too_large' => 'Слишком большая сумма',
-  'invalid_commission' => S.errCommissionNegative,
-  'commission_exceeds_amount' => S.errCommissionGtAmount,
+/// Text for a failure shown in the add-trip form's snackbar.
+String failureMessage(AppLocalizations l10n, Failure failure) =>
+    switch (failure) {
+      ConflictFailure(code: 'trip_conflict') => l10n.conflictTitle,
+      ValidationFailure(:final code) => validationMessage(l10n, code),
+      _ => commonFailureMessage(l10n, failure, offline: l10n.tripOffline),
+    };
+
+/// Text for a validation code, shared by the client-side rules and the
+/// server's 422 responses (`commission_exceeds_amount`, ...).
+String validationMessage(AppLocalizations l10n, String code) => switch (code) {
+  TripFormCode.required => l10n.errRequired,
+  TripFormCode.notInteger => l10n.errNotInteger,
+  'invalid_amount' => l10n.errAmount,
+  'amount_too_large' => l10n.errAmountTooLarge,
+  'invalid_commission' => l10n.errCommissionNegative,
+  'commission_exceeds_amount' => l10n.errCommissionGtAmount,
   // The form allows at most 12 h, so a too-long trip reads as a wrong end.
-  'invalid_time_range' || 'trip_too_long' => S.errEndBeforeStart,
-  'datetime_out_of_range' => 'Дата вне допустимого диапазона',
-  'naive_datetime' || 'invalid_datetime' => 'Неверное время поездки',
-  'invalid_payment' => 'Выберите способ оплаты',
-  _ => 'Проверьте данные поездки',
+  'invalid_time_range' || 'trip_too_long' => l10n.errEndBeforeStart,
+  'datetime_out_of_range' => l10n.errDateOutOfRange,
+  'naive_datetime' || 'invalid_datetime' => l10n.errInvalidTime,
+  'invalid_payment' => l10n.errInvalidPayment,
+  _ => l10n.errTripGeneric,
 };

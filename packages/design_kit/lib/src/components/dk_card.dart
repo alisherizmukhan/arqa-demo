@@ -156,10 +156,10 @@ class DkSummaryCard extends StatelessWidget {
     required this.revenue,
     required this.commission,
     required this.tripsCount,
-    this.netLabel = 'На руки',
-    this.revenueLabel = 'Выручка',
-    this.commissionLabel = 'Комиссия',
-    this.tripsLabel = 'Поездок',
+    required this.netLabel,
+    required this.revenueLabel,
+    required this.commissionLabel,
+    required this.tripsLabel,
     super.key,
   });
 
@@ -254,8 +254,8 @@ class DkSplitBar extends StatelessWidget {
   const new({
     required this.cash,
     required this.card,
-    this.cashLabel = 'Наличные',
-    this.cardLabel = 'карта',
+    required this.cashLabel,
+    required this.cardLabel,
     super.key,
   });
 
@@ -308,8 +308,8 @@ class DkPaymentCard extends StatelessWidget {
   const new({
     required this.cash,
     required this.card,
-    this.cashLabel = 'Наличные',
-    this.cardLabel = 'Карта',
+    required this.cashLabel,
+    required this.cardLabel,
     super.key,
   });
 

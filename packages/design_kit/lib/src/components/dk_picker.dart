@@ -13,8 +13,8 @@ Future<({int hour, int minute})?> showDkTimePicker(
   BuildContext context, {
   required int hour,
   required int minute,
-  String title = 'Время',
-  String doneLabel = 'Готово',
+  required String title,
+  required String doneLabel,
 }) async {
   final picked = await _showWheelSheet(
     context,
@@ -39,8 +39,8 @@ Future<DateTime?> showDkDatePicker(
   required DateTime initialDate,
   required DateTime firstDate,
   required DateTime lastDate,
-  String title = 'Выберите дату',
-  String doneLabel = 'Готово',
+  required String title,
+  required String doneLabel,
   String? todayLabel,
 }) {
   DateTime dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);

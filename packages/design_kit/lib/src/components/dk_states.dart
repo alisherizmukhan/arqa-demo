@@ -53,8 +53,8 @@ class DkErrorState extends StatelessWidget {
   const new({
     required this.title,
     required this.onRetry,
+    required this.retryLabel,
     this.message,
-    this.retryLabel = 'Повторить',
     this.isRetrying = false,
     super.key,
   });

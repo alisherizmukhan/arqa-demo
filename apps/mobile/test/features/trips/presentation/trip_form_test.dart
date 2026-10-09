@@ -1,12 +1,24 @@
+import 'package:driver_diary/core/l10n/l10n.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip_rules.dart';
+import 'package:driver_diary/features/trips/presentation/error_messages.dart';
 import 'package:driver_diary/features/trips/presentation/models/trip_form.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../helpers/fixtures.dart';
 
 TripFormResult validate(TripFormInput input) =>
     validateTripForm(input, zone: kz, id: 'new-id');
+
+final AppLocalizations _ru = lookupAppLocalizations(const Locale('ru'));
+
+/// The form's errors as the Russian texts shown under the fields.
+Map<TripField, String> texts(TripFormResult result) => {
+  for (final MapEntry(:key, :value)
+      in (result as TripFormInvalid).errors.entries)
+    key: validationMessage(_ru, value),
+};
 
 void main() {
   final complete = TripFormInput(
@@ -36,7 +48,7 @@ void main() {
   test('empty form: every field says «Заполните поле»', () {
     final result = validate(TripFormInput(day: referenceDay));
 
-    expect((result as TripFormInvalid).errors, {
+    expect(texts(result), {
       TripField.start: 'Заполните поле',
       TripField.end: 'Заполните поле',
       TripField.amount: 'Заполните поле',
@@ -71,7 +83,7 @@ void main() {
       commissionText: '0',
     );
 
-    expect((validate(input) as TripFormInvalid).errors, {
+    expect(texts(validate(input)), {
       TripField.end: 'Окончание должно быть позже начала',
     });
   });
@@ -99,7 +111,7 @@ void main() {
     );
 
     expect(input.endsNextDay, isTrue);
-    expect((validate(input) as TripFormInvalid).errors, {
+    expect(texts(validate(input)), {
       TripField.end: 'Окончание должно быть позже начала',
     });
   });
@@ -113,7 +125,7 @@ void main() {
       commissionText: '360',
     );
 
-    expect((validate(input) as TripFormInvalid).errors, {
+    expect(texts(validate(input)), {
       TripField.amount: 'Сумма должна быть больше 0',
       TripField.commission: 'Комиссия не может быть больше суммы',
     });
@@ -129,7 +141,7 @@ void main() {
     );
 
     expect(
-      (validate(input) as TripFormInvalid).errors[TripField.amount],
+      texts(validate(input))[TripField.amount],
       'Введите целое число тенге',
     );
   });
@@ -142,7 +154,7 @@ void main() {
     );
 
     expect(
-      (validate(input) as TripFormInvalid).errors[TripField.commission],
+      texts(validate(input))[TripField.commission],
       'Комиссия не может быть больше суммы',
     );
   });
@@ -151,13 +163,10 @@ void main() {
     final input = TripFormInput(day: referenceDay, amountText: '0');
 
     expect(
-      (validate(input) as TripFormInvalid).errors[TripField.amount],
+      texts(validate(input))[TripField.amount],
       'Сумма должна быть больше 0',
     );
-    expect(
-      (validate(input) as TripFormInvalid).errors[TripField.commission],
-      'Заполните поле',
-    );
+    expect(texts(validate(input))[TripField.commission], 'Заполните поле');
   });
 
   test('net is shown only for valid sums; grouped input is parsed', () {

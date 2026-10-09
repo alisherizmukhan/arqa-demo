@@ -4,6 +4,7 @@
 // stage 5. Copy marked «proposed» is not in §8.7 and waits for approval.
 
 import 'package:design_kit/design_kit.dart';
+import 'package:design_kit_example/ru.dart';
 import 'package:flutter/material.dart';
 
 /// One screen state.
@@ -329,7 +330,7 @@ class _ControllersState extends State<_Controllers> {
 String _money(int amount) => DkMoney.format(amount);
 
 String _dateTime(DateTime moment) =>
-    '${DkFormat.date(moment)}, ${DkFormat.clock(moment.hour, moment.minute)}';
+    '${Ru.date(moment)}, ${DkFormat.clock(moment.hour, moment.minute)}';
 
 const _shortMonths = [
   'янв.',
@@ -396,7 +397,7 @@ class _Login extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const DkWordmark(),
+                    const DkWordmark(title: 'Дневник смен'),
                     SizedBox(height: spacing.s32),
                     Text(
                       'Вход',
@@ -462,10 +463,11 @@ class _DayHeader extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: spacing.screenGutter),
         children: [
           DkWordmark(
+            title: 'Дневник смен',
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DkTodayButton(onPressed: () {}),
+                DkTodayButton(label: 'Сегодня', onPressed: () {}),
                 DkIconButton(
                   icon: DkIcons.menu,
                   label: 'Меню',
@@ -475,7 +477,7 @@ class _DayHeader extends StatelessWidget {
             ),
           ),
           SizedBox(height: spacing.s8),
-          DkDaySwitcher(
+          RuDaySwitcher(
             date: DateTime(2026, 10),
             today: _today,
             onPrev: () {},
@@ -484,13 +486,22 @@ class _DayHeader extends StatelessWidget {
           ),
           SizedBox(height: spacing.s16),
           const DkSummaryCard(
+            netLabel: 'На руки',
+            revenueLabel: 'Выручка',
+            commissionLabel: 'Комиссия',
+            tripsLabel: 'Поездок',
             net: 3315,
             revenue: 3900,
             commission: 585,
             tripsCount: 2,
           ),
           SizedBox(height: spacing.s16),
-          const DkPaymentCard(cash: 1500, card: 2400),
+          const DkPaymentCard(
+            cashLabel: 'Наличные',
+            cardLabel: 'Карта',
+            cash: 1500,
+            card: 2400,
+          ),
         ],
       ),
     );
@@ -827,6 +838,7 @@ class _AdminScaffold extends StatelessWidget {
         ),
         children: [
           DkWordmark(
+            title: 'Дневник смен',
             caption: 'Администратор',
             trailing: DkIconButton(
               icon: DkIcons.menu,
@@ -901,7 +913,7 @@ class _AdminTrips extends StatelessWidget {
           onChanged: (_) {},
         ),
         SizedBox(height: spacing.s8),
-        DkDaySwitcher(
+        RuDaySwitcher(
           date: DateTime(2026, 10),
           today: _today,
           onPrev: () {},
@@ -910,13 +922,22 @@ class _AdminTrips extends StatelessWidget {
         ),
         SizedBox(height: spacing.s16),
         DkSummaryCard(
+          netLabel: 'На руки',
+          revenueLabel: 'Выручка',
+          commissionLabel: 'Комиссия',
+          tripsLabel: 'Поездок',
           net: net,
           revenue: revenue,
           commission: commission,
           tripsCount: trips.length,
         ),
         SizedBox(height: spacing.s16),
-        DkPaymentCard(cash: cash, card: card),
+        DkPaymentCard(
+          cashLabel: 'Наличные',
+          cardLabel: 'Карта',
+          cash: cash,
+          card: card,
+        ),
         SizedBox(height: spacing.s16),
         DkListHeader(
           title: 'Поездки',
@@ -932,6 +953,7 @@ class _AdminTrips extends StatelessWidget {
           children: [
             for (final t in trips)
               DkTripTile(
+                nextDayLabel: 'следующий день',
                 timeRange: t.$1,
                 endsNextDay: false,
                 meta: t.$2,
@@ -1179,6 +1201,7 @@ class _AdminState extends StatelessWidget {
         _ => [
           SizedBox(height: spacing.s64),
           DkErrorState(
+            retryLabel: 'Повторить',
             title: 'Не удалось загрузить',
             message: 'Проверьте интернет и попробуйте ещё раз.',
             onRetry: () {},

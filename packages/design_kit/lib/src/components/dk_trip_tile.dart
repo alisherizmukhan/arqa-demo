@@ -13,12 +13,6 @@ enum DkPaymentMethod {
   /// Card.
   card;
 
-  /// Default Russian label.
-  String get label => switch (this) {
-    DkPaymentMethod.cash => 'Наличные',
-    DkPaymentMethod.card => 'Карта',
-  };
-
   /// Lucide icon.
   IconData get icon => switch (this) {
     DkPaymentMethod.cash => DkIcons.cash,
@@ -37,8 +31,8 @@ class DkTripTile extends StatelessWidget {
     required this.amount,
     required this.commission,
     required this.method,
+    required this.nextDayLabel,
     this.highlighted = false,
-    this.nextDayLabel = 'следующий день',
     this.driver,
     super.key,
   });

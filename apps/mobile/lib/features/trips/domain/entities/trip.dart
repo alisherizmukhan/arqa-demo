@@ -13,6 +13,7 @@ final class Trip {
     required this.amount,
     required this.payment,
     required this.commission,
+    this.driverId,
   });
 
   /// Client-generated UUID v4; doubles as the idempotency key.
@@ -22,6 +23,10 @@ final class Trip {
   final int amount;
   final PaymentMethod payment;
   final int commission;
+
+  /// The driver's user id (from the server; null for a trip not sent yet).
+  /// Not part of the payload.
+  final String? driverId;
 
   int get net => amount - commission;
 
@@ -40,6 +45,7 @@ final class Trip {
     amount: amount,
     payment: payment,
     commission: commission,
+    driverId: driverId,
   );
 
   @override

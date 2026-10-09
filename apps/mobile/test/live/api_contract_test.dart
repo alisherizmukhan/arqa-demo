@@ -3,7 +3,9 @@
 //
 //   LIVE_API_URL=http://127.0.0.1:8000 flutter test test/live
 //
-// It creates trips on 2026-10-10, so point it at a local/dev backend.
+// With LIVE_LOGIN / LIVE_PASSWORD it signs in first (needed when the backend
+// has AUTH_REQUIRED=true). It creates trips on 2026-10-10, so point it at a
+// local/dev backend.
 @Tags(['live'])
 library;
 
@@ -12,9 +14,12 @@ import 'dart:io';
 import 'package:driver_diary/core/config/app_config.dart';
 import 'package:driver_diary/core/error/failure.dart';
 import 'package:driver_diary/core/error/result.dart';
+import 'package:driver_diary/core/network/auth_interceptor.dart';
 import 'package:driver_diary/core/network/dio_client.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
+import 'package:driver_diary/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:driver_diary/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:driver_diary/features/trips/data/datasources/trips_remote_data_source.dart';
 import 'package:driver_diary/features/trips/data/repositories/trips_repository_impl.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
@@ -26,10 +31,25 @@ void main() {
   const zone = DriverZone.kazakhstan;
   final day = CalendarDay(2026, 10, 10);
 
+  final login = Platform.environment['LIVE_LOGIN'];
+  final password = Platform.environment['LIVE_PASSWORD'] ?? '';
+
   late TripsRepositoryImpl repository;
-  setUp(() {
-    final dio = createDio(AppConfig(apiUrl: apiUrl ?? '', driverZone: zone));
+  setUp(() async {
+    final gate = AuthGate();
+    final dio = createDio(
+      AppConfig(apiUrl: apiUrl ?? '', driverZone: zone),
+      gate,
+    );
     repository = TripsRepositoryImpl(TripsRemoteDataSource(dio));
+    if (apiUrl != null && login != null) {
+      final auth = AuthRepositoryImpl(AuthRemoteDataSource(dio));
+      final session = await auth.login(login, password);
+      gate.token = switch (session) {
+        Ok(:final value) => value.token,
+        Err(:final failure) => fail('login failed: $failure'),
+      };
+    }
   });
 
   Trip newTrip({int amount = 2500}) => Trip(

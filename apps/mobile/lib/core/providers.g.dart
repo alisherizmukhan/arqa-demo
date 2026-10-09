@@ -54,6 +54,52 @@ final class AppConfigProvider
 
 String _$appConfigHash() => r'87f9d20a2d92252672162b2ce97547b7b2479239';
 
+/// The session token for requests and the "session ended" signal.
+
+@ProviderFor(authGate)
+final authGateProvider = AuthGateProvider._();
+
+/// The session token for requests and the "session ended" signal.
+
+final class AuthGateProvider
+    extends $FunctionalProvider<AuthGate, AuthGate, AuthGate>
+    with $Provider<AuthGate> {
+  /// The session token for requests and the "session ended" signal.
+  AuthGateProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'authGateProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$authGateHash();
+
+  @$internal
+  @override
+  $ProviderElement<AuthGate> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  AuthGate create(Ref ref) {
+    return authGate(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AuthGate value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AuthGate>(value),
+    );
+  }
+}
+
+String _$authGateHash() => r'464e0596bb34d3dd816b4f3768604403dfc267f4';
+
 /// The HTTP client, shared by all features.
 
 @ProviderFor(dio)
@@ -97,7 +143,7 @@ final class DioProvider extends $FunctionalProvider<Dio, Dio, Dio>
   }
 }
 
-String _$dioHash() => r'a4e0c5356c2560fd8a99fcf057f710bda98ce90b';
+String _$dioHash() => r'e4db8d81699f675e3104e2e14319223782efc0d1';
 
 /// The current time. Overridden in tests to pin "today".
 

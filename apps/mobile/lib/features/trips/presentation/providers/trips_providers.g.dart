@@ -138,15 +138,18 @@ final class TodayProvider
 
 String _$todayHash() => r'a5c87d0bd63cf8c7ae3e8bf0ae12302aed711772';
 
-/// The day the user is looking at. Starts at today; never goes past today.
+/// The day the user is looking at. Starts at today (again for each new
+/// session); never goes past today.
 
 @ProviderFor(SelectedDay)
 final selectedDayProvider = SelectedDayProvider._();
 
-/// The day the user is looking at. Starts at today; never goes past today.
+/// The day the user is looking at. Starts at today (again for each new
+/// session); never goes past today.
 final class SelectedDayProvider
     extends $NotifierProvider<SelectedDay, CalendarDay> {
-  /// The day the user is looking at. Starts at today; never goes past today.
+  /// The day the user is looking at. Starts at today (again for each new
+  /// session); never goes past today.
   SelectedDayProvider._()
     : super(
         from: null,
@@ -174,9 +177,10 @@ final class SelectedDayProvider
   }
 }
 
-String _$selectedDayHash() => r'75e117e148199d8ec5e2d6202c4de0b1350bf03e';
+String _$selectedDayHash() => r'65c1e5f9035666e5697da0487e1765caa9a3fcde';
 
-/// The day the user is looking at. Starts at today; never goes past today.
+/// The day the user is looking at. Starts at today (again for each new
+/// session); never goes past today.
 
 abstract class _$SelectedDay extends $Notifier<CalendarDay> {
   CalendarDay build();
@@ -196,14 +200,18 @@ abstract class _$SelectedDay extends $Notifier<CalendarDay> {
   }
 }
 
-/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
-/// listener goes; a failed load is not cached.
+/// Trips of [day], ordered by start: the driver's own, or (admin) all
+/// drivers' or one driver's ([driverId]). Cached for [dayCacheTtl] after its
+/// last listener goes, and only for the session that loaded it; a failed load
+/// is not cached.
 
 @ProviderFor(dayTrips)
 final dayTripsProvider = DayTripsFamily._();
 
-/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
-/// listener goes; a failed load is not cached.
+/// Trips of [day], ordered by start: the driver's own, or (admin) all
+/// drivers' or one driver's ([driverId]). Cached for [dayCacheTtl] after its
+/// last listener goes, and only for the session that loaded it; a failed load
+/// is not cached.
 
 final class DayTripsProvider
     extends
@@ -213,11 +221,13 @@ final class DayTripsProvider
           FutureOr<List<Trip>>
         >
     with $FutureModifier<List<Trip>>, $FutureProvider<List<Trip>> {
-  /// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
-  /// listener goes; a failed load is not cached.
+  /// Trips of [day], ordered by start: the driver's own, or (admin) all
+  /// drivers' or one driver's ([driverId]). Cached for [dayCacheTtl] after its
+  /// last listener goes, and only for the session that loaded it; a failed load
+  /// is not cached.
   DayTripsProvider._({
     required DayTripsFamily super.from,
-    required CalendarDay super.argument,
+    required (CalendarDay, {String? driverId}) super.argument,
   }) : super(
          retry: null,
          name: r'dayTripsProvider',
@@ -233,7 +243,7 @@ final class DayTripsProvider
   String toString() {
     return r'dayTripsProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -243,8 +253,8 @@ final class DayTripsProvider
 
   @override
   FutureOr<List<Trip>> create(Ref ref) {
-    final argument = this.argument as CalendarDay;
-    return dayTrips(ref, argument);
+    final argument = this.argument as (CalendarDay, {String? driverId});
+    return dayTrips(ref, argument.$1, driverId: argument.driverId);
   }
 
   @override
@@ -258,13 +268,19 @@ final class DayTripsProvider
   }
 }
 
-String _$dayTripsHash() => r'cf4ea4929a3bc6caab6ac86da6f1d2c53ad4a1cd';
+String _$dayTripsHash() => r'df849ddda57037589360118737309848163d8375';
 
-/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
-/// listener goes; a failed load is not cached.
+/// Trips of [day], ordered by start: the driver's own, or (admin) all
+/// drivers' or one driver's ([driverId]). Cached for [dayCacheTtl] after its
+/// last listener goes, and only for the session that loaded it; a failed load
+/// is not cached.
 
 final class DayTripsFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<List<Trip>>, CalendarDay> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<Trip>>,
+          (CalendarDay, {String? driverId})
+        > {
   DayTripsFamily._()
     : super(
         retry: null,
@@ -274,11 +290,13 @@ final class DayTripsFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
-  /// listener goes; a failed load is not cached.
+  /// Trips of [day], ordered by start: the driver's own, or (admin) all
+  /// drivers' or one driver's ([driverId]). Cached for [dayCacheTtl] after its
+  /// last listener goes, and only for the session that loaded it; a failed load
+  /// is not cached.
 
-  DayTripsProvider call(CalendarDay day) =>
-      DayTripsProvider._(argument: day, from: this);
+  DayTripsProvider call(CalendarDay day, {String? driverId}) =>
+      DayTripsProvider._(argument: (day, driverId: driverId), from: this);
 
   @override
   String toString() => r'dayTripsProvider';
@@ -305,7 +323,7 @@ final class DaySummaryProvider
   /// card and the list can never disagree.
   DaySummaryProvider._({
     required DaySummaryFamily super.from,
-    required CalendarDay super.argument,
+    required (CalendarDay, {String? driverId}) super.argument,
   }) : super(
          retry: null,
          name: r'daySummaryProvider',
@@ -321,7 +339,7 @@ final class DaySummaryProvider
   String toString() {
     return r'daySummaryProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -332,8 +350,8 @@ final class DaySummaryProvider
 
   @override
   FutureOr<DailySummary> create(Ref ref) {
-    final argument = this.argument as CalendarDay;
-    return daySummary(ref, argument);
+    final argument = this.argument as (CalendarDay, {String? driverId});
+    return daySummary(ref, argument.$1, driverId: argument.driverId);
   }
 
   @override
@@ -347,13 +365,17 @@ final class DaySummaryProvider
   }
 }
 
-String _$daySummaryHash() => r'c73ddc9acd023a351c87d5d2cc03446903ac6a5a';
+String _$daySummaryHash() => r'856c21e98169c424d2c96a3964434e7cf6d9c6cc';
 
 /// Summary of [day], computed from the same trips the list shows, so the
 /// card and the list can never disagree.
 
 final class DaySummaryFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<DailySummary>, CalendarDay> {
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<DailySummary>,
+          (CalendarDay, {String? driverId})
+        > {
   DaySummaryFamily._()
     : super(
         retry: null,
@@ -366,8 +388,8 @@ final class DaySummaryFamily extends $Family
   /// Summary of [day], computed from the same trips the list shows, so the
   /// card and the list can never disagree.
 
-  DaySummaryProvider call(CalendarDay day) =>
-      DaySummaryProvider._(argument: day, from: this);
+  DaySummaryProvider call(CalendarDay day, {String? driverId}) =>
+      DaySummaryProvider._(argument: (day, driverId: driverId), from: this);
 
   @override
   String toString() => r'daySummaryProvider';

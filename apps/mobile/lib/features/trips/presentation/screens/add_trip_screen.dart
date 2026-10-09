@@ -4,7 +4,8 @@ import 'dart:math' as math;
 import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/core/error/failure.dart';
 import 'package:driver_diary/core/error/result.dart';
-import 'package:driver_diary/core/l10n/strings_ru.dart';
+import 'package:driver_diary/core/l10n/l10n.dart';
+import 'package:driver_diary/core/network/resend_schedule.dart';
 import 'package:driver_diary/core/providers.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
@@ -19,12 +20,7 @@ import 'package:uuid/uuid.dart';
 
 /// Waits between automatic resends after a network/server failure
 /// (DESIGN.md §5.9): 2 s, 4 s, 8 s, then every 30 s while the form is open.
-const addTripRetryDelays = [
-  Duration(seconds: 2),
-  Duration(seconds: 4),
-  Duration(seconds: 8),
-  Duration(seconds: 30),
-];
+const List<Duration> addTripRetryDelays = resendDelays;
 
 /// Full-screen form for a new trip on [day] (DESIGN.md §5.6–5.11). Pops with
 /// the saved [Trip].
@@ -61,7 +57,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   /// Save was pressed: every error is shown.
   bool _submitted = false;
 
-  /// Server 422s for a field, until that field changes.
+  /// Server 422s for a field (validation codes), until that field changes.
   final _serverErrors = <TripField, String>{};
 
   /// The error snackbar above the bottom bar (null: hidden). Part of the
@@ -126,10 +122,11 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     ..._serverErrors,
   };
 
-  /// Errors the user should see now.
+  /// Errors the user should see now, as text.
   Map<TripField, String> get _visibleErrors => {
     for (final MapEntry(:key, :value) in _errors.entries)
-      if (_submitted || _touched.contains(key)) key: value,
+      if (_submitted || _touched.contains(key))
+        key: validationMessage(context.l10n, value),
   };
 
   void _edited(TripField field) {
@@ -210,7 +207,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       final first = _unsent == null;
       _unsent = trip;
       if (first || _error == null) {
-        _showError(failureMessage(failure), retry: true);
+        _showError(failureMessage(context.l10n, failure), retry: true);
       }
       _scheduleRetry();
       return;
@@ -225,14 +222,12 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       case Err(failure: ValidationFailure(:final code, :final field))
           when _formField(field) != null:
         _closeError();
-        setState(
-          () => _serverErrors[_formField(field)!] = validationMessage(code),
-        );
+        setState(() => _serverErrors[_formField(field)!] = code);
       case Err(failure: ConflictFailure()):
         _closeError();
         await _showConflict();
       case Err(:final failure):
-        _showError(failureMessage(failure), retry: false);
+        _showError(failureMessage(context.l10n, failure), retry: false);
     }
   }
 
@@ -256,14 +251,14 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   Future<void> _showConflict() => showDkDialog(
     context,
     icon: DkIcons.alert,
-    title: S.conflictTitle,
-    message: S.conflictMessage,
-    primaryLabel: S.conflictKeep,
+    title: context.l10n.conflictTitle,
+    message: context.l10n.conflictMessage,
+    primaryLabel: context.l10n.conflictKeep,
     onPrimary: () {
       ref.invalidate(dayTripsProvider);
       Navigator.of(context).pop();
     },
-    secondaryLabel: S.conflictNew,
+    secondaryLabel: context.l10n.conflictNew,
     // A new id is used: the conflicting attempt is not retried.
     onSecondary: _save,
   );
@@ -276,7 +271,10 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
       context,
       hour: current?.hour ?? now.hour,
       minute: current?.minute ?? now.minute,
-      title: isStart ? S.startPickerHelp : S.endPickerHelp,
+      title: isStart
+          ? context.l10n.startPickerHelp
+          : context.l10n.endPickerHelp,
+      doneLabel: context.l10n.pickerDone,
     );
     if (!mounted) return;
     final field = isStart ? TripField.start : TripField.end;
@@ -297,6 +295,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final saving = ref.watch(addTripControllerProvider).isLoading;
     final spacing = context.dkSpacing;
     final input = _input;
@@ -317,8 +316,9 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
           child: Column(
             children: [
               DkModalAppBar(
-                title: S.formTitle,
-                subtitle: DkFormat.date(_date(widget.day)),
+                title: l10n.formTitle,
+                subtitle: l10n.date(widget.day.toDateTime()),
+                closeLabel: l10n.close,
                 onClose: () => Navigator.of(context).maybePop(),
               ),
               Expanded(
@@ -333,14 +333,16 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                         children: [
                           _TimeRow(
                             start: DkTimeField(
-                              label: S.start,
+                              label: l10n.start,
+                              emptyValueLabel: l10n.timeNotPicked,
                               value: clock(_start),
                               enabled: !saving,
                               invalid: visible.containsKey(TripField.start),
                               onTap: () => _pickTime(isStart: true),
                             ),
                             end: DkTimeField(
-                              label: S.end,
+                              label: l10n.end,
+                              emptyValueLabel: l10n.timeNotPicked,
                               value: clock(_end),
                               enabled: !saving,
                               invalid: visible.containsKey(TripField.end),
@@ -349,31 +351,31 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                               trailing:
                                   input.endsNextDay &&
                                       !errors.containsKey(TripField.end)
-                                  ? const DkBadge(S.nextDayBadge)
+                                  ? DkBadge(l10n.nextDayBadge)
                                   : null,
                               onTap: () => _pickTime(isStart: false),
                             ),
-                            message: _timeMessage(input, errors, visible),
+                            message: _timeMessage(l10n, input, errors, visible),
                           ),
                           SizedBox(height: spacing.s20),
                           DkTextField.money(
-                            label: S.amount,
+                            label: l10n.amount,
                             controller: _amount,
                             focusNode: _amountFocus,
                             enabled: !saving,
-                            helper: S.amountHelper,
+                            helper: l10n.amountHelper,
                             errorText: visible[TripField.amount],
                             textInputAction: TextInputAction.next,
                             onChanged: (_) => _edited(TripField.amount),
                           ),
                           SizedBox(height: spacing.s20),
                           DkTextField.money(
-                            label: S.commission,
+                            label: l10n.commission,
                             controller: _commission,
                             focusNode: _commissionFocus,
                             enabled: !saving,
                             helper: switch (input.net) {
-                              final net? => S.netHelper(net),
+                              final net? => l10n.netHelper(DkMoney.format(net)),
                               null => null,
                             },
                             errorText: visible[TripField.commission],
@@ -382,12 +384,12 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                           ),
                           SizedBox(height: spacing.s20),
                           DkSegmentedControl<PaymentMethod>(
-                            label: S.payment,
+                            label: l10n.payment,
                             segments: [
                               for (final method in PaymentMethod.values)
                                 DkSegment(
                                   value: method,
-                                  label: method.toKit().label,
+                                  label: l10n.paymentLabel(method.toKit()),
                                   icon: method.toKit().icon,
                                 ),
                             ],
@@ -414,7 +416,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                             key: ValueKey(error),
                             message: error.message,
                             tone: DkSnackTone.error,
-                            actionLabel: error.retry ? S.retry : null,
+                            actionLabel: error.retry ? l10n.retry : null,
                             onAction: error.retry ? _retryNow : null,
                           ),
                         ),
@@ -426,7 +428,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
               // the keyboard, so Save stays pinned right above it (§5.6).
               DkBottomBar(
                 child: DkButton(
-                  label: saving ? S.saving : S.save,
+                  label: saving ? l10n.saving : l10n.save,
                   expand: true,
                   isLoading: saving,
                   // §5.7: disabled while any error is shown.
@@ -444,11 +446,11 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   Future<void> _confirmDiscard() => showDkDialog(
     context,
     icon: DkIcons.alert,
-    title: S.discardTitle,
-    message: S.discardMessage,
-    primaryLabel: S.discardKeep,
+    title: context.l10n.discardTitle,
+    message: context.l10n.discardMessage,
+    primaryLabel: context.l10n.discardKeep,
     onPrimary: () {},
-    secondaryLabel: S.discardLeave,
+    secondaryLabel: context.l10n.discardLeave,
     // pop() ignores PopScope (only maybePop and system back consult it).
     onSecondary: () => Navigator.of(context).pop(),
   );
@@ -456,6 +458,7 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   /// The one line under the time row: an error, the midnight explanation
   /// (§5.10) or the duration.
   static DkFieldMessage? _timeMessage(
+    AppLocalizations l10n,
     TripFormInput input,
     Map<TripField, String> errors,
     Map<TripField, String> visible,
@@ -471,17 +474,14 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     }
     return DkFieldMessage(
       text: input.endsNextDay
-          ? S.midnightHelper(
-              endDay: _date(input.endDay),
-              startDay: _date(input.day),
-              duration: duration,
+          ? l10n.midnightHelper(
+              l10n.dayMonth(input.endDay.toDateTime()),
+              l10n.duration(duration),
+              l10n.dayMonth(input.day.toDateTime()),
             )
-          : S.durationHelper(duration),
+          : l10n.durationHelper(l10n.duration(duration)),
     );
   }
-
-  static DateTime _date(CalendarDay day) =>
-      DateTime(day.year, day.month, day.day);
 }
 
 /// Two time fields side by side (gap 12) and one message under them (gap 6).

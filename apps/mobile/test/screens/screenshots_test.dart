@@ -8,12 +8,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/account_scenarios.dart';
 import '../helpers/app_harness.dart';
 import '../helpers/scenarios.dart';
 
 /// Renders every mockup state at 390×844 @2x (780×1688, like the PNGs in
-/// docs/design) with the real fonts into `$SCREENSHOTS_DIR`. Skipped unless
-/// that variable is set:
+/// docs/design) with the real fonts into `$SCREENSHOTS_DIR`, and the §8
+/// screens (login, menu, withdraw, admin) in Russian and Kazakh into
+/// `$SCREENSHOTS_DIR/accounts`. Skipped unless that variable is set:
 ///
 ///     SCREENSHOTS_DIR=build/screens flutter test test/screens/screenshots_test.dart
 void main() {
@@ -57,6 +59,54 @@ void main() {
           ..writeAsBytesSync(png!);
         await disposeApp(tester);
       });
+    }
+  }
+
+  // §8 screens, ru and kk; dark for one state per screen.
+  const darkAccounts = {
+    'a01_login',
+    'a06_day_header',
+    'a07_menu_driver',
+    'a10_withdraw',
+    'a16_admin_trips_all',
+    'a18_admin_withdrawals',
+  };
+  for (final locale in ['ru', 'kk']) {
+    for (final scenario in accountScenarios) {
+      for (final brightness in [
+        Brightness.light,
+        if (darkAccounts.contains(scenario.id)) Brightness.dark,
+      ]) {
+        final name =
+            '${scenario.id}_$locale'
+            '${brightness == Brightness.dark ? '_dark' : ''}';
+        testWidgets('accounts/$name', skip: dir == null, (tester) async {
+          scenarioLocale = locale;
+          addTearDown(() => scenarioLocale = 'ru');
+          useDevice(tester, (
+            size: const Size(390, 844),
+            textScale: 1,
+            brightness: brightness,
+            pixelRatio: 2,
+          ));
+          debugDisableShadows = false;
+          await scenario.run(tester);
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(shotKey),
+          );
+          final png = await tester.runAsync(() async {
+            final image = await boundary.toImage(pixelRatio: 2);
+            final data = await image.toByteData(format: ui.ImageByteFormat.png);
+            image.dispose();
+            return data!.buffer.asUint8List();
+          });
+          debugDisableShadows = true;
+          File('$dir/accounts/$name.png')
+            ..createSync(recursive: true)
+            ..writeAsBytesSync(png!);
+          await disposeApp(tester);
+        });
+      }
     }
   }
 }

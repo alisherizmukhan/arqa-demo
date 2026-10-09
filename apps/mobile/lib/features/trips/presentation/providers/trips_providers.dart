@@ -5,6 +5,7 @@ import 'package:driver_diary/core/error/result.dart';
 import 'package:driver_diary/core/providers.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
+import 'package:driver_diary/features/auth/presentation/providers/session_providers.dart';
 import 'package:driver_diary/features/trips/data/datasources/trips_remote_data_source.dart';
 import 'package:driver_diary/features/trips/data/repositories/trips_repository_impl.dart';
 import 'package:driver_diary/features/trips/domain/entities/daily_summary.dart';
@@ -30,11 +31,15 @@ DriverZone driverZone(Ref ref) => ref.watch(appConfigProvider).driverZone;
 CalendarDay today(Ref ref) =>
     ref.watch(driverZoneProvider).dayOf(ref.watch(clockProvider)());
 
-/// The day the user is looking at. Starts at today; never goes past today.
+/// The day the user is looking at. Starts at today (again for each new
+/// session); never goes past today.
 @Riverpod(keepAlive: true)
 class SelectedDay extends _$SelectedDay {
   @override
-  CalendarDay build() => _today;
+  CalendarDay build() {
+    ref.watch(currentUserIdProvider);
+    return _today;
+  }
 
   CalendarDay get _today =>
       ref.read(driverZoneProvider).dayOf(ref.read(clockProvider)());
@@ -54,10 +59,17 @@ class SelectedDay extends _$SelectedDay {
 /// back to it within this time shows it at once (no skeleton).
 const dayCacheTtl = Duration(minutes: 5);
 
-/// Trips of [day], ordered by start. Cached for [dayCacheTtl] after its last
-/// listener goes; a failed load is not cached.
+/// Trips of [day], ordered by start: the driver's own, or (admin) all
+/// drivers' or one driver's ([driverId]). Cached for [dayCacheTtl] after its
+/// last listener goes, and only for the session that loaded it; a failed load
+/// is not cached.
 @riverpod
-Future<List<Trip>> dayTrips(Ref ref, CalendarDay day) async {
+Future<List<Trip>> dayTrips(
+  Ref ref,
+  CalendarDay day, {
+  String? driverId,
+}) async {
+  ref.watch(currentUserIdProvider);
   final link = ref.keepAlive();
   final timer = Timer(dayCacheTtl, link.close);
   ref.onDispose(timer.cancel);
@@ -65,6 +77,7 @@ Future<List<Trip>> dayTrips(Ref ref, CalendarDay day) async {
   final result = await GetDayTrips(ref.watch(tripsRepositoryProvider))(
     day,
     zone,
+    driverId: driverId,
   );
   switch (result) {
     case Ok(:final value):
@@ -78,9 +91,15 @@ Future<List<Trip>> dayTrips(Ref ref, CalendarDay day) async {
 /// Summary of [day], computed from the same trips the list shows, so the
 /// card and the list can never disagree.
 @riverpod
-Future<DailySummary> daySummary(Ref ref, CalendarDay day) async {
+Future<DailySummary> daySummary(
+  Ref ref,
+  CalendarDay day, {
+  String? driverId,
+}) async {
   final zone = ref.watch(driverZoneProvider);
-  final trips = await ref.watch(dayTripsProvider(day).future);
+  final trips = await ref.watch(
+    dayTripsProvider(day, driverId: driverId).future,
+  );
   return calculateDailySummary(day, trips, zone);
 }
 

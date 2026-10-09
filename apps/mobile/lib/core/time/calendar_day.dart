@@ -35,6 +35,10 @@ final class CalendarDay implements Comparable<CalendarDay> {
 
   bool isAfter(CalendarDay other) => compareTo(other) > 0;
 
+  /// Local midnight of this date (for formatting and pickers; only its
+  /// y/m/d are meaningful).
+  DateTime toDateTime() => DateTime(year, month, day);
+
   /// `YYYY-MM-DD`, as the API expects.
   String toIso() =>
       '${year.toString().padLeft(4, '0')}-${_two(month)}-${_two(day)}';

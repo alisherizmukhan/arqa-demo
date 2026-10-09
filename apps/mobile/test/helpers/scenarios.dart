@@ -56,7 +56,7 @@ Future<void> _form(
 
 /// Lets a save attempt run and its dialog/snackbar settle in.
 Future<void> _tapSave(WidgetTester tester) async {
-  await tester.tap(find.text('Сохранить'));
+  await tester.tap(find.text(tr.save));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 400));
   await tester.pump(const Duration(milliseconds: 600)); // ink ripple
@@ -100,15 +100,15 @@ final scenarios = <Scenario>[
     run: (tester) async {
       await pumpDiary(tester, FakeTripsRepository([_sep30Trip]));
       await selectDay(tester, _sep30);
-      await tester.tap(find.text('Поездка'));
+      await tester.tap(find.text(tr.addTripFab));
       await tester.pumpAndSettle();
-      await pickTime(tester, 'Начало', 23, 50);
-      await pickTime(tester, 'Окончание', 0, 20);
+      await pickTime(tester, tr.start, 23, 50);
+      await pickTime(tester, tr.end, 0, 20);
       await tester.enterText(find.byType(TextField).at(0), '3000');
       await tester.enterText(find.byType(TextField).at(1), '450');
-      await tester.tap(find.text('Наличные'));
+      await tester.tap(find.text(tr.cash));
       await tester.pump();
-      await tester.tap(find.text('Сохранить'));
+      await tester.tap(find.text(tr.save));
       // Save, close the form, reload the day, place the snackbar.
       for (var i = 0; i < 6; i++) {
         await tester.pump(const Duration(milliseconds: 100));
@@ -237,7 +237,7 @@ final behaviourScenarios = <Scenario>[
     run: (tester) async {
       await pumpDiary(tester, FakeTripsRepository([t1, t2]));
       await selectDay(tester, referenceDay);
-      await tester.tap(find.bySemanticsLabel(RegExp('^Сортировка')));
+      await tester.tap(find.bySemanticsLabel(RegExp('^${tr.sortTitle}')));
       await tester.pumpAndSettle();
     },
   ),
@@ -245,7 +245,7 @@ final behaviourScenarios = <Scenario>[
     id: 'r6_time_picker',
     run: (tester) async {
       await _form(tester, FakeTripsRepository(), _input(referenceDay));
-      await tester.tap(find.text('Начало'));
+      await tester.tap(find.text(tr.start));
       await tester.pumpAndSettle();
     },
   ),
@@ -254,7 +254,9 @@ final behaviourScenarios = <Scenario>[
     run: (tester) async {
       await pumpDiary(tester, FakeTripsRepository([t1, t2]));
       await selectDay(tester, referenceDay);
-      await tester.tap(find.bySemanticsLabel(RegExp('^Выбрать дату')));
+      await tester.tap(
+        find.bySemanticsLabel(RegExp('^${RegExp.escape(tr.pickDate(''))}')),
+      );
       await tester.pumpAndSettle();
     },
   ),
@@ -266,7 +268,7 @@ final behaviourScenarios = <Scenario>[
         FakeTripsRepository(),
         input: _input(referenceDay),
       );
-      await tester.tap(find.bySemanticsLabel('Закрыть'));
+      await tester.tap(find.bySemanticsLabel(tr.close));
       await tester.pumpAndSettle();
     },
   ),
@@ -294,7 +296,11 @@ final behaviourScenarios = <Scenario>[
       await pumpDiary(tester, repository);
       await selectDay(tester, referenceDay);
       repository.onLoad = (_) async => const Err(NetworkFailure());
-      await tester.fling(find.text('Поездки'), const Offset(0, 300), 1000);
+      await tester.fling(
+        find.text(tr.tripsTitle).first,
+        const Offset(0, 300),
+        1000,
+      );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
       await tester.pump(const Duration(seconds: 1));

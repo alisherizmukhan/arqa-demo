@@ -26,7 +26,13 @@ Failure _fromResponse(Response<dynamic>? response) {
   final body = _errorBody(response?.data);
   final message = body?.message ?? 'HTTP $status';
   return switch (status) {
-    409 => ConflictFailure(message),
+    401 => UnauthorizedFailure(
+      code: body?.code ?? 'unauthorized',
+      message: message,
+    ),
+    403 => ForbiddenFailure(code: body?.code ?? 'forbidden', message: message),
+    409 => ConflictFailure(message, body?.code ?? 'conflict'),
+    429 => RateLimitedFailure(message),
     422 => ValidationFailure(
       code: body?.code ?? 'invalid_request',
       message: message,

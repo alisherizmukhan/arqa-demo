@@ -46,6 +46,7 @@ void main() {
     await pumpOpener<({int hour, int minute})>(
       tester,
       (context) => showDkTimePicker(
+        doneLabel: 'Готово',
         context,
         hour: 8,
         minute: 10,
@@ -70,6 +71,8 @@ void main() {
     await pumpOpener<DateTime>(
       tester,
       (context) => showDkDatePicker(
+        title: 'Выберите дату',
+        doneLabel: 'Готово',
         context,
         initialDate: DateTime(2026, 10, 9),
         firstDate: DateTime(2000),
@@ -95,6 +98,8 @@ void main() {
     await pumpOpener<DateTime>(
       tester,
       (context) => showDkDatePicker(
+        title: 'Выберите дату',
+        doneLabel: 'Готово',
         context,
         initialDate: DateTime(2026, 10),
         firstDate: DateTime(2000),
@@ -167,7 +172,10 @@ void main() {
       MaterialApp(
         theme: DkTheme.light(),
         home: Scaffold(
-          body: DkWordmark(trailing: DkTodayButton(onPressed: () => taps++)),
+          body: DkWordmark(
+            title: 'Дневник смен',
+            trailing: DkTodayButton(label: 'Сегодня', onPressed: () => taps++),
+          ),
         ),
       ),
     );

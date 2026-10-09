@@ -19,6 +19,7 @@ abstract class TripDto with _$TripDto {
     required int amount,
     required String payment,
     required int commission,
+    @JsonKey(name: 'driver_id') String? driverId,
   }) = _TripDto;
 
   const new _();
@@ -38,6 +39,7 @@ abstract class TripDto with _$TripDto {
       _ => throw FormatException('unknown payment method', payment),
     },
     commission: commission,
+    driverId: driverId,
   );
 }
 

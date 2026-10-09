@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'golden_helpers.dart';
+import 'ru.dart';
 
 /// A scenario per theme, 390 dp wide (the mockups' frame).
 GoldenTestGroup _themes(Widget Function() child, {double width = 390}) {
@@ -36,6 +37,7 @@ DkTripTile _trip({
   bool endsNextDay = false,
   bool highlighted = false,
 }) => DkTripTile(
+  nextDayLabel: 'следующий день',
   timeRange: DkFormat.timeRange(start, end),
   endsNextDay: endsNextDay,
   meta: meta,
@@ -90,10 +92,16 @@ class _FieldsState extends State<_Fields> {
         spacing: context.dkSpacing.s12,
         children: [
           Expanded(
-            child: DkTimeField(label: 'Начало', value: '09:20', onTap: () {}),
+            child: DkTimeField(
+              emptyValueLabel: 'не выбрано',
+              label: 'Начало',
+              value: '09:20',
+              onTap: () {},
+            ),
           ),
           Expanded(
             child: DkTimeField(
+              emptyValueLabel: 'не выбрано',
               label: 'Окончание',
               value: '09:05',
               invalid: true,
@@ -117,6 +125,10 @@ void main() {
     fileName: 'summary_card',
     builder: () => _themes(
       () => const DkSummaryCard(
+        netLabel: 'На руки',
+        revenueLabel: 'Выручка',
+        commissionLabel: 'Комиссия',
+        tripsLabel: 'Поездок',
         net: 3315,
         revenue: 3900,
         commission: 585,
@@ -243,14 +255,14 @@ void main() {
         builder: (context) => Column(
           spacing: context.dkSpacing.s12,
           children: [
-            DkDaySwitcher(
+            RuDaySwitcher(
               date: oct(1),
               today: oct(6),
               onPrev: () {},
               onNext: () {},
               onPickDate: () {},
             ),
-            DkDaySwitcher(
+            RuDaySwitcher(
               date: oct(6),
               today: oct(6),
               onPrev: () {},

@@ -1,14 +1,15 @@
 import 'dart:async';
 
 import 'package:design_kit/design_kit.dart';
-import 'package:driver_diary/core/l10n/strings_ru.dart';
+import 'package:driver_diary/core/l10n/l10n.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
+import 'package:driver_diary/features/menu/presentation/screens/menu_screen.dart';
 import 'package:driver_diary/features/trips/domain/entities/daily_summary.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
-import 'package:driver_diary/features/trips/presentation/models/trip_order.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
 import 'package:driver_diary/features/trips/presentation/screens/add_trip_screen.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/day_skeleton.dart';
+import 'package:driver_diary/features/trips/presentation/widgets/day_switcher_bar.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/summary_card.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/trip_list.dart';
 import 'package:flutter/material.dart';
@@ -81,6 +82,7 @@ class _DayScreenState extends ConsumerState<DayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final day = ref.watch(selectedDayProvider);
     final today = ref.watch(todayProvider);
     final selection = ref.read(selectedDayProvider.notifier);
@@ -113,36 +115,44 @@ class _DayScreenState extends ConsumerState<DayScreen> {
                 padding: EdgeInsets.symmetric(horizontal: gutter),
                 sliver: SliverList.list(
                   children: [
-                    // Kit default = §6 copy («Дневник смен»).
                     DkWordmark(
-                      trailing: day == today
-                          ? null
-                          : DkTodayButton(onPressed: selection.today),
+                      title: l10n.appTitle,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (day != today)
+                            DkTodayButton(
+                              label: l10n.today,
+                              onPressed: selection.today,
+                            ),
+                          // §8.2: the only change to this screen.
+                          DkIconButton(
+                            icon: DkIcons.menu,
+                            label: l10n.menu,
+                            onPressed: () => openMenu(context),
+                          ),
+                        ],
+                      ),
                     ),
                     SizedBox(height: spacing.s8),
-                    DkDaySwitcher(
-                      date: _date(day),
-                      today: _date(today),
-                      onPrev: selection.previous,
-                      onNext: selection.next,
-                      onPickDate: () => _pickDay(day, today),
-                    ),
+                    const DaySwitcherBar(),
                   ],
                 ),
               ),
               switch (view) {
                 _Loaded(:final summary) when summary.tripsCount == 0 => _fill(
                   DkEmptyState(
-                    title: S.emptyTitle,
-                    message: S.emptyMessage,
-                    actionLabel: S.emptyAction,
+                    title: l10n.emptyTitle,
+                    message: l10n.emptyMessage,
+                    actionLabel: l10n.emptyAction,
                     onAction: () => _addTrip(day),
                   ),
                 ),
                 _Failed(:final retrying) => _fill(
                   DkErrorState(
-                    title: S.errorTitle,
-                    message: S.errorMessage,
+                    title: l10n.errorTitle,
+                    message: l10n.errorMessage,
+                    retryLabel: l10n.retry,
                     isRetrying: retrying,
                     onRetry: () => ref.invalidate(dayTripsProvider(day)),
                   ),
@@ -165,7 +175,7 @@ class _DayScreenState extends ConsumerState<DayScreen> {
                             trips: trips,
                             zone: ref.watch(driverZoneProvider),
                             order: ref.watch(tripOrderSettingProvider),
-                            onSort: _chooseOrder,
+                            onSort: () => chooseTripOrder(context, ref),
                             highlightedId: ref.watch(highlightedTripProvider),
                             highlightKey: _newTripKey,
                           ),
@@ -183,7 +193,7 @@ class _DayScreenState extends ConsumerState<DayScreen> {
       floatingActionButton: showFab
           ? DkFab(
               key: _fabKey,
-              label: S.addTripFab,
+              label: l10n.addTripFab,
               icon: DkIcons.add,
               onPressed: () => _addTrip(day),
             )
@@ -205,9 +215,6 @@ class _DayScreenState extends ConsumerState<DayScreen> {
     ),
   );
 
-  static DateTime _date(CalendarDay day) =>
-      DateTime(day.year, day.month, day.day);
-
   Future<void> _refresh() async {
     final day = ref.read(selectedDayProvider);
     try {
@@ -222,50 +229,20 @@ class _DayScreenState extends ConsumerState<DayScreen> {
       final fab = _fabKey.currentContext?.size?.height ?? 0;
       _snack = showDkSnackbar(
         context,
-        message: S.errorTitle,
+        message: context.l10n.errorTitle,
         tone: DkSnackTone.error,
         bottom:
             MediaQuery.paddingOf(context).bottom +
             context.dkSpacing.s16 +
             fab +
             context.dkSpacing.s12,
-        actionLabel: S.retry,
+        actionLabel: context.l10n.retry,
         onAction: () {
           _snack?.close();
           ref.invalidate(dayTripsProvider(day));
         },
       );
     }
-  }
-
-  Future<void> _pickDay(CalendarDay day, CalendarDay today) async {
-    final picked = await showDkDatePicker(
-      context,
-      initialDate: _date(day),
-      firstDate: DateTime(2000),
-      lastDate: _date(today),
-      title: S.pickDateHelp,
-      todayLabel: S.today,
-    );
-    if (picked == null) return;
-    ref
-        .read(selectedDayProvider.notifier)
-        .select(CalendarDay(picked.year, picked.month, picked.day));
-  }
-
-  Future<void> _chooseOrder() async {
-    final current = ref.read(tripOrderSettingProvider);
-    final picked = await showDkOptionsSheet<TripOrder>(
-      context,
-      title: S.sortTitle,
-      options: [
-        for (final order in TripOrder.values)
-          (value: order, label: order.label),
-      ],
-      selected: current,
-    );
-    if (picked == null || !mounted) return;
-    ref.read(tripOrderSettingProvider.notifier).order = picked;
   }
 
   /// Scrolls the just-added trip to the middle of the screen, so it is seen
@@ -308,7 +285,7 @@ class _DayScreenState extends ConsumerState<DayScreen> {
     ref.read(highlightedTripProvider.notifier).flash(trip.id);
     _snack = showDkSnackbar(
       context,
-      message: S.saved,
+      message: context.l10n.saved,
       tone: DkSnackTone.success,
       fabSize: _fabKey.currentContext?.size,
     );

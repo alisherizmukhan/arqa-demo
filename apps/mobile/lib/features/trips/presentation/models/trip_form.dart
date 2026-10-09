@@ -1,5 +1,4 @@
 import 'package:design_kit/design_kit.dart';
-import 'package:driver_diary/core/l10n/strings_ru.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
@@ -79,7 +78,8 @@ final class TripFormValid extends TripFormResult {
   final Trip trip;
 }
 
-/// Errors to show under the fields.
+/// Errors to show under the fields, as validation codes (the screen turns
+/// them into text with `validationMessage`).
 final class TripFormInvalid extends TripFormResult {
   const new(this.errors);
 
@@ -96,8 +96,8 @@ TripFormResult validateTripForm(
   final errors = <TripField, String>{};
   final start = input.start;
   final end = input.end;
-  if (start == null) errors[TripField.start] = S.errRequired;
-  if (end == null) errors[TripField.end] = S.errRequired;
+  if (start == null) errors[TripField.start] = TripFormCode.required;
+  if (end == null) errors[TripField.end] = TripFormCode.required;
   final amount = _parseTenge(input.amountText, errors, TripField.amount);
   final commission = _parseTenge(
     input.commissionText,
@@ -106,10 +106,7 @@ TripFormResult validateTripForm(
   );
   void report(List<TripRuleViolation> violations) {
     for (final violation in violations) {
-      errors.putIfAbsent(
-        violation.field,
-        () => validationMessage(violation.code),
-      );
+      errors.putIfAbsent(violation.field, () => violation.code);
     }
   }
 
@@ -130,7 +127,7 @@ TripFormResult validateTripForm(
     );
     report(validateTimes(times.start, times.end));
     if (input.duration! > maxFormTripDuration) {
-      errors.putIfAbsent(TripField.end, () => S.errEndBeforeStart);
+      errors.putIfAbsent(TripField.end, () => 'trip_too_long');
     }
   }
 
@@ -149,11 +146,11 @@ TripFormResult validateTripForm(
 
 int? _parseTenge(String text, Map<TripField, String> errors, TripField field) {
   if (_digits(text).isEmpty) {
-    errors[field] = S.errRequired;
+    errors[field] = TripFormCode.required;
     return null;
   }
   final value = _tenge(text);
-  if (value == null) errors[field] = 'Введите целое число тенге';
+  if (value == null) errors[field] = TripFormCode.notInteger;
   return value;
 }
 

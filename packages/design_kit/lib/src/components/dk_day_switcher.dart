@@ -1,31 +1,30 @@
-import 'package:design_kit/src/format/dk_format.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:design_kit/src/tokens/dk_icons.dart';
 import 'package:flutter/material.dart';
 
 /// Day switcher, DESIGN.md §4: ‹ «1 октября 2026 ⌄ / Четверг» ›.
 ///
-/// Titles follow §3 (Сегодня / Вчера / date). Next is disabled when [date]
-/// is [today] (or later) or [onNext] is null. Only y/m/d of the dates matter.
+/// The caller formats [title] and [subtitle] (§3: Сегодня / Вчера / date,
+/// in the active language). Next is disabled when [onNext] is null (today).
 class DkDaySwitcher extends StatelessWidget {
   /// Creates a day switcher.
   const new({
-    required this.date,
-    required this.today,
+    required this.title,
+    required this.subtitle,
     required this.onPrev,
     required this.onPickDate,
+    required this.prevLabel,
+    required this.nextLabel,
+    required this.pickLabel,
     this.onNext,
-    this.prevLabel = 'Предыдущий день',
-    this.nextLabel = 'Следующий день',
-    this.pickLabel = 'Выбрать дату',
     super.key,
   });
 
-  /// The shown day.
-  final DateTime date;
+  /// «Сегодня», «Вчера» or the date.
+  final String title;
 
-  /// Today (the driver's).
-  final DateTime today;
+  /// The date, or the weekday.
+  final String subtitle;
 
   /// One day back.
   final VoidCallback onPrev;
@@ -42,7 +41,7 @@ class DkDaySwitcher extends StatelessWidget {
   /// «Следующий день».
   final String nextLabel;
 
-  /// «Выбрать дату» (the date is appended).
+  /// Spoken name of the middle button, e.g. «Выбрать дату, 1 октября 2026».
   final String pickLabel;
 
   @override
@@ -51,13 +50,6 @@ class DkDaySwitcher extends StatelessWidget {
     final text = context.dkText;
     final sizes = context.dkSizes;
     final spacing = context.dkSpacing;
-    final label = DkFormat.relativeDay(date, today);
-    final isToday = !DateTime.utc(
-      date.year,
-      date.month,
-      date.day,
-    ).isBefore(DateTime.utc(today.year, today.month, today.day));
-    final next = isToday ? null : onNext;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -79,7 +71,7 @@ class DkDaySwitcher extends StatelessWidget {
               Expanded(
                 child: Semantics(
                   button: true,
-                  label: '$pickLabel, ${DkFormat.date(date)}',
+                  label: pickLabel,
                   excludeSemantics: true,
                   child: InkWell(
                     onTap: onPickDate,
@@ -97,7 +89,7 @@ class DkDaySwitcher extends StatelessWidget {
                             children: [
                               Flexible(
                                 child: Text(
-                                  label.title,
+                                  title,
                                   textAlign: TextAlign.center,
                                   style: text.titleM.copyWith(
                                     color: colors.textPrimary,
@@ -112,7 +104,7 @@ class DkDaySwitcher extends StatelessWidget {
                             ],
                           ),
                           Text(
-                            label.subtitle,
+                            subtitle,
                             textAlign: TextAlign.center,
                             style: text.caption.copyWith(
                               color: colors.textTertiary,
@@ -127,7 +119,7 @@ class DkDaySwitcher extends StatelessWidget {
               _ArrowButton(
                 icon: DkIcons.next,
                 label: nextLabel,
-                onPressed: next,
+                onPressed: onNext,
               ),
             ],
           ),

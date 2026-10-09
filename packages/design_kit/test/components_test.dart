@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'golden_helpers.dart';
 import 'helpers.dart';
+import 'ru.dart';
 
 /// Pumps an empty kit screen and returns a context under its Overlay.
 Future<BuildContext> pumpContext(WidgetTester tester) async {
@@ -147,12 +148,21 @@ void main() {
           const Column(
             children: [
               DkSummaryCard(
+                netLabel: 'На руки',
+                revenueLabel: 'Выручка',
+                commissionLabel: 'Комиссия',
+                tripsLabel: 'Поездок',
                 net: 3315,
                 revenue: 3900,
                 commission: 585,
                 tripsCount: 2,
               ),
-              DkPaymentCard(cash: 1500, card: 2400),
+              DkPaymentCard(
+                cashLabel: 'Наличные',
+                cardLabel: 'Карта',
+                cash: 1500,
+                card: 2400,
+              ),
             ],
           ),
         ),
@@ -176,7 +186,12 @@ void main() {
             alignment: Alignment.centerLeft,
             child: SizedBox(
               width: 403,
-              child: DkSplitBar(cash: 1500, card: 2400),
+              child: DkSplitBar(
+                cashLabel: 'Наличные',
+                cardLabel: 'карта',
+                cash: 1500,
+                card: 2400,
+              ),
             ),
           ),
         ),
@@ -196,7 +211,16 @@ void main() {
     });
 
     testWidgets('no split and no percentages at zero revenue', (tester) async {
-      await tester.pumpWidget(wrap(const DkPaymentCard(cash: 0, card: 0)));
+      await tester.pumpWidget(
+        wrap(
+          const DkPaymentCard(
+            cashLabel: 'Наличные',
+            cardLabel: 'Карта',
+            cash: 0,
+            card: 0,
+          ),
+        ),
+      );
 
       expect(find.byType(DkSplitBar), findsNothing);
       expect(find.textContaining('%'), findsNothing);
@@ -208,6 +232,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           const DkTripTile(
+            nextDayLabel: 'следующий день',
             timeRange: '23:50 – 00:20',
             endsNextDay: true,
             meta: '30 мин · Наличные',
@@ -237,6 +262,7 @@ void main() {
               SizedBox(
                 width: 328, // 360 dp minus the screen gutters
                 child: DkTripTile(
+                  nextDayLabel: 'следующий день',
                   timeRange: '23:50 – 00:20',
                   endsNextDay: true,
                   meta: '30 мин · Наличные',
@@ -260,6 +286,7 @@ void main() {
           const SizedBox(
             width: 358,
             child: DkTripTile(
+              nextDayLabel: 'следующий день',
               timeRange: '08:10 – 08:32',
               endsNextDay: false,
               meta: '22 мин · Карта',
@@ -284,6 +311,7 @@ void main() {
       await tester.pumpWidget(
         wrap(
           const DkTripTile(
+            nextDayLabel: 'следующий день',
             timeRange: '08:10 – 08:32',
             endsNextDay: false,
             meta: '22 мин · Карта',
@@ -311,7 +339,7 @@ void main() {
       var next = 0;
       await tester.pumpWidget(
         wrap(
-          DkDaySwitcher(
+          RuDaySwitcher(
             date: oct(6),
             today: oct(6),
             onPrev: () {},
@@ -331,7 +359,7 @@ void main() {
       final calls = <String>[];
       await tester.pumpWidget(
         wrap(
-          DkDaySwitcher(
+          RuDaySwitcher(
             date: oct(1),
             today: oct(6),
             onPrev: () => calls.add('prev'),
@@ -376,6 +404,7 @@ void main() {
           SizedBox(
             width: 173,
             child: DkTimeField(
+              emptyValueLabel: 'не выбрано',
               label: 'Окончание',
               value: '00:20',
               onTap: () {},
@@ -405,6 +434,7 @@ void main() {
                 child: SizedBox(
                   width: 158,
                   child: DkTimeField(
+                    emptyValueLabel: 'не выбрано',
                     label: 'Окончание',
                     value: '00:20',
                     onTap: () {},
@@ -444,8 +474,14 @@ void main() {
         wrap(
           Column(
             children: [
-              DkTimeField(label: 'Начало', value: '09:20', onTap: () {}),
               DkTimeField(
+                emptyValueLabel: 'не выбрано',
+                label: 'Начало',
+                value: '09:20',
+                onTap: () {},
+              ),
+              DkTimeField(
+                emptyValueLabel: 'не выбрано',
                 label: 'Окончание',
                 value: '09:05',
                 invalid: true,
@@ -468,7 +504,14 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        wrap(DkTimeField(label: 'Начало', value: '23:40', onTap: () {})),
+        wrap(
+          DkTimeField(
+            emptyValueLabel: 'не выбрано',
+            label: 'Начало',
+            value: '23:40',
+            onTap: () {},
+          ),
+        ),
       );
       expect(find.byIcon(DkIcons.time), findsOneWidget);
     });
@@ -655,6 +698,7 @@ void main() {
                 onAction: () {},
               ),
               DkErrorState(
+                retryLabel: 'Повторить',
                 title: 'Не удалось загрузить данные',
                 onRetry: () => retries++,
               ),

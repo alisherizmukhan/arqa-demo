@@ -13,6 +13,7 @@ _TripDto _$TripDtoFromJson(Map<String, dynamic> json) => _TripDto(
   amount: (json['amount'] as num).toInt(),
   payment: json['payment'] as String,
   commission: (json['commission'] as num).toInt(),
+  driverId: json['driver_id'] as String?,
 );
 
 Map<String, dynamic> _$TripDtoToJson(_TripDto instance) => <String, dynamic>{
@@ -22,6 +23,7 @@ Map<String, dynamic> _$TripDtoToJson(_TripDto instance) => <String, dynamic>{
   'amount': instance.amount,
   'payment': instance.payment,
   'commission': instance.commission,
+  'driver_id': instance.driverId,
 };
 
 _DayTripsDto _$DayTripsDtoFromJson(Map<String, dynamic> json) => _DayTripsDto(

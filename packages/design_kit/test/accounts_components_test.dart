@@ -219,6 +219,7 @@ void main() {
     await tester.pumpWidget(
       wrap(
         const DkTripTile(
+          nextDayLabel: 'следующий день',
           timeRange: '08:10 – 08:32',
           endsNextDay: false,
           meta: '22 мин · Карта',

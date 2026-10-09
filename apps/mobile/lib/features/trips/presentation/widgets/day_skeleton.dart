@@ -1,5 +1,5 @@
 import 'package:design_kit/design_kit.dart';
-import 'package:driver_diary/core/l10n/strings_ru.dart';
+import 'package:driver_diary/core/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 /// Placeholder in the shape of the Day screen (DESIGN.md §5.3).
@@ -10,7 +10,7 @@ class DaySkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
     return Semantics(
-      label: S.loading,
+      label: context.l10n.loading,
       container: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

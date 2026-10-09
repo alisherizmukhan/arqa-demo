@@ -7,7 +7,7 @@ sealed class Failure implements Exception {
   /// Short name for logs, e.g. `NetworkFailure`.
   String get kind;
 
-  /// Developer-facing description (the UI shows its own Russian text).
+  /// Developer-facing description (the UI shows its own localized text).
   final String message;
 
   @override
@@ -38,12 +38,51 @@ final class ValidationFailure extends Failure {
   String get kind => 'ValidationFailure';
 }
 
-/// The trip id already exists with a different payload (HTTP 409).
+/// The id already exists with a different payload, or the state changed
+/// (HTTP 409). [code]: `trip_conflict`, `withdrawal_conflict`,
+/// `withdrawal_already_decided`, `demo_account_protected`.
 final class ConflictFailure extends Failure {
-  const new([super.message = 'trip already exists with different data']);
+  const new([
+    super.message = 'trip already exists with different data',
+    this.code = 'trip_conflict',
+  ]);
+
+  final String code;
 
   @override
   String get kind => 'ConflictFailure';
+}
+
+/// No valid session (HTTP 401): missing, revoked or unknown token, or
+/// wrong credentials at login ([code] `invalid_credentials`).
+final class UnauthorizedFailure extends Failure {
+  const new({this.code = 'unauthorized', String message = 'unauthorized'})
+    : super(message);
+
+  final String code;
+
+  @override
+  String get kind => 'UnauthorizedFailure';
+}
+
+/// Signed in, but not allowed (HTTP 403); [code] `account_disabled` at
+/// login for a blocked account.
+final class ForbiddenFailure extends Failure {
+  const new({this.code = 'forbidden', String message = 'forbidden'})
+    : super(message);
+
+  final String code;
+
+  @override
+  String get kind => 'ForbiddenFailure';
+}
+
+/// Too many failed logins (HTTP 429).
+final class RateLimitedFailure extends Failure {
+  const new([super.message = 'rate limited']);
+
+  @override
+  String get kind => 'RateLimitedFailure';
 }
 
 /// The server failed (5xx) or answered unexpectedly.

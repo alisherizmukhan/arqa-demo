@@ -2,6 +2,8 @@ import 'package:design_kit/design_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'ru.dart';
+
 /// Every interactive component on one screen.
 class _Gallery extends StatefulWidget {
   const new();
@@ -32,7 +34,7 @@ class _GalleryState extends State<_Gallery> {
         child: ListView(
           padding: EdgeInsets.all(spacing.s16),
           children: <Widget>[
-            DkDaySwitcher(
+            RuDaySwitcher(
               date: oct(1),
               today: oct(6),
               onPrev: () {},
@@ -40,13 +42,25 @@ class _GalleryState extends State<_Gallery> {
               onPickDate: () {},
             ),
             const DkSummaryCard(
+              netLabel: 'На руки',
+              revenueLabel: 'Выручка',
+              commissionLabel: 'Комиссия',
+              tripsLabel: 'Поездок',
               net: 3315,
               revenue: 3900,
               commission: 585,
               tripsCount: 2,
             ),
-            const DkPaymentCard(cash: 1500, card: 2400),
-            DkWordmark(trailing: DkTodayButton(onPressed: () {})),
+            const DkPaymentCard(
+              cashLabel: 'Наличные',
+              cardLabel: 'Карта',
+              cash: 1500,
+              card: 2400,
+            ),
+            DkWordmark(
+              title: 'Дневник смен',
+              trailing: DkTodayButton(label: 'Сегодня', onPressed: () {}),
+            ),
             DkListHeader(
               title: 'Поездки',
               trailing: '2 поездки · 37 мин',
@@ -67,6 +81,7 @@ class _GalleryState extends State<_Gallery> {
             const DkTripList(
               children: [
                 DkTripTile(
+                  nextDayLabel: 'следующий день',
                   timeRange: '08:10 – 08:32',
                   endsNextDay: false,
                   meta: '22 мин · Карта',
@@ -83,6 +98,7 @@ class _GalleryState extends State<_Gallery> {
               onPressed: () {},
             ),
             DkTimeField(
+              emptyValueLabel: 'не выбрано',
               label: 'Окончание',
               value: '00:20',
               onTap: () {},
@@ -98,7 +114,11 @@ class _GalleryState extends State<_Gallery> {
               selected: DkPaymentMethod.card,
               onChanged: (_) {},
             ),
-            DkErrorState(title: 'Не удалось загрузить данные', onRetry: () {}),
+            DkErrorState(
+              retryLabel: 'Повторить',
+              title: 'Не удалось загрузить данные',
+              onRetry: () {},
+            ),
           ].expand((w) => [w, SizedBox(height: spacing.s16)]).toList(),
         ),
       ),

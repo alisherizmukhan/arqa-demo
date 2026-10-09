@@ -124,7 +124,27 @@ class DkMoneyText extends StatelessWidget {
           TextSpan(text: DkMoney.currency, style: suffix),
         ],
       ),
-      semanticsLabel: '${DkMoney.formatNumber(value)} тенге',
+      semanticsLabel: DkMoneySemantics.labelOf(context, value),
     );
   }
+}
+
+/// How amounts are spoken: the app puts this above its screens with the
+/// active language («3 315 тенге», «3 315 теңге»). Without it a screen
+/// reader reads the visible text.
+class DkMoneySemantics extends InheritedWidget {
+  /// Provides [label] to the [DkMoneyText]s below.
+  const new({required this.label, required super.child, super.key});
+
+  /// The spoken amount, from the grouped number (`3 315`, `−585`).
+  final String Function(String number) label;
+
+  /// The spoken form of [amount] under [context], or null.
+  static String? labelOf(BuildContext context, int amount) => context
+      .dependOnInheritedWidgetOfExactType<DkMoneySemantics>()
+      ?.label(DkMoney.formatNumber(amount));
+
+  @override
+  bool updateShouldNotify(DkMoneySemantics oldWidget) =>
+      label != oldWidget.label;
 }

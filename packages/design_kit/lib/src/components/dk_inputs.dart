@@ -375,13 +375,13 @@ class DkTimeField extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    required this.emptyValueLabel,
     this.helper,
     this.errorText,
     this.trailing,
     this.enabled = true,
     this.invalid = false,
     this.placeholder = '––:––',
-    this.emptyValueLabel = 'не выбрано',
     super.key,
   });
 

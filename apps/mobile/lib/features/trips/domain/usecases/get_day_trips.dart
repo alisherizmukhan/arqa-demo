@@ -10,6 +10,9 @@ final class GetDayTrips {
 
   final TripsRepository _repository;
 
-  Future<Result<List<Trip>>> call(CalendarDay day, DriverZone zone) =>
-      _repository.tripsForDay(day, zone);
+  Future<Result<List<Trip>>> call(
+    CalendarDay day,
+    DriverZone zone, {
+    String? driverId,
+  }) => _repository.tripsForDay(day, zone, driverId: driverId);
 }
