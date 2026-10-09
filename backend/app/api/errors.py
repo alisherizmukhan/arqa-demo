@@ -1,6 +1,7 @@
 """One error shape for everything: {"error": {"code", "message", "field"}}."""
 
 import logging
+import math
 from enum import StrEnum
 from typing import Any
 
@@ -10,7 +11,15 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.schemas import ErrorBody, ErrorResponse
-from app.application.errors import TripConflictError
+from app.application.errors import (
+    AccountDisabledError,
+    ForbiddenError,
+    InvalidCredentialsError,
+    NotAuthenticatedError,
+    NotFoundError,
+    TooManyLoginAttemptsError,
+    TripConflictError,
+)
 from app.domain.errors import DomainValidationError, ErrorCode
 
 logger = logging.getLogger(__name__)
@@ -25,6 +34,11 @@ class ApiErrorCode(StrEnum):
     INVALID_JSON = "invalid_json"
     INVALID_REQUEST = "invalid_request"
     TRIP_CONFLICT = "trip_conflict"
+    UNAUTHORIZED = "unauthorized"
+    INVALID_CREDENTIALS = "invalid_credentials"
+    ACCOUNT_DISABLED = "account_disabled"
+    RATE_LIMITED = "rate_limited"
+    FORBIDDEN = "forbidden"
     NOT_FOUND = "not_found"
     METHOD_NOT_ALLOWED = "method_not_allowed"
     HTTP_ERROR = "http_error"
@@ -98,6 +112,41 @@ def install_error_handlers(app: FastAPI) -> None:
         return error_response(
             status.HTTP_409_CONFLICT, ApiErrorCode.TRIP_CONFLICT, str(exc), field="id"
         )
+
+    # 401s carry WWW-Authenticate, as RFC 6750 asks of bearer-token APIs.
+    @app.exception_handler(NotAuthenticatedError)
+    async def _unauthenticated(_: Request, exc: NotAuthenticatedError) -> JSONResponse:
+        response = error_response(status.HTTP_401_UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, str(exc))
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+
+    @app.exception_handler(InvalidCredentialsError)
+    async def _invalid_credentials(_: Request, exc: InvalidCredentialsError) -> JSONResponse:
+        response = error_response(
+            status.HTTP_401_UNAUTHORIZED, ApiErrorCode.INVALID_CREDENTIALS, str(exc)
+        )
+        response.headers["WWW-Authenticate"] = "Bearer"
+        return response
+
+    @app.exception_handler(AccountDisabledError)
+    async def _disabled(_: Request, exc: AccountDisabledError) -> JSONResponse:
+        return error_response(status.HTTP_403_FORBIDDEN, ApiErrorCode.ACCOUNT_DISABLED, str(exc))
+
+    @app.exception_handler(TooManyLoginAttemptsError)
+    async def _rate_limited(_: Request, exc: TooManyLoginAttemptsError) -> JSONResponse:
+        response = error_response(
+            status.HTTP_429_TOO_MANY_REQUESTS, ApiErrorCode.RATE_LIMITED, str(exc)
+        )
+        response.headers["Retry-After"] = str(max(1, math.ceil(exc.retry_after.total_seconds())))
+        return response
+
+    @app.exception_handler(ForbiddenError)
+    async def _forbidden(_: Request, exc: ForbiddenError) -> JSONResponse:
+        return error_response(status.HTTP_403_FORBIDDEN, ApiErrorCode.FORBIDDEN, str(exc))
+
+    @app.exception_handler(NotFoundError)
+    async def _not_found(_: Request, exc: NotFoundError) -> JSONResponse:
+        return error_response(status.HTTP_404_NOT_FOUND, ApiErrorCode.NOT_FOUND, str(exc))
 
     @app.exception_handler(ApiError)
     async def _api_error(_: Request, exc: ApiError) -> JSONResponse:

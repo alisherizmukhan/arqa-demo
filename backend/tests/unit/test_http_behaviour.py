@@ -9,6 +9,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.infrastructure.settings import Settings
 from app.main import create_app
+from tests.conftest import STARTUP_TIMEOUT
 
 # Nothing listens on port 1, so every connection attempt fails fast.
 UNREACHABLE_DB = "postgresql://postgres:postgres@127.0.0.1:1/none"
@@ -18,7 +19,7 @@ UNREACHABLE_DB = "postgresql://postgres:postgres@127.0.0.1:1/none"
 async def client() -> AsyncIterator[AsyncClient]:
     app = create_app(Settings(database_url=UNREACHABLE_DB, seed_on_startup=False))
     async with (
-        LifespanManager(app),
+        LifespanManager(app, startup_timeout=STARTUP_TIMEOUT),
         AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c,
     ):
         yield c
@@ -52,6 +53,23 @@ async def test_cors_preflight_allows_browser_clients(client: AsyncClient) -> Non
     assert "POST" in response.headers["access-control-allow-methods"]
 
 
+async def test_cors_allows_the_bearer_header_and_admin_patch(client: AsyncClient) -> None:
+    response = await client.options(
+        "/admin/users/00000000-0000-4000-8000-000000000001",
+        headers={
+            "Origin": "http://localhost:5000",
+            "Access-Control-Request-Method": "PATCH",
+            "Access-Control-Request-Headers": "authorization, content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "PATCH" in response.headers["access-control-allow-methods"]
+    assert "authorization" in response.headers["access-control-allow-headers"].lower()
+    # Tokens are sent in a header, never as cookies: no credentials mode.
+    assert "access-control-allow-credentials" not in response.headers
+
+
 async def test_cors_origins_are_configurable() -> None:
     app = create_app(
         Settings(
@@ -80,7 +98,7 @@ async def test_unreachable_database_does_not_block_startup(
         )
     )
 
-    async with LifespanManager(app):
+    async with LifespanManager(app, startup_timeout=STARTUP_TIMEOUT):
         pass
 
     assert "seed skipped: database unavailable" in caplog.text

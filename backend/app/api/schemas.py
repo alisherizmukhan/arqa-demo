@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone, tzinfo
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, BeforeValidator, ConfigDict, Field, StrictInt
 from pydantic_core import PydanticCustomError
@@ -7,6 +8,7 @@ from pydantic_core import PydanticCustomError
 from app.domain.day import format_utc_offset
 from app.domain.summary import DailySummary
 from app.domain.trip import MAX_AMOUNT, PaymentMethod, Trip
+from app.domain.user import Role, User
 
 TripId = Annotated[
     str,
@@ -177,3 +179,72 @@ class ErrorResponse(BaseModel):
     """Every error response has this shape."""
 
     error: ErrorBody
+
+
+class LoginIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"login": "user_1", "password": "password_1"}]},
+    )
+
+    login: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=256)
+
+
+class UserOut(BaseModel):
+    id: UUID
+    login: str
+    role: Role
+    display_name: str
+
+    @classmethod
+    def from_domain(cls, user: User) -> "UserOut":
+        return cls(id=user.id, login=user.login, role=user.role, display_name=user.display_name)
+
+
+class AdminUserOut(UserOut):
+    is_active: bool
+
+    @classmethod
+    def from_domain(cls, user: User) -> "AdminUserOut":
+        return cls(
+            id=user.id,
+            login=user.login,
+            role=user.role,
+            display_name=user.display_name,
+            is_active=user.is_active,
+        )
+
+
+class LoginOut(BaseModel):
+    token: str = Field(description="Opaque bearer token. Send as `Authorization: Bearer <token>`.")
+    user: UserOut
+
+
+class UserPatchIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid", json_schema_extra={"examples": [{"is_active": False}]}
+    )
+
+    is_active: bool
+
+
+class RevokedOut(BaseModel):
+    revoked: int = Field(description="How many active sessions were ended")
+
+
+def error_example(
+    status_code: int, description: str, code: str, message: str
+) -> dict[int | str, dict[str, Any]]:
+    """An OpenAPI `responses` entry with the error shape and one example."""
+    return {
+        status_code: {
+            "model": ErrorResponse,
+            "description": description,
+            "content": {
+                "application/json": {
+                    "example": {"error": {"code": code, "message": message, "field": None}}
+                }
+            },
+        }
+    }

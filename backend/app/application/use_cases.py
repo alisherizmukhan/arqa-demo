@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from uuid import UUID
 
 from app.application.errors import TripConflictError
 from app.application.ports import PasswordHasher, TripRepository, UserRepository
@@ -23,22 +24,25 @@ class CreateTripResult:
     created: bool
 
 
-async def create_trip(repo: TripRepository, trip: Trip) -> CreateTripResult:
-    """Idempotent create keyed by the client-generated trip id.
+async def create_trip(repo: TripRepository, trip: Trip, driver_id: UUID) -> CreateTripResult:
+    """Idempotent create keyed by the client-generated trip id, for `driver_id`
+    (`repo` is that driver's scope).
 
-    - new id                    -> created
-    - same id, same payload     -> the stored trip, not created
-    - same id, different payload -> TripConflictError
+    - new id                                   -> created
+    - same id, same driver, same payload       -> the stored trip, not created
+    - same id, same driver, different payload  -> TripConflictError
+    - same id, another driver                  -> TripConflictError (same message:
+      nothing about the other driver's trip is revealed)
     """
     if await repo.insert_if_absent(trip):
         return CreateTripResult(trip=trip, created=True)
 
     existing = await repo.get(trip.id)
-    if existing is None:  # pragma: no cover - trips are never deleted
+    if existing is None:  # pragma: no cover - trips are never deleted by the API
         raise RuntimeError(f"trip {trip.id!r} conflicted on insert but cannot be read")
-    if not existing.has_same_payload(trip):
+    if existing.driver_id != driver_id or not existing.trip.has_same_payload(trip):
         raise TripConflictError(trip.id)
-    return CreateTripResult(trip=existing, created=False)
+    return CreateTripResult(trip=existing.trip, created=False)
 
 
 async def seed_trips(repo: TripRepository, trips: Sequence[Trip]) -> int:

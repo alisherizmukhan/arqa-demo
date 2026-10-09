@@ -7,6 +7,7 @@ from sqlalchemy import (
     CheckConstraint,
     DateTime,
     ForeignKey,
+    Identity,
     Index,
     MetaData,
     String,
@@ -116,3 +117,16 @@ class WithdrawalRow(Base):
         CheckConstraint("status IN ('pending', 'paid', 'rejected')", name="status"),
         Index("ix_withdrawals_driver_id_created_at", "driver_id", "created_at"),
     )
+
+
+class LoginFailureRow(Base):
+    """`login_failures`: failed sign-in attempts, for the per-login rate limit.
+    Rows older than the window are deleted as new failures are recorded."""
+
+    __tablename__ = "login_failures"
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    login: Mapped[str] = mapped_column(Text)
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_login_failures_login_attempted_at", "login", "attempted_at"),)

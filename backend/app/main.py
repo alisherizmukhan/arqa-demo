@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.account_routes import router as account_router
 from app.api.errors import install_error_handlers
 from app.api.routes import router
 from app.application.use_cases import seed_accounts, seed_trips
@@ -40,20 +41,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
         description=(
             "Trips per day, daily summary and idempotent trip creation for ride-hailing "
-            "drivers. Money is integer tenge. Days are computed in the driver's UTC offset "
+            "drivers. Sign in with `POST /auth/login` and send "
+            "`Authorization: Bearer <token>`; drivers see their own data, admins all drivers. "
+            "Money is integer tenge. Days are computed in the driver's UTC offset "
             "(`tz`, default `+05:00`); a trip belongs to the day it started. "
             'Errors always look like `{"error": {"code", "message", "field"}}`.'
         ),
         lifespan=lifespan,
     )
+    app.state.settings = settings
+    # One hasher per app: it caches the dummy hash used for unknown logins.
+    app.state.hasher = Argon2PasswordHasher()
     install_error_handlers(app)
+    # Bearer tokens travel in a header, never in cookies: no credentials mode.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_methods=["GET", "POST", "PATCH"],
+        allow_headers=["Content-Type", "Authorization"],
     )
     app.include_router(router)
+    app.include_router(account_router)
     return app
 
 

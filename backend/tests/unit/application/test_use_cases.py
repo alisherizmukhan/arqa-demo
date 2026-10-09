@@ -14,7 +14,13 @@ from app.application.use_cases import (
 from app.domain.day import DayWindow
 from app.domain.user import DemoAccount, Role
 from tests.factories import KZ, load_seed_trips, make_trip
-from tests.fakes import InMemoryTripRepository, InMemoryUserRepository, PlainTextHasher
+from tests.fakes import (
+    DRIVER_1,
+    DRIVER_2,
+    InMemoryTripRepository,
+    InMemoryUserRepository,
+    PlainTextHasher,
+)
 
 OCT_1 = DayWindow(date(2026, 10, 1), KZ)
 
@@ -43,7 +49,7 @@ async def test_create_new_trip() -> None:
     repo = InMemoryTripRepository()
     trip = make_trip(id="new")
 
-    result = await create_trip(repo, trip)
+    result = await create_trip(repo, trip, DRIVER_1)
 
     assert result.created
     assert result.trip == trip
@@ -52,9 +58,9 @@ async def test_create_new_trip() -> None:
 
 async def test_create_same_trip_twice_returns_existing() -> None:
     repo = InMemoryTripRepository()
-    await create_trip(repo, make_trip(id="dup"))
+    await create_trip(repo, make_trip(id="dup"), DRIVER_1)
 
-    result = await create_trip(repo, make_trip(id="dup"))
+    result = await create_trip(repo, make_trip(id="dup"), DRIVER_1)
 
     assert not result.created
     assert await repo.count() == 1
@@ -63,12 +69,12 @@ async def test_create_same_trip_twice_returns_existing() -> None:
 async def test_same_trip_in_other_offset_notation_is_not_a_conflict() -> None:
     repo = InMemoryTripRepository()
     original = make_trip(id="dup")
-    await create_trip(repo, original)
+    await create_trip(repo, original, DRIVER_1)
     in_utc = make_trip(
         id="dup", start=original.start.astimezone(UTC), end=original.end.astimezone(UTC)
     )
 
-    result = await create_trip(repo, in_utc)
+    result = await create_trip(repo, in_utc, DRIVER_1)
 
     assert not result.created
     assert result.trip is repo.trips["dup"]
@@ -76,10 +82,10 @@ async def test_same_trip_in_other_offset_notation_is_not_a_conflict() -> None:
 
 async def test_same_id_different_payload_conflicts() -> None:
     repo = InMemoryTripRepository()
-    await create_trip(repo, make_trip(id="dup", amount=2400))
+    await create_trip(repo, make_trip(id="dup", amount=2400), DRIVER_1)
 
     with pytest.raises(TripConflictError) as exc:
-        await create_trip(repo, make_trip(id="dup", amount=2500))
+        await create_trip(repo, make_trip(id="dup", amount=2500), DRIVER_1)
 
     assert exc.value.trip_id == "dup"
     assert repo.trips["dup"].amount == 2400
@@ -132,3 +138,25 @@ async def test_seed_accounts_resets_a_password_changed_in_settings() -> None:
     assert (result.created, result.passwords_updated) == (0, 1)
     assert users.hashes["user_1"] == "plain:new-secret"
     assert users.hashes["admin"] == "plain:adm"
+
+
+async def test_an_id_used_by_another_driver_is_a_conflict() -> None:
+    mine = InMemoryTripRepository()
+    await create_trip(mine, make_trip(id="shared"), DRIVER_1)
+    theirs = mine.for_driver(DRIVER_2)
+
+    # Even with the very same payload: nothing of driver 1's trip is returned.
+    with pytest.raises(TripConflictError):
+        await create_trip(theirs, make_trip(id="shared"), DRIVER_2)
+
+    assert await theirs.count() == 0
+    assert await mine.count() == 1
+
+
+async def test_drivers_only_list_their_own_trips() -> None:
+    mine = InMemoryTripRepository([make_trip(id="a")])
+    theirs = mine.for_driver(DRIVER_2)
+    await create_trip(theirs, make_trip(id="b", amount=1000), DRIVER_2)
+
+    assert [t.id for t in await get_trips_for_day(mine, OCT_1)] == ["a"]
+    assert [t.id for t in await get_trips_for_day(theirs, OCT_1)] == ["b"]

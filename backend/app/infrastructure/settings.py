@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     app_env: Literal["local", "test", "production"] = "local"
     database_url: str = ""
     port: int = 8000
+    # Every endpoint except /health and /auth/login needs a bearer token. Off
+    # (production until the app supports login): requests without a token act
+    # as user_1, like before accounts existed; a token that is sent is checked.
+    auth_required: bool = True
     # One switch for all demo data: the demo accounts and the trips file.
     seed_on_startup: bool = True
     seed_file: Path = _REPO_SEED_FILE

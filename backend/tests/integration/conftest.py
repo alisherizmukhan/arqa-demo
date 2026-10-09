@@ -21,13 +21,19 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.application.auth import hash_token
 from app.application.use_cases import seed_trips
 from app.domain.user import User
 from app.infrastructure.models import TripRow
-from app.infrastructure.repository import SqlTripRepository, SqlUserRepository
+from app.infrastructure.repository import (
+    SqlSessionRepository,
+    SqlTripRepository,
+    SqlUserRepository,
+)
 from app.infrastructure.seed import load_seed_trips
 from app.infrastructure.settings import Settings
 from app.main import create_app
+from tests.conftest import STARTUP_TIMEOUT
 from tests.factories import SEED_FILE
 
 TEST_DATABASE_URL = os.environ.get(
@@ -62,25 +68,40 @@ def database_url() -> str:
 
 
 # Fast placeholder for tests that only need the accounts to exist; argon2
-# hashing is covered by the seed tests.
+# hashing is covered by the seed and login tests.
 TEST_PASSWORD_HASH = "!"
+
+# A ready session per demo account (the `app` fixture stores their hashes).
+TOKENS = {login: f"test-token-{login}" for login in ("user_1", "user_2", "admin")}
+
+
+def bearer(login: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {TOKENS[login]}"}
 
 
 @pytest.fixture
 async def app(database_url: str) -> AsyncIterator[FastAPI]:
     """The API on empty tables plus the three demo accounts (no trips)."""
     application = create_app(Settings(database_url=database_url, seed_on_startup=False))
-    async with LifespanManager(application):
+    async with LifespanManager(application, startup_timeout=STARTUP_TIMEOUT):
         async with application.state.sessionmaker() as session:
-            await session.execute(text("TRUNCATE trips, withdrawals, sessions, users"))
+            await session.execute(
+                text("TRUNCATE trips, withdrawals, sessions, users, login_failures")
+            )
             await session.commit()
             users = SqlUserRepository(session)
+            sessions = SqlSessionRepository(session)
             for account in Settings().demo_accounts:
                 await users.insert_if_absent(
                     login=account.login,
                     password_hash=TEST_PASSWORD_HASH,
                     role=account.role,
                     display_name=account.display_name,
+                )
+                user = await users.get_by_login(account.login)
+                assert user is not None
+                await sessions.create(
+                    user_id=user.id, token_hash=hash_token(TOKENS[account.login]), user_agent=None
                 )
         yield application
 
@@ -119,6 +140,16 @@ def sessionmaker(app: FastAPI) -> async_sessionmaker[AsyncSession]:
 
 @pytest.fixture
 async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """Signed in as user_1 (the driver with the reference day)."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test", headers=bearer("user_1")
+    ) as c:
+        yield c
+
+
+@pytest.fixture
+async def anonymous(app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """No Authorization header."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
 

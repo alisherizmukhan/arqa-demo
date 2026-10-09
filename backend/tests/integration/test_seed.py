@@ -11,6 +11,7 @@ from app.infrastructure.passwords import Argon2PasswordHasher
 from app.infrastructure.seed import load_seed_trips
 from app.infrastructure.settings import Settings
 from app.main import create_app
+from tests.conftest import STARTUP_TIMEOUT
 from tests.factories import SEED_FILE
 from tests.integration.conftest import count_trips, seed_trips_file
 
@@ -29,7 +30,7 @@ async def _start(database_url: str, admin_password: str = "admin") -> None:
     settings = Settings(
         database_url=database_url, seed_on_startup=True, seed_admin_password=admin_password
     )
-    async with LifespanManager(create_app(settings)):
+    async with LifespanManager(create_app(settings), startup_timeout=STARTUP_TIMEOUT):
         pass
 
 
@@ -117,7 +118,7 @@ async def test_seed_off_creates_nothing(
     await _clear(sessionmaker)
 
     app = create_app(Settings(database_url=database_url, seed_on_startup=False))
-    async with LifespanManager(app):
+    async with LifespanManager(app, startup_timeout=STARTUP_TIMEOUT):
         pass
 
     assert await _hashes(sessionmaker) == {}
@@ -135,7 +136,7 @@ async def test_missing_seed_file_still_seeds_accounts(
     settings = Settings(
         database_url=database_url, seed_on_startup=True, seed_file=tmp_path / "missing.json"
     )
-    async with LifespanManager(create_app(settings)):
+    async with LifespanManager(create_app(settings), startup_timeout=STARTUP_TIMEOUT):
         pass
 
     assert set(await _hashes(sessionmaker)) == {"user_1", "user_2", "admin"}
@@ -157,5 +158,5 @@ async def test_seed_file_with_an_unknown_driver_stops_startup(
     app = create_app(Settings(database_url=database_url, seed_on_startup=True, seed_file=bad))
 
     with pytest.raises(RuntimeError, match="unknown driver 'nobody'"):
-        async with LifespanManager(app):
+        async with LifespanManager(app, startup_timeout=STARTUP_TIMEOUT):
             pass

@@ -40,3 +40,50 @@ def test_money_is_integer_in_schema(spec: dict[str, Any]) -> None:
     schemas = spec["components"]["schemas"]
     for name, field in [("TripIn", "amount"), ("TripIn", "commission"), ("SummaryOut", "net")]:
         assert schemas[name]["properties"][field]["type"] == "integer"
+
+
+def test_bearer_scheme_is_declared(spec: dict[str, Any]) -> None:
+    schemes = spec["components"]["securitySchemes"]
+    assert any(s["type"] == "http" and s["scheme"] == "bearer" for s in schemes.values())
+    for path, method in [("/trips", "get"), ("/summary", "get"), ("/trips", "post")]:
+        assert spec["paths"][path][method]["security"]
+    assert "security" not in spec["paths"]["/health"]["get"]
+    assert "security" not in spec["paths"]["/auth/login"]["post"]
+
+
+def test_account_endpoints_are_documented(spec: dict[str, Any]) -> None:
+    paths = spec["paths"]
+    assert "post" in paths["/auth/login"]
+    assert "post" in paths["/auth/logout"]
+    assert "get" in paths["/auth/me"]
+    assert "get" in paths["/admin/users"]
+    assert "patch" in paths["/admin/users/{user_id}"]
+    assert "post" in paths["/admin/users/{user_id}/revoke-sessions"]
+
+
+@pytest.mark.parametrize(
+    ("path", "method", "codes"),
+    [
+        ("/trips", "post", {"401": "unauthorized", "403": "forbidden", "409": "trip_conflict"}),
+        ("/summary", "get", {"401": "unauthorized", "403": "forbidden", "404": "not_found"}),
+        (
+            "/auth/login",
+            "post",
+            {
+                "401": "invalid_credentials",
+                "403": "account_disabled",
+                "422": "missing_field",
+                "429": "rate_limited",
+            },
+        ),
+        ("/admin/users", "get", {"401": "unauthorized", "403": "forbidden"}),
+    ],
+)
+def test_error_responses_have_the_shape_and_an_example(
+    spec: dict[str, Any], path: str, method: str, codes: dict[str, str]
+) -> None:
+    responses = spec["paths"][path][method]["responses"]
+    for status, code in codes.items():
+        content = responses[status]["content"]["application/json"]
+        assert content["schema"]["$ref"] == "#/components/schemas/ErrorResponse"
+        assert content["example"]["error"]["code"] == code
