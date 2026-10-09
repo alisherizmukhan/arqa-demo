@@ -69,7 +69,7 @@ async def test_cors_origins_are_configurable() -> None:
     assert "access-control-allow-origin" not in response.headers
 
 
-async def test_missing_seed_file_does_not_block_startup(
+async def test_unreachable_database_does_not_block_startup(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     app = create_app(
@@ -83,4 +83,4 @@ async def test_missing_seed_file_does_not_block_startup(
     async with LifespanManager(app):
         pass
 
-    assert "not found, skipping seed" in caplog.text
+    assert "seed skipped: database unavailable" in caplog.text

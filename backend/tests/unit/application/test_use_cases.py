@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
@@ -7,11 +8,13 @@ from app.application.use_cases import (
     create_trip,
     get_daily_summary,
     get_trips_for_day,
+    seed_accounts,
     seed_trips,
 )
 from app.domain.day import DayWindow
+from app.domain.user import DemoAccount, Role
 from tests.factories import KZ, load_seed_trips, make_trip
-from tests.fakes import InMemoryTripRepository
+from tests.fakes import InMemoryTripRepository, InMemoryUserRepository, PlainTextHasher
 
 OCT_1 = DayWindow(date(2026, 10, 1), KZ)
 
@@ -91,9 +94,41 @@ async def test_seed_into_empty_store_then_skip() -> None:
     assert await repo.count() == len(seed)
 
 
-async def test_seed_skipped_when_store_has_data() -> None:
+async def test_seed_adds_missing_trips_to_existing_data() -> None:
     start = datetime(2026, 10, 5, 9, 0, tzinfo=KZ)
     repo = InMemoryTripRepository([make_trip(id="mine", start=start, end=start + timedelta(1))])
+    seed = load_seed_trips()
 
-    assert await seed_trips(repo, load_seed_trips()) == 0
-    assert await repo.count() == 1
+    assert await seed_trips(repo, seed) == len(seed)
+    assert await repo.count() == 1 + len(seed)
+    assert repo.trips["mine"].start == start
+
+
+ACCOUNTS = [
+    DemoAccount(login="user_1", password="pw1", role=Role.DRIVER, display_name="Водитель 1"),
+    DemoAccount(login="admin", password="adm", role=Role.ADMIN, display_name="Администратор"),
+]
+
+
+async def test_seed_accounts_creates_missing_and_is_idempotent() -> None:
+    users = InMemoryUserRepository()
+
+    first = await seed_accounts(users, PlainTextHasher(), ACCOUNTS)
+    again = await seed_accounts(users, PlainTextHasher(), ACCOUNTS)
+
+    assert (first.created, first.passwords_updated) == (2, 0)
+    assert (again.created, again.passwords_updated) == (0, 0)
+    assert users.users["admin"].role is Role.ADMIN
+    assert users.hashes["user_1"] == "plain:pw1"
+
+
+async def test_seed_accounts_resets_a_password_changed_in_settings() -> None:
+    users = InMemoryUserRepository()
+    await seed_accounts(users, PlainTextHasher(), ACCOUNTS)
+    changed = [replace(ACCOUNTS[0], password="new-secret"), ACCOUNTS[1]]
+
+    result = await seed_accounts(users, PlainTextHasher(), changed)
+
+    assert (result.created, result.passwords_updated) == (0, 1)
+    assert users.hashes["user_1"] == "plain:new-secret"
+    assert users.hashes["admin"] == "plain:adm"

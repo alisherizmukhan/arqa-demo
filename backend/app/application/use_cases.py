@@ -2,10 +2,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from app.application.errors import TripConflictError
-from app.application.ports import TripRepository
+from app.application.ports import PasswordHasher, TripRepository, UserRepository
 from app.domain.day import DayWindow
 from app.domain.summary import DailySummary, calculate_daily_summary
 from app.domain.trip import Trip
+from app.domain.user import DemoAccount
 
 
 async def get_trips_for_day(repo: TripRepository, window: DayWindow) -> list[Trip]:
@@ -41,14 +42,45 @@ async def create_trip(repo: TripRepository, trip: Trip) -> CreateTripResult:
 
 
 async def seed_trips(repo: TripRepository, trips: Sequence[Trip]) -> int:
-    """Load initial data into an empty store. Returns how many trips were inserted.
+    """Insert the seed trips that are missing. Returns how many were inserted.
 
-    Safe to run on every startup and from several replicas at once: it is skipped
-    when data exists, and each insert is itself idempotent.
+    Safe on every startup and from several replicas at once: each insert is
+    idempotent (keyed by the trip id), so existing trips are never touched and a
+    database that already has data still gets new seed trips.
     """
-    if await repo.count() > 0:
-        return 0
     inserted = 0
     for trip in trips:
         inserted += await repo.insert_if_absent(trip)
     return inserted
+
+
+@dataclass(frozen=True, slots=True)
+class SeedAccountsResult:
+    created: int
+    passwords_updated: int
+
+
+async def seed_accounts(
+    users: UserRepository, hasher: PasswordHasher, accounts: Sequence[DemoAccount]
+) -> SeedAccountsResult:
+    """Create the demo accounts that are missing; reset a password that no
+    longer matches the configured one (so production changes it via env).
+
+    Plaintext passwords only pass through here: they are hashed, never stored
+    or logged.
+    """
+    created = updated = 0
+    for account in accounts:
+        if await users.insert_if_absent(
+            login=account.login,
+            password_hash=hasher.hash(account.password),
+            role=account.role,
+            display_name=account.display_name,
+        ):
+            created += 1
+            continue
+        stored = await users.password_hash(account.login)
+        if stored is None or not hasher.verify(stored, account.password):
+            await users.set_password_hash(account.login, hasher.hash(account.password))
+            updated += 1
+    return SeedAccountsResult(created=created, passwords_updated=updated)

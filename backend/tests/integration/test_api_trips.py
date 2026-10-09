@@ -2,13 +2,13 @@ from datetime import datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.application.use_cases import seed_trips
+from app.domain.user import User
 from app.infrastructure.repository import SqlTripRepository
-from app.infrastructure.seed import load_trips_from_json
-from tests.factories import SEED_FILE
-from tests.integration.conftest import trip_payload
+from tests.factories import make_trip
+from tests.integration.conftest import seed_trips_file, trip_payload
 
 REFERENCE_SUMMARY = {
     "date": "2026-10-01",
@@ -23,9 +23,8 @@ REFERENCE_SUMMARY = {
 
 
 @pytest.fixture
-async def seeded(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
-    async with sessionmaker() as session:
-        await seed_trips(SqlTripRepository(session), load_trips_from_json(SEED_FILE))
+async def seeded(sessionmaker: async_sessionmaker[AsyncSession], users: dict[str, User]) -> None:
+    await seed_trips_file(sessionmaker, users)
 
 
 async def test_health(client: AsyncClient) -> None:
@@ -155,3 +154,22 @@ async def test_created_trip_shows_up_in_summary(client: AsyncClient) -> None:
 
     assert (summary["trips_count"], summary["revenue"], summary["net"]) == (1, 5000, 4250)
     assert (summary["cash"], summary["card"]) == (5000, 0)
+
+
+async def test_without_the_stage_1_driver_the_api_says_unavailable(
+    client: AsyncClient, sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    async with sessionmaker() as session:
+        await session.execute(text("TRUNCATE trips, withdrawals, sessions, users"))
+        await session.commit()
+
+    response = await client.get("/trips", params={"date": "2026-10-01"})
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "database_unavailable"
+
+
+async def test_a_trip_needs_a_driver(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
+    async with sessionmaker() as session:
+        with pytest.raises(ValueError, match="for a driver"):
+            await SqlTripRepository(session).insert_if_absent(make_trip(id="orphan"))

@@ -30,6 +30,7 @@ COPY --chown=app:app data/trips.json /app/data/trips.json
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    APP_ENV=production \
     SEED_FILE=/app/data/trips.json \
     PORT=8000
 

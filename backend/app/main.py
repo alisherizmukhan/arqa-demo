@@ -4,13 +4,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.errors import install_error_handlers
 from app.api.routes import router
-from app.application.use_cases import seed_trips
+from app.application.use_cases import seed_accounts, seed_trips
 from app.infrastructure.db import create_engine, create_sessionmaker
-from app.infrastructure.repository import SqlTripRepository
-from app.infrastructure.seed import load_trips_from_json
+from app.infrastructure.passwords import Argon2PasswordHasher
+from app.infrastructure.repository import SqlTripRepository, SqlUserRepository
+from app.infrastructure.seed import load_seed_trips
 from app.infrastructure.settings import Settings
 
 logger = logging.getLogger("app")
@@ -24,7 +26,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine = create_engine(settings.async_database_url)
         app.state.sessionmaker = create_sessionmaker(engine)
         if settings.seed_on_startup:
-            await _seed(app, settings)
+            try:
+                await _seed(app, settings)
+            except (SQLAlchemyError, OSError):
+                # Start anyway: /health then reports the database as unavailable
+                # (a crash loop would hide the reason). The next start seeds.
+                logger.exception("seed skipped: database unavailable")
         yield
         await engine.dispose()
 
@@ -51,13 +58,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
 
 async def _seed(app: FastAPI, settings: Settings) -> None:
-    if not settings.seed_file.is_file():
-        logger.warning("seed file %s not found, skipping seed", settings.seed_file)
-        return
-    trips = load_trips_from_json(settings.seed_file)
     async with app.state.sessionmaker() as session:
-        inserted = await seed_trips(SqlTripRepository(session), trips)
-    logger.info("seed: inserted %d of %d trips from %s", inserted, len(trips), settings.seed_file)
+        users = SqlUserRepository(session)
+        accounts = await seed_accounts(users, Argon2PasswordHasher(), settings.demo_accounts)
+        logger.info(
+            "seed: %d demo accounts created, %d passwords reset",
+            accounts.created,
+            accounts.passwords_updated,
+        )
+        if not settings.seed_file.is_file():
+            logger.warning("seed file %s not found, skipping seed trips", settings.seed_file)
+            return
+        seeds = load_seed_trips(settings.seed_file)
+        inserted = 0
+        for login in sorted({seed.driver for seed in seeds}):
+            driver = await users.get_by_login(login)
+            if driver is None:
+                raise RuntimeError(f"seed file names unknown driver {login!r}")
+            trips = [seed.trip for seed in seeds if seed.driver == login]
+            inserted += await seed_trips(SqlTripRepository(session, driver.id), trips)
+    logger.info("seed: inserted %d of %d trips from %s", inserted, len(seeds), settings.seed_file)
 
 
 logging.basicConfig(level=Settings().log_level, format="%(levelname)s %(name)s: %(message)s")

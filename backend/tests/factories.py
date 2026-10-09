@@ -35,6 +35,11 @@ def trip_from_json(raw: dict[str, Any]) -> Trip:
     )
 
 
-def load_seed_trips() -> list[Trip]:
+def load_seed_trips(driver: str | None = "user_1") -> list[Trip]:
+    """Seed trips of one driver (a trip without "driver" is user_1's), or all."""
     raw: list[dict[str, Any]] = json.loads(SEED_FILE.read_text(encoding="utf-8"))
-    return [trip_from_json(item) for item in raw]
+    return [
+        trip_from_json(item)
+        for item in raw
+        if driver is None or item.get("driver", "user_1") == driver
+    ]

@@ -17,7 +17,8 @@ from typing import Any
 
 SEED_FILE = Path(__file__).resolve().parents[2] / "data" / "trips.json"
 KZ = timezone(timedelta(hours=5))
-HANDWRITTEN_ID = re.compile(r"^t\d+$")
+# t1..tN, plus the reference trips of other drivers (u2-t1, ...).
+HANDWRITTEN_ID = re.compile(r"^(u\d+-)?t\d+$")
 RESERVED_DAYS = {date(2026, 9, 30), date(2026, 10, 1), date(2026, 10, 2), date(2026, 10, 3)}
 DAYS_OFF = {date(2026, 9, 27)}
 FIRST_DAY, LAST_DAY = date(2026, 9, 21), date(2026, 10, 6)

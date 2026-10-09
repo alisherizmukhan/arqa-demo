@@ -49,7 +49,7 @@ def test_reference_case_from_assignment() -> None:
 
 
 def test_reference_case_from_seed_file() -> None:
-    """The seed has edge-case trips around 2026-10-01; none may leak into that day."""
+    """The seed has edge-case trips around 2026-10-01; none may leak into user_1's day."""
     day_trips = [t for t in load_seed_trips() if REFERENCE_DAY.contains(t.start)]
 
     assert sorted(t.id for t in day_trips) == ["t1", "t2"]
@@ -120,3 +120,30 @@ def test_summary_invariants(trips: list[Trip]) -> None:
     assert summary.cash + summary.card == summary.revenue
     assert summary.cash == sum(t.amount for t in trips if t.payment is PaymentMethod.CASH)
     assert 0 <= summary.net <= summary.revenue
+
+
+def test_user_2_reference_case_from_seed_file() -> None:
+    day_trips = [t for t in load_seed_trips("user_2") if REFERENCE_DAY.contains(t.start)]
+
+    assert sorted(t.id for t in day_trips) == ["u2-t1", "u2-t2"]
+    summary = calculate_daily_summary(REFERENCE_DAY, day_trips)
+    assert (summary.trips_count, summary.revenue, summary.commission, summary.net) == (
+        2,
+        4800,
+        720,
+        4080,
+    )
+    assert (summary.cash, summary.card) == (1800, 3000)
+
+
+def test_all_drivers_reference_case_from_seed_file() -> None:
+    day_trips = [t for t in load_seed_trips(None) if REFERENCE_DAY.contains(t.start)]
+
+    summary = calculate_daily_summary(REFERENCE_DAY, day_trips)
+    assert (summary.trips_count, summary.revenue, summary.commission, summary.net) == (
+        4,
+        8700,
+        1305,
+        7395,
+    )
+    assert (summary.cash, summary.card) == (3300, 5400)

@@ -21,9 +21,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.application.use_cases import seed_trips
+from app.domain.user import User
 from app.infrastructure.models import TripRow
+from app.infrastructure.repository import SqlTripRepository, SqlUserRepository
+from app.infrastructure.seed import load_seed_trips
 from app.infrastructure.settings import Settings
 from app.main import create_app
+from tests.factories import SEED_FILE
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/driver_diary_test"
@@ -56,14 +61,54 @@ def database_url() -> str:
     return TEST_DATABASE_URL
 
 
+# Fast placeholder for tests that only need the accounts to exist; argon2
+# hashing is covered by the seed tests.
+TEST_PASSWORD_HASH = "!"
+
+
 @pytest.fixture
 async def app(database_url: str) -> AsyncIterator[FastAPI]:
+    """The API on empty tables plus the three demo accounts (no trips)."""
     application = create_app(Settings(database_url=database_url, seed_on_startup=False))
     async with LifespanManager(application):
         async with application.state.sessionmaker() as session:
-            await session.execute(text("TRUNCATE trips"))
+            await session.execute(text("TRUNCATE trips, withdrawals, sessions, users"))
             await session.commit()
+            users = SqlUserRepository(session)
+            for account in Settings().demo_accounts:
+                await users.insert_if_absent(
+                    login=account.login,
+                    password_hash=TEST_PASSWORD_HASH,
+                    role=account.role,
+                    display_name=account.display_name,
+                )
         yield application
+
+
+@pytest.fixture
+async def users(app: FastAPI) -> dict[str, User]:
+    """The demo accounts by login."""
+    found: dict[str, User] = {}
+    async with app.state.sessionmaker() as session:
+        repo = SqlUserRepository(session)
+        for login in ("user_1", "user_2", "admin"):
+            user = await repo.get_by_login(login)
+            assert user is not None
+            found[login] = user
+    return found
+
+
+async def seed_trips_file(
+    sessionmaker: async_sessionmaker[AsyncSession], users: dict[str, User]
+) -> int:
+    """Load data/trips.json, each trip for its driver."""
+    seeds = load_seed_trips(SEED_FILE)
+    inserted = 0
+    async with sessionmaker() as session:
+        for login, user in users.items():
+            trips = [seed.trip for seed in seeds if seed.driver == login]
+            inserted += await seed_trips(SqlTripRepository(session, user.id), trips)
+    return inserted
 
 
 @pytest.fixture

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Protocol
 
 from app.domain.trip import Trip
+from app.domain.user import Role, User
 
 
 class TripRepository(Protocol):
@@ -19,4 +20,26 @@ class TripRepository(Protocol):
         """
         ...
 
-    async def count(self) -> int: ...
+
+class UserRepository(Protocol):
+    async def get_by_login(self, login: str) -> User | None: ...
+
+    async def password_hash(self, login: str) -> str | None:
+        """The stored hash, for verification only."""
+        ...
+
+    async def insert_if_absent(
+        self, *, login: str, password_hash: str, role: Role, display_name: str
+    ) -> bool:
+        """Insert unless the login exists (atomically, by the unique key)."""
+        ...
+
+    async def set_password_hash(self, login: str, password_hash: str) -> None: ...
+
+
+class PasswordHasher(Protocol):
+    def hash(self, password: str) -> str: ...
+
+    def verify(self, password_hash: str, password: str) -> bool:
+        """False for a wrong password and for a hash it cannot read."""
+        ...

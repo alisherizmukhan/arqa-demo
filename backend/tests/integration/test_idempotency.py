@@ -4,6 +4,7 @@ from collections import Counter
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.user import User
 from app.infrastructure.repository import SqlTripRepository
 from tests.factories import make_trip
 from tests.integration.conftest import count_trips, trip_payload
@@ -101,14 +102,14 @@ async def test_concurrent_posts_with_conflicting_payloads(
 
 
 async def test_repository_insert_is_atomic_across_sessions(
-    sessionmaker: async_sessionmaker[AsyncSession],
+    sessionmaker: async_sessionmaker[AsyncSession], users: dict[str, User]
 ) -> None:
     """The guarantee itself: separate sessions/transactions racing on one id."""
     trip = make_trip(id="race")
 
     async def attempt() -> bool:
         async with sessionmaker() as session:
-            return await SqlTripRepository(session).insert_if_absent(trip)
+            return await SqlTripRepository(session, users["user_1"].id).insert_if_absent(trip)
 
     results = await asyncio.gather(*(attempt() for _ in range(10)))
 

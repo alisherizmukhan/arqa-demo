@@ -16,7 +16,7 @@ from app.domain.day import (
     format_utc_offset,
     parse_utc_offset,
 )
-from app.infrastructure.repository import SqlTripRepository
+from app.infrastructure.repository import SqlTripRepository, SqlUserRepository
 
 _DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DEFAULT_TZ = format_utc_offset(DEFAULT_DRIVER_TZ)
@@ -31,8 +31,21 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-def get_repository(session: SessionDep) -> TripRepository:
-    return SqlTripRepository(session)
+# Stage 1 of the accounts iteration: no authentication yet, so the API acts as
+# the first demo driver (its trips: the reference day and the demo history).
+# Replaced by the signed-in user's scope in stage 2.
+LEGACY_DRIVER_LOGIN = "user_1"
+
+
+async def get_repository(session: SessionDep) -> TripRepository:
+    driver = await SqlUserRepository(session).get_by_login(LEGACY_DRIVER_LOGIN)
+    if driver is None:
+        raise ApiError(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ApiErrorCode.DATABASE_UNAVAILABLE,
+            f"driver {LEGACY_DRIVER_LOGIN!r} does not exist yet (seed on startup is off)",
+        )
+    return SqlTripRepository(session, driver.id)
 
 
 RepositoryDep = Annotated[TripRepository, Depends(get_repository)]
