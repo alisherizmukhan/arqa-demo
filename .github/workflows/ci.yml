@@ -98,7 +98,7 @@ jobs:
           fi
       - name: No raw colors or text styles in the app (DESIGN.md §7)
         run: |
-          if grep -RnE 'Color\(0x|Colors\.|TextStyle\(' apps/mobile/lib; then
+          if grep -RnE 'Color\(0x|\bColors\.|TextStyle\(' apps/mobile/lib; then
             echo "::error::Use design kit tokens (context.dkColors / context.dkText) in apps/mobile"
             exit 1
           fi
