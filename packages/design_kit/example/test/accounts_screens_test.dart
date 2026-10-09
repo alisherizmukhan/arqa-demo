@@ -127,4 +127,121 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('the money detector flags hand-built and narrow amounts', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: DkTheme.light(),
+        home: Column(
+          children: [
+            const Text('1 000₸'), // no separator before ₸
+            const Text('-585 ₸'), // hyphen, and a plain (narrow) Text
+            DkGroupedText(
+              DkMoney.format(-585),
+              style: dkTextStyle(
+                size: 14,
+                lineHeight: 20,
+                weight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final problems = moneyProblems(tester);
+    expect(problems, contains('no U+202F before ₸ in "1 000₸"'));
+    expect(problems, contains('hyphen instead of U+2212 in "-585 ₸"'));
+    expect(problems.where((p) => p.contains('narrow')), hasLength(2));
+    expect(problems.where((p) => p.contains('−585')), isEmpty);
+  });
+
+  // Every amount on screen goes through the shared money formatting: U+202F
+  // before ₸ and between digit groups, U+2212 for minus, and the gap widened
+  // by DkGroupedText / DkMoneyText (a plain Text draws U+202F too narrow).
+  for (final preview in accountsPreviews) {
+    testWidgets('${preview.id}: money is formatted and rendered by the kit', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        preview,
+        size: const Size(390, 844),
+        ratio: 1,
+        brightness: Brightness.light,
+      );
+      expect(moneyProblems(tester), isEmpty);
+    });
+  }
+
+  // Admin withdrawal rows: the content block (icon, amount, «driver · date»,
+  // chip) is the same height in every row, and so is every row with buttons.
+  for (final id in [
+    '24_admin_withdrawals_pending',
+    '25_admin_withdrawals_all',
+    '28_admin_marked_paid',
+  ]) {
+    for (final width in [360.0, 390.0]) {
+      testWidgets('$id at ${width.toInt()} dp: rows have equal heights', (
+        tester,
+      ) async {
+        final preview = accountsPreviews.firstWhere((p) => p.id == id);
+        await _pump(
+          tester,
+          preview,
+          size: Size(width, 844),
+          ratio: 1,
+          brightness: Brightness.light,
+        );
+        final tiles = find.byType(DkWithdrawalTile);
+        final content = find.descendant(
+          of: tiles,
+          matching: find.byType(MergeSemantics),
+        );
+        final heights = {
+          for (final element in content.evaluate())
+            tester.getSize(find.byWidget(element.widget)).height,
+        };
+        expect(heights, hasLength(1), reason: 'content heights: $heights');
+        final withButtons = {
+          for (final element in tiles.evaluate())
+            if ((element.widget as DkWithdrawalTile).actions != null)
+              tester.getSize(find.byWidget(element.widget)).height,
+        };
+        expect(withButtons.length, lessThanOrEqualTo(1));
+      });
+    }
+  }
+}
+
+/// Texts with ₸ that break the money rules (empty when all is well).
+List<String> moneyProblems(WidgetTester tester) {
+  const separator = ' ';
+  final problems = <String>[];
+  for (final rich in tester.widgetList<RichText>(find.byType(RichText))) {
+    final text = rich.text.toPlainText();
+    // A lone «₸» is the currency suffix of a money field.
+    if (!text.contains('₸') || text.trim() == '₸') continue;
+    for (var i = text.indexOf('₸'); i >= 0; i = text.indexOf('₸', i + 1)) {
+      if (i == 0 || text[i - 1] != separator) {
+        problems.add('no U+202F before ₸ in "$text"');
+      }
+    }
+    if (RegExp(r'-\d[\d ]* ₸').hasMatch(text)) {
+      problems.add('hyphen instead of U+2212 in "$text"');
+    }
+    var widened = false;
+    rich.text.visitChildren((span) {
+      if (span is TextSpan &&
+          span.text == separator &&
+          (span.style?.letterSpacing ?? 0) > 0) {
+        widened = true;
+      }
+      return !widened;
+    });
+    if (!widened) problems.add('narrow (not widened) money gap in "$text"');
+  }
+  return problems;
 }

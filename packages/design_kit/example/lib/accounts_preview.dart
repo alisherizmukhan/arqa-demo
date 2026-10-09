@@ -331,9 +331,24 @@ String _money(int amount) => DkMoney.format(amount);
 String _dateTime(DateTime moment) =>
     '${DkFormat.date(moment)}, ${DkFormat.clock(moment.hour, moment.minute)}';
 
-/// Admin rows: no year, so amount and date fit one line at 390 dp.
+const _shortMonths = [
+  'янв.',
+  'февр.',
+  'мар.',
+  'апр.',
+  'мая',
+  'июн.',
+  'июл.',
+  'авг.',
+  'сент.',
+  'окт.',
+  'нояб.',
+  'дек.',
+];
+
+/// Admin rows: «9 окт., 22:34», so «driver · date» fits one line.
 String _shortDateTime(DateTime moment) =>
-    '${DkFormat.dayMonth(moment)}, '
+    '${moment.day} ${_shortMonths[moment.month - 1]}, '
     '${DkFormat.clock(moment.hour, moment.minute)}';
 
 // --- §8.1 Login --------------------------------------------------------------
@@ -607,7 +622,7 @@ class _Withdraw extends StatelessWidget {
       if (created)
         DkWithdrawalTile(
           highlighted: true,
-          title: _money(300),
+          amount: 300,
           subtitle: _dateTime(DateTime(2026, 10, 9, 14, 20)),
           status: const DkStatusChip(
             kind: DkStatusKind.pending,
@@ -615,7 +630,7 @@ class _Withdraw extends StatelessWidget {
           ),
         ),
       DkWithdrawalTile(
-        title: _money(400),
+        amount: 400,
         subtitle: _dateTime(DateTime(2026, 10, 8, 18, 5)),
         status: const DkStatusChip(
           kind: DkStatusKind.pending,
@@ -623,7 +638,7 @@ class _Withdraw extends StatelessWidget {
         ),
       ),
       DkWithdrawalTile(
-        title: _money(500),
+        amount: 500,
         subtitle: _dateTime(DateTime(2026, 10, 6, 9, 40)),
         note: 'Неверные реквизиты',
         status: const DkStatusChip(
@@ -632,7 +647,7 @@ class _Withdraw extends StatelessWidget {
         ),
       ),
       DkWithdrawalTile(
-        title: _money(600),
+        amount: 600,
         subtitle: _dateTime(DateTime(2026, 10, 5, 14, 20)),
         status: const DkStatusChip(kind: DkStatusKind.paid, label: 'Выплачено'),
       ),
@@ -919,7 +934,8 @@ class _AdminTrips extends StatelessWidget {
               DkTripTile(
                 timeRange: t.$1,
                 endsNextDay: false,
-                meta: driver == 0 ? '${t.$2} · Водитель ${t.$6}' : t.$2,
+                meta: t.$2,
+                driver: driver == 0 ? 'Водитель ${t.$6}' : null,
                 amount: _money(t.$3),
                 commission: 'комиссия ${_money(t.$4)}',
                 method: t.$5,
@@ -953,8 +969,9 @@ class _AdminWithdrawals extends StatelessWidget {
       DateTime at, {
       bool busy = false,
     }) => DkWithdrawalTile(
-      title: driver,
-      subtitle: '${_money(amount)} · ${_shortDateTime(at)}',
+      prominent: true,
+      amount: amount,
+      subtitle: '$driver · ${_shortDateTime(at)}',
       status: const DkStatusChip(
         kind: DkStatusKind.pending,
         label: 'В обработке',
@@ -978,10 +995,10 @@ class _AdminWithdrawals extends StatelessWidget {
       pending('Водитель 1', 500, DateTime(2026, 10, 9, 12, 10)),
       if (all || markedPaid)
         DkWithdrawalTile(
-          title: 'Водитель 2',
+          prominent: true,
+          amount: 1000,
           subtitle:
-              '${_money(1000)} · '
-              '${_shortDateTime(DateTime(2026, 10, 9, 22, 34))}',
+              'Водитель 2 · ${_shortDateTime(DateTime(2026, 10, 9, 22, 34))}',
           status: const DkStatusChip(
             kind: DkStatusKind.paid,
             label: 'Выплачено',
@@ -989,10 +1006,9 @@ class _AdminWithdrawals extends StatelessWidget {
         ),
       if (all)
         DkWithdrawalTile(
-          title: 'Водитель 1',
-          subtitle:
-              '${_money(800)} · ${_shortDateTime(DateTime(2026, 10, 7, 16))}',
-          note: 'Неверные реквизиты',
+          prominent: true,
+          amount: 800,
+          subtitle: 'Водитель 1 · ${_shortDateTime(DateTime(2026, 10, 7, 16))}',
           status: const DkStatusChip(
             kind: DkStatusKind.rejected,
             label: 'Отклонено',

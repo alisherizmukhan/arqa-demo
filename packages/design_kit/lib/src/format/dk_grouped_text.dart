@@ -53,6 +53,7 @@ class DkGroupedText extends StatelessWidget {
     required this.style,
     this.maxLines,
     this.textAlign,
+    this.overflow,
     super.key,
   });
 
@@ -68,6 +69,9 @@ class DkGroupedText extends StatelessWidget {
   /// Optional alignment.
   final TextAlign? textAlign;
 
+  /// Optional overflow (with [maxLines]).
+  final TextOverflow? overflow;
+
   @override
   Widget build(BuildContext context) {
     final effective = DefaultTextStyle.of(context).style.merge(style);
@@ -75,6 +79,7 @@ class DkGroupedText extends StatelessWidget {
       TextSpan(style: effective, children: dkGroupedSpans(text, effective)),
       maxLines: maxLines,
       textAlign: textAlign,
+      overflow: overflow,
     );
   }
 }

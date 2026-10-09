@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:design_kit/src/components/dk_button.dart';
+import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:design_kit/src/tokens/dk_dimensions.dart';
 import 'package:design_kit/src/tokens/dk_icons.dart';
@@ -193,7 +194,7 @@ class DkSnackbarView extends StatelessWidget {
               color: colors.inverseError,
             ),
           Expanded(
-            child: Text(
+            child: DkGroupedText(
               message,
               style: text.bodyS.copyWith(color: colors.onInverse),
             ),
@@ -244,7 +245,7 @@ class _SuccessSnack extends StatelessWidget {
             color: colors.inverseSuccess,
           ),
           Flexible(
-            child: Text(
+            child: DkGroupedText(
               message,
               style: context.dkText.label.copyWith(color: colors.onInverse),
             ),
@@ -416,7 +417,7 @@ class DkDialogView extends StatelessWidget {
                         children: [
                           Semantics(
                             header: true,
-                            child: Text(
+                            child: DkGroupedText(
                               title,
                               textAlign: TextAlign.center,
                               style: text.titleDialog.copyWith(
@@ -424,7 +425,7 @@ class DkDialogView extends StatelessWidget {
                               ),
                             ),
                           ),
-                          Text(
+                          DkGroupedText(
                             message,
                             textAlign: TextAlign.center,
                             style: text.bodyMd.copyWith(

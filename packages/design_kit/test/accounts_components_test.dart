@@ -151,4 +151,87 @@ void main() {
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     expect(tester.getSize(find.byType(DkSegmentedControl<String>)).height, 56);
   });
+
+  testWidgets('balance card deductions use U+2212, not a hyphen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(
+        const DkBalanceCard(
+          label: 'Доступно к выводу',
+          amount: 815,
+          tiles: [
+            (label: 'Безнал', amount: 2400, deduction: false),
+            (label: 'Комиссия', amount: 585, deduction: true),
+            (label: 'Выведено', amount: 1000, deduction: true),
+          ],
+        ),
+      ),
+    );
+
+    final texts = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .map((r) => r.text.toPlainText())
+        .toList();
+    expect(texts, contains('\u2212585\u202F₸'));
+    expect(texts, contains('\u22121\u202F000\u202F₸'));
+    expect(texts, contains('2\u202F400\u202F₸'));
+    expect(texts.where((t) => t.contains('-')), isEmpty);
+  });
+
+  testWidgets(
+    'withdrawal row: amount in moneyM when prominent, one-line subtitle',
+    (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const DkWithdrawalTile(
+            amount: 1000,
+            prominent: true,
+            subtitle:
+                'Водитель 2 · 9 окт., 22:34, a very long subtitle '
+                'that must stay on one line',
+            status: DkStatusChip(
+              kind: DkStatusKind.pending,
+              label: 'В обработке',
+            ),
+          ),
+        ),
+      );
+
+      final amount = tester.widget<RichText>(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText() == '1\u202F000\u202F₸',
+        ),
+      );
+      // Text.rich wraps the money span in the default style; check the span.
+      final span = (amount.text as TextSpan).children!.first as TextSpan;
+      expect(span.style?.fontSize, DkTypography.standard.moneyM.fontSize);
+      final subtitle = tester.widget<RichText>(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().startsWith('Водитель 2'),
+        ),
+      );
+      expect(subtitle.maxLines, 1);
+    },
+  );
+
+  testWidgets('trip row: the driver has its own line', (tester) async {
+    await tester.pumpWidget(
+      wrap(
+        const DkTripTile(
+          timeRange: '08:10 – 08:32',
+          endsNextDay: false,
+          meta: '22 мин · Карта',
+          amount: '2\u202F400\u202F₸',
+          commission: 'комиссия 360\u202F₸',
+          method: DkPaymentMethod.card,
+          driver: 'Водитель 1',
+        ),
+      ),
+    );
+
+    final meta = tester.getRect(find.text('22 мин · Карта'));
+    final driver = tester.getRect(find.text('Водитель 1'));
+    expect(driver.top, greaterThanOrEqualTo(meta.bottom));
+  });
 }

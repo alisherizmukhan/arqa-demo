@@ -39,8 +39,13 @@ class DkTripTile extends StatelessWidget {
     required this.method,
     this.highlighted = false,
     this.nextDayLabel = 'следующий день',
+    this.driver,
     super.key,
   });
+
+  /// Admin, all drivers: the driver's name on its own third line (`caption`,
+  /// textTertiary), DESIGN.md §8.6.
+  final String? driver;
 
   /// `08:10 – 08:32`.
   final String timeRange;
@@ -143,6 +148,15 @@ class DkTripTile extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (driver case final name?)
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: text.caption.copyWith(
+                              color: colors.textTertiary,
+                            ),
+                          ),
                       ],
                     ),
                   ),

@@ -245,7 +245,10 @@ class DkListRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(title, style: text.bodyStrong.copyWith(color: tone)),
+                  DkGroupedText(
+                    title,
+                    style: text.bodyStrong.copyWith(color: tone),
+                  ),
                   if (subtitle case final value?)
                     DkGroupedText(
                       value,
@@ -296,11 +299,11 @@ class DkProfileCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  DkGroupedText(
                     name,
                     style: text.titleM.copyWith(color: colors.textPrimary),
                   ),
-                  Text(
+                  DkGroupedText(
                     caption,
                     style: text.caption.copyWith(color: colors.textTertiary),
                   ),
@@ -537,30 +540,35 @@ class DkBalanceCard extends StatelessWidget {
   }
 }
 
-/// A withdrawal row, DESIGN.md §8.4 / §8.6: icon tile `wallet` · [title]
-/// (amount, or driver for the admin) over [subtitle] (date) and an optional
-/// [note] (reject reason) · [status] chip. [actions] go under the row
-/// (the admin's «Отклонить» / «Выплатить»). [highlighted]: accentSoft.
+/// A withdrawal row, DESIGN.md §8.4 / §8.6: icon tile `wallet` · [amount]
+/// (`bodyStrong`; `moneyM` when [prominent], the admin list) over [subtitle]
+/// (one line: date, or «driver · date») and an optional [note] (reject
+/// reason) · [status] chip. [actions] go under the row (the admin's
+/// «Отклонить» / «Выплатить»). [highlighted]: accentSoft.
 class DkWithdrawalTile extends StatelessWidget {
   /// Creates the row.
   const new({
-    required this.title,
+    required this.amount,
     required this.subtitle,
     required this.status,
+    this.prominent = false,
     this.note,
     this.actions,
     this.highlighted = false,
     super.key,
   });
 
-  /// `bodyStrong` first line.
-  final String title;
+  /// Whole tenge.
+  final int amount;
 
-  /// `caption` second line.
+  /// `caption` second line, never wrapped.
   final String subtitle;
 
   /// Status chip.
   final Widget status;
+
+  /// `moneyM` amount (admin list) instead of `bodyStrong`.
+  final bool prominent;
 
   /// Third line (`caption`, textSecondary), e.g. the reject reason.
   final String? note;
@@ -598,22 +606,37 @@ class DkWithdrawalTile extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      DkGroupedText(
-                        title,
-                        style: text.bodyStrong.copyWith(
-                          color: colors.textPrimary,
-                        ),
+                      // The chip shares the amount's line, so the subtitle
+                      // below gets the full width.
+                      Row(
+                        spacing: spacing.s8,
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: DkMoneyText(
+                                amount,
+                                style:
+                                    (prominent ? text.moneyM : text.bodyStrong)
+                                        .copyWith(color: colors.textPrimary),
+                              ),
+                            ),
+                          ),
+                          status,
+                        ],
                       ),
-                      Text(
+                      DkGroupedText(
                         subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: text.caption.copyWith(
                           color: colors.textTertiary,
                         ),
                       ),
                       if (note case final value?)
-                        Text(
+                        DkGroupedText(
                           value,
                           style: text.caption.copyWith(
                             color: colors.textSecondary,
@@ -622,7 +645,6 @@ class DkWithdrawalTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                status,
               ],
             ),
           ),
@@ -655,7 +677,7 @@ class DkInfoRow extends StatelessWidget {
           color: colors.textSecondary,
         ),
         Expanded(
-          child: Text(
+          child: DkGroupedText(
             text,
             style: context.dkText.bodyS.copyWith(color: colors.textSecondary),
           ),
@@ -754,14 +776,14 @@ class DkActionSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      DkGroupedText(
                         title,
                         style: context.dkText.titleM.copyWith(
                           color: colors.textPrimary,
                         ),
                       ),
                       if (subtitle case final value?)
-                        Text(
+                        DkGroupedText(
                           value,
                           style: context.dkText.caption.copyWith(
                             color: colors.textTertiary,
