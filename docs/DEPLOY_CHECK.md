@@ -80,3 +80,24 @@ FROM tr, w;
 ```
 
 Result: 258 450 − 58 123 − 0 = **200 327 ₸** — the same as computed from `data/trips.json` in the stage 0 audit (F6), so the deployed data is exactly the seed. The balance endpoint (stage 3) must return this value for user_1.
+
+## Stage 2 — deploy with AUTH_REQUIRED=false (2026-10-09)
+
+Allowed during stages 2–4 only with `AUTH_REQUIRED=false` (DECISIONS.md, «Branches and deploys»).
+
+- Before the deploy: `railway variable set AUTH_REQUIRED=false --service api --skip-deploys`; the variable is also declared in `.railway/railway.ts` (`railway config plan`: already up to date — without it, the plan wanted to delete the variable).
+- Rehearsed first with the production image on a fresh local database (`AUTH_REQUIRED=false`): migrations 0001 → 0003, seed, the README curl examples for login / me / summary / logout.
+- Deployed from `main` at `29ff68a` (CI green) with `railway up --service api --ci`. Deployment `052aa7ab-74fd-4e50-bad3-d5c5f659f936`: **SUCCESS**, healthcheck passed.
+- Deploy log: `Running upgrade 0002 -> 0003, login_failures …`; `seed: 0 demo accounts created, 0 passwords reset`; `seed: inserted 0 of 133 trips`.
+
+| Check (deployed API) | Result |
+|---|---|
+| `GET /health` | 200 `{"status":"ok","database":"ok"}` |
+| `GET /summary?date=2026-10-01` **without a token** (acts as user_1, like the released app) | 200: 2 trips, 3 900 / 585 / 3 315, cash 1 500 / card 2 400 — **exact** |
+| `POST /auth/login` user_2, then `/summary` with its token | 2 trips, 4 800 / 720 / 4 080, cash 1 800 / card 3 000 |
+| `POST /auth/login` admin, then `/summary` | all drivers: 4 trips, 8 700 / 1 305 / 7 395, cash 3 300 / card 5 400 |
+| Unknown token | 401 `unauthorized` (checked even with AUTH_REQUIRED=false) |
+| user_2's token with `driver_id` | 403 |
+| `POST /auth/logout` (user_2, admin), then `/auth/me` | 204, then 401 |
+
+Database after the checks: revision `0003`, 133 trips, 2 sessions (both from these checks, both revoked), 0 login failures.
