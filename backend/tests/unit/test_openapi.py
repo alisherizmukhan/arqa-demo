@@ -77,6 +77,21 @@ def test_account_endpoints_are_documented(spec: dict[str, Any]) -> None:
             },
         ),
         ("/admin/users", "get", {"401": "unauthorized", "403": "forbidden"}),
+        (
+            "/withdrawals",
+            "post",
+            {
+                "401": "unauthorized",
+                "403": "forbidden",
+                "409": "withdrawal_conflict",
+                "422": "insufficient_funds",
+            },
+        ),
+        (
+            "/admin/withdrawals/{withdrawal_id}/approve",
+            "post",
+            {"403": "forbidden", "404": "not_found", "409": "withdrawal_already_decided"},
+        ),
     ],
 )
 def test_error_responses_have_the_shape_and_an_example(
@@ -87,3 +102,12 @@ def test_error_responses_have_the_shape_and_an_example(
         content = responses[status]["content"]["application/json"]
         assert content["schema"]["$ref"] == "#/components/schemas/ErrorResponse"
         assert content["example"]["error"]["code"] == code
+
+
+def test_withdrawal_endpoints_are_documented(spec: dict[str, Any]) -> None:
+    paths = spec["paths"]
+    assert "get" in paths["/balance"]
+    assert {"get", "post"} <= paths["/withdrawals"].keys()
+    assert "post" in paths["/admin/withdrawals/{withdrawal_id}/approve"]
+    assert "post" in paths["/admin/withdrawals/{withdrawal_id}/reject"]
+    assert {"200", "201"} <= paths["/withdrawals"]["post"]["responses"].keys()

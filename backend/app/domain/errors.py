@@ -15,6 +15,7 @@ class ErrorCode(StrEnum):
     INVALID_TIMEZONE = "invalid_timezone"
     DATETIME_OUT_OF_RANGE = "datetime_out_of_range"
     TRIP_TOO_LONG = "trip_too_long"
+    INVALID_REASON = "invalid_reason"
 
 
 class DomainError(Exception):

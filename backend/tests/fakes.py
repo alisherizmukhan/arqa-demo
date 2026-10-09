@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -5,6 +7,7 @@ from uuid import UUID, uuid4
 from app.application.ports import ActiveSession, OwnedTrip
 from app.domain.trip import Trip
 from app.domain.user import Role, User
+from app.domain.withdrawal import RESERVED_STATUSES, Balance, Withdrawal, WithdrawalStatus
 
 DRIVER_1 = UUID("00000000-0000-4000-8000-000000000001")
 DRIVER_2 = UUID("00000000-0000-4000-8000-000000000002")
@@ -159,3 +162,64 @@ class PlainTextHasher:
 
     def dummy_hash(self) -> str:
         return "plain-dummy"
+
+
+class InMemoryWithdrawalStore:
+    """WithdrawalStore for unit tests. `trips` gives each driver's card and
+    commission totals; a transaction rolls back (restores the dict) on error."""
+
+    def __init__(self, trips: dict[UUID, tuple[int, int]] | None = None) -> None:
+        self.trips = trips or {}
+        self.withdrawals: dict[UUID, Withdrawal] = {}
+        self.locked_drivers: list[UUID] = []
+        self.locked_reads = 0
+
+    def _balance(self, driver_id: UUID | None) -> Balance:
+        drivers = list(self.trips) if driver_id is None else [driver_id]
+        card = sum(self.trips.get(d, (0, 0))[0] for d in drivers)
+        commission = sum(self.trips.get(d, (0, 0))[1] for d in drivers)
+        withdrawn = sum(
+            w.amount
+            for w in self.withdrawals.values()
+            if (driver_id is None or w.driver_id == driver_id) and w.status in RESERVED_STATUSES
+        )
+        return Balance(card_total=card, commission_total=commission, withdrawn_total=withdrawn)
+
+    @asynccontextmanager
+    async def transaction(self) -> AsyncIterator["InMemoryWithdrawalStore"]:
+        snapshot = dict(self.withdrawals)
+        try:
+            yield self
+        except BaseException:
+            self.withdrawals = snapshot
+            raise
+
+    async def lock_driver(self, driver_id: UUID) -> None:
+        self.locked_drivers.append(driver_id)
+
+    async def get(self, withdrawal_id: UUID, *, for_update: bool = False) -> Withdrawal | None:
+        self.locked_reads += for_update
+        return self.withdrawals.get(withdrawal_id)
+
+    async def balance(self, driver_id: UUID | None) -> Balance:
+        return self._balance(driver_id)
+
+    async def insert_if_absent(self, withdrawal: Withdrawal) -> bool:
+        if withdrawal.id in self.withdrawals:
+            return False
+        self.withdrawals[withdrawal.id] = withdrawal
+        return True
+
+    async def save_decision(self, withdrawal: Withdrawal) -> None:
+        self.withdrawals[withdrawal.id] = withdrawal
+
+    async def list(
+        self, driver_id: UUID | None, status: WithdrawalStatus | None
+    ) -> list[Withdrawal]:
+        found = [
+            w
+            for w in self.withdrawals.values()
+            if (driver_id is None or w.driver_id == driver_id)
+            and (status is None or w.status is status)
+        ]
+        return sorted(found, key=lambda w: w.created_at, reverse=True)

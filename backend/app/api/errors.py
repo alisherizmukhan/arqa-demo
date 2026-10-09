@@ -15,11 +15,14 @@ from app.application.errors import (
     AccountDisabledError,
     DemoAccountProtectedError,
     ForbiddenError,
+    InsufficientFundsError,
     InvalidCredentialsError,
     NotAuthenticatedError,
     NotFoundError,
     TooManyLoginAttemptsError,
     TripConflictError,
+    WithdrawalAlreadyDecidedError,
+    WithdrawalConflictError,
 )
 from app.domain.errors import DomainValidationError, ErrorCode
 
@@ -41,6 +44,9 @@ class ApiErrorCode(StrEnum):
     RATE_LIMITED = "rate_limited"
     FORBIDDEN = "forbidden"
     DEMO_ACCOUNT_PROTECTED = "demo_account_protected"
+    INSUFFICIENT_FUNDS = "insufficient_funds"
+    WITHDRAWAL_CONFLICT = "withdrawal_conflict"
+    WITHDRAWAL_ALREADY_DECIDED = "withdrawal_already_decided"
     NOT_FOUND = "not_found"
     METHOD_NOT_ALLOWED = "method_not_allowed"
     HTTP_ERROR = "http_error"
@@ -145,6 +151,27 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ForbiddenError)
     async def _forbidden(_: Request, exc: ForbiddenError) -> JSONResponse:
         return error_response(status.HTTP_403_FORBIDDEN, ApiErrorCode.FORBIDDEN, str(exc))
+
+    @app.exception_handler(InsufficientFundsError)
+    async def _insufficient(_: Request, exc: InsufficientFundsError) -> JSONResponse:
+        return error_response(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            ApiErrorCode.INSUFFICIENT_FUNDS,
+            str(exc),
+            field="amount",
+        )
+
+    @app.exception_handler(WithdrawalConflictError)
+    async def _withdrawal_conflict(_: Request, exc: WithdrawalConflictError) -> JSONResponse:
+        return error_response(
+            status.HTTP_409_CONFLICT, ApiErrorCode.WITHDRAWAL_CONFLICT, str(exc), field="id"
+        )
+
+    @app.exception_handler(WithdrawalAlreadyDecidedError)
+    async def _already_decided(_: Request, exc: WithdrawalAlreadyDecidedError) -> JSONResponse:
+        return error_response(
+            status.HTTP_409_CONFLICT, ApiErrorCode.WITHDRAWAL_ALREADY_DECIDED, str(exc)
+        )
 
     @app.exception_handler(DemoAccountProtectedError)
     async def _demo_protected(_: Request, exc: DemoAccountProtectedError) -> JSONResponse:

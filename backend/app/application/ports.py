@@ -1,3 +1,4 @@
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
@@ -5,6 +6,7 @@ from uuid import UUID
 
 from app.domain.trip import Trip
 from app.domain.user import Role, User
+from app.domain.withdrawal import Balance, Withdrawal, WithdrawalStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,3 +113,39 @@ class Accounts:
     users: UserRepository
     sessions: SessionRepository
     demo_logins: frozenset[str] = frozenset()
+
+
+class WithdrawalTransaction(Protocol):
+    """Reads and writes inside one database transaction (see WithdrawalStore)."""
+
+    async def lock_driver(self, driver_id: UUID) -> None:
+        """Take the driver's row lock until the transaction ends: requests for
+        the same driver run one after another, so the balance cannot be spent
+        twice."""
+        ...
+
+    async def get(self, withdrawal_id: UUID, *, for_update: bool = False) -> Withdrawal | None: ...
+
+    async def balance(self, driver_id: UUID) -> Balance: ...
+
+    async def insert_if_absent(self, withdrawal: Withdrawal) -> bool:
+        """INSERT ... ON CONFLICT (id) DO NOTHING; True if inserted."""
+        ...
+
+    async def save_decision(self, withdrawal: Withdrawal) -> None: ...
+
+
+class WithdrawalStore(Protocol):
+    def transaction(self) -> AbstractAsyncContextManager[WithdrawalTransaction]:
+        """Commit when the block ends normally, roll back on an exception."""
+        ...
+
+    async def balance(self, driver_id: UUID | None) -> Balance:
+        """One driver's balance, or the sum over all drivers (None)."""
+        ...
+
+    async def list(
+        self, driver_id: UUID | None, status: WithdrawalStatus | None
+    ) -> list[Withdrawal]:
+        """Newest first."""
+        ...

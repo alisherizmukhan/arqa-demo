@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.api.account_routes import router as account_router
 from app.api.errors import install_error_handlers
 from app.api.routes import router
+from app.api.withdrawal_routes import router as withdrawal_router
 from app.application.use_cases import seed_accounts, seed_trips
 from app.infrastructure.db import create_engine, create_sessionmaker
 from app.infrastructure.passwords import Argon2PasswordHasher
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.include_router(router)
     app.include_router(account_router)
+    app.include_router(withdrawal_router)
     return app
 
 

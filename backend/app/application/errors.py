@@ -54,3 +54,23 @@ class DemoAccountProtectedError(DomainError):
     def __init__(self, login: str) -> None:
         super().__init__(f"{login!r} is a demo account and cannot be blocked or signed out")
         self.login = login
+
+
+class InsufficientFundsError(DomainError):
+    def __init__(self, available: int) -> None:
+        super().__init__(f"amount is more than the available balance ({available})")
+        self.available = available
+
+
+class WithdrawalConflictError(DomainError):
+    """The id is taken by a withdrawal with another amount, or by another
+    driver's withdrawal (same message: nothing about it is revealed)."""
+
+    def __init__(self, withdrawal_id: object) -> None:
+        super().__init__(f"withdrawal {withdrawal_id} already exists with a different amount")
+
+
+class WithdrawalAlreadyDecidedError(DomainError):
+    def __init__(self, withdrawal_id: object, status: str) -> None:
+        super().__init__(f"withdrawal {withdrawal_id} is already {status}")
+        self.status = status
