@@ -457,7 +457,7 @@ Keep copy in one file (`core/l10n/strings_ru.dart` or ARB). No English strings i
 - DkFilterChips: horizontal scroll row of chips height 40 (tap area 48), radius pill, padding h 16; selected bg accent fg onAccent; unselected bg surface, border 1 border, fg textPrimary; label 14/600.
 
 ### 8.1 Login
-- bg `bg`, SafeArea, padding 16. Top-right: DkLanguageSwitch compact (width 200, height 48).
+- bg `bg`, SafeArea, padding 16. Top-right: DkLanguageSwitch (width 200, height **56** — approved: at 48 the segments would be 40, below the 48 dp tap target).
 - Centered block (max width 360): wordmark (accent square 16 + «Дневник смен» wordmark style), gap 32, title «Вход» titleL, gap 24, fields «Логин» (DkTextField, autofill username), gap 16 «Пароль» (DkPasswordField, autofill password), gap 24, DkButton primary expand «Войти» (loading «Входим…»).
 - Error: under the password field, error row «Неверный логин или пароль». Rate-limit: «Слишком много попыток. Попробуйте через 15 минут.» Offline: error snackbar «Нет связи. Проверьте интернет.»
 - Keyboard: Enter on login → focus password; Enter on password → submit.
@@ -496,8 +496,8 @@ Keep copy in one file (`core/l10n/strings_ru.dart` or ARB). No English strings i
 ### 8.6 Admin («Админка»)
 - Day-screen layout reused. Header: wordmark + caption «Администратор» + DkIconButton menu (Menu without «Вывод средств»).
 - Under the header: DkSegmentedControl with 3 segments: «Поездки» / «Выводы» / «Водители».
-- Поездки: DkFilterChips «Все водители», «Водитель 1», «Водитель 2» (from /admin/users) → DkDaySwitcher → summary card + payment card + trip list for the selection. In «Все водители» each trip row's meta line is «22 мин · Карта · Водитель 1». No FAB (admin does not create trips).
-- Выводы: DkFilterChips «В обработке», «Все»; list rows: driver name, amount, date, status chip; pending rows have two buttons under the row content: DkButton secondary «Отклонить» and primary «Выплатить» (each 48 high, side by side). Reject opens a dialog with a text field «Причина» (required). Approve → no dialog, button loading then row updates; success snackbar «Отмечено как выплачено».
+- Поездки: DkFilterChips «Все водители», «Водитель 1», «Водитель 2» (from /admin/users) → DkDaySwitcher → summary card + payment card + trip list for the selection. In «Все водители» each trip row keeps its meta line «22 мин · Карта» and gets the driver's name on its own **third line** (`caption`, textTertiary, one line, ellipsis) — same size in every row, never shrunk to fit (`DkTripTile(driver: …)`). No FAB (admin does not create trips).
+- Выводы: DkFilterChips «В обработке», «Все»; list rows (`DkWithdrawalTile(prominent: true)`): title = amount (`moneyM`, `DkMoneyText`), subtitle = «Водитель 2 · 9 окт., 22:34» (`caption`, one line), status chip on the right; no reject reason in the admin list, so every row's content block has the same height (and every row with buttons too) at 360 and 390 dp, text 1.0 — tested; pending rows have two buttons under the row content: DkButton secondary «Отклонить» and primary «Выплатить» (each 48 high, side by side). Reject opens a dialog with a text field «Причина» (required). Approve → no dialog, button loading then row updates; success snackbar «Отмечено как выплачено».
 - Водители: DkListGroup rows: display name, «@user_1», trailing balance moneyM; row tap → bottom sheet with actions: «Заблокировать» / «Разблокировать» (is_active), «Сбросить все сессии» (confirm dialog «Водитель выйдет на всех устройствах»).
 - Empty / error / loading states reuse DkEmptyState, DkErrorState, DkSkeleton.
 
@@ -513,8 +513,9 @@ Components live in `packages/design_kit/lib/src/components/dk_accounts.dart` unl
 | DkIconButton | `DkIconButton(icon, label, onPressed, active)` in `dk_chrome.dart`; icon 24 (`iconNav`); `active` draws the icon in `accent` (the sort button). |
 | DkListGroup + DkListRow | `DkListGroup(children)` inserts the inset-68 dividers; `DkListAttachment(child)` sits under the row above it without a divider (the language switch under «Язык»). `DkListRow(title, icon, subtitle, trailing, onTap, destructive)` — a chevron when tappable and no trailing. |
 | DkStatusChip | `DkStatusChip(kind: DkStatusKind.pending/paid/rejected, label)`. |
+| Money in any text | Every amount is built by `DkMoney.format` (U+202F before ₸ and between groups, U+2212 minus) and drawn by `DkMoneyText` / `DkGroupedText`, which widen the gap; a plain `Text` draws U+202F too narrow. Kit texts that can carry an amount (list rows, dialog title and message, snackbars, sheet titles, info line, withdrawal rows) render through `DkGroupedText`. `example/test/accounts_screens_test.dart` fails on any rendered «₸» without U+202F before it, a hyphen minus, or a narrow gap. |
 | DkPasswordField | `DkPasswordField(label, controller, showLabel, hideLabel, …)`; `DkTextField` gained `obscureText`, `autofillHints`, `onSubmitted`, and its `trailing` is now a separate semantics node (otherwise the eye button merged into the field and was unreachable for screen readers). |
-| DkLanguageSwitch | `DkLanguageSwitch(languages: [(code, name)], selected, onChanged)`. **Deviation (pending approval):** always 56 high, also on the login screen — a 48-high track (§8.1 "compact") leaves 40-high segments, below the 48 dp tap target of §1. The login switch keeps width 200. |
+| DkLanguageSwitch | `DkLanguageSwitch(languages: [(code, name)], selected, onChanged)`. **Approved deviation:** always 56 high, also on the login screen — a 48-high track (§8.1 "compact") leaves 40-high segments, below the 48 dp tap target of §1. The login switch keeps width 200. |
 | DkFilterChips | `DkFilterChips<T>(options: [(value, label)], selected, onChanged)`. |
 
 Also added for §8.3–8.6:
