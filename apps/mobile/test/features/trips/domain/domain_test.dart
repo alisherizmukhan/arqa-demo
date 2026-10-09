@@ -29,6 +29,36 @@ void main() {
       );
     });
 
+    test('reference case 2026-10-01, user_2', () {
+      expect(
+        calculateDailySummary(referenceDay, [u2t1, u2t2], kz),
+        DailySummary(
+          day: referenceDay,
+          tripsCount: 2,
+          revenue: 4800,
+          commission: 720,
+          net: 4080,
+          cash: 1800,
+          card: 3000,
+        ),
+      );
+    });
+
+    test('reference case 2026-10-01, all drivers (admin)', () {
+      expect(
+        calculateDailySummary(referenceDay, [t1, t2, u2t1, u2t2], kz),
+        DailySummary(
+          day: referenceDay,
+          tripsCount: 4,
+          revenue: 8700,
+          commission: 1305,
+          net: 7395,
+          cash: 3300,
+          card: 5400,
+        ),
+      );
+    });
+
     test('empty day is all zeros', () {
       final summary = calculateDailySummary(referenceDay, const [], kz);
       expect(

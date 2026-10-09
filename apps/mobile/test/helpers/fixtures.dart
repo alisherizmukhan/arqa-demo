@@ -29,6 +29,24 @@ final t2 = Trip(
   commission: 225,
 );
 
+/// user_2's reference trips on 2026-10-01 (seed ids u2-t1, u2-t2).
+final u2t1 = Trip(
+  id: 'u2-t1',
+  start: at(10, 0),
+  end: at(10, 40),
+  amount: 3000,
+  payment: PaymentMethod.card,
+  commission: 450,
+);
+final u2t2 = Trip(
+  id: 'u2-t2',
+  start: at(12, 15),
+  end: at(12, 35),
+  amount: 1800,
+  payment: PaymentMethod.cash,
+  commission: 270,
+);
+
 Trip trip({
   String id = 'trip-1',
   DateTime? start,
