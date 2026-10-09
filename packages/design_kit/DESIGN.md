@@ -524,8 +524,17 @@ Also added for §8.3–8.6:
 - `DkWordmark(caption: …)` — «Администратор» under the wordmark (§8.6); `trailing` takes the header buttons.
 - `DkProfileCard(name, caption)` — §8.3 profile card.
 - `DkBalanceCard(label, amount, tiles)` — §8.4 balance card (summary-card layout; tiles marked `deduction` show `−`).
-- `DkWithdrawalTile(title, subtitle, status, note, actions, highlighted)` and `DkDecisionButtons(…)` — §8.4 history rows and §8.6 rows with «Отклонить» / «Выплатить» (`DkButton(compact: true)` = 48 high).
+- `DkWithdrawalTile(amount, subtitle, status, prominent, note, actions, highlighted)` and `DkDecisionButtons(…)` — §8.4 history rows and §8.6 rows with «Отклонить» / «Выплатить» (`DkButton(compact: true)` = 48 high).
 - `DkInfoRow(text)` — «Сейчас нечего выводить.»
 - `showDkActionSheet(title, subtitle, actions)` / `DkActionSheet` — §8.6 driver actions.
 - `DkDialogView` / `showDkDialog`: `content` slot (the «Причина» field), `primaryEnabled`, `primaryLoading`.
+
+### 8.9 Languages (stage 5)
+
+- **The kit has no texts at all.** The Russian defaults of the older components became required parameters: `DkSummaryCard` (4 labels), `DkPaymentCard` / `DkSplitBar` (cash / card), `DkWordmark.title`, `DkTodayButton.label`, `DkModalAppBar.closeLabel`, `DkErrorState.retryLabel`, `DkTimeField.emptyValueLabel`, `DkTripTile.nextDayLabel`, `showDkTimePicker` / `showDkDatePicker` (`title`, `doneLabel`). `DkPaymentMethod.label` is gone.
+- **`DkDaySwitcher` takes formatted texts**: `title`, `subtitle`, `pickLabel` (spoken), `prevLabel`, `nextLabel`; `onNext: null` disables next (today). The app formats Сегодня / Вчера / the date in the active language.
+- **`DkFormat` keeps only language-neutral helpers** (`clock`, `timeRange`, `splitPercent`). Dates, durations and plurals are formatted by the app (`AppFormat` on `AppLocalizations`, `intl` + ICU plurals). The showcase has its own Russian helpers (`example/lib/ru.dart`).
+- **`DkMoneySemantics(label)`** above the screens tells `DkMoneyText` how to speak an amount («3 315 тенге» / «3 315 теңге»); without it a screen reader reads the visible text.
+- Money looks the same in every language (`DkMoney.format`).
+- CI fails on a Cyrillic literal in `apps/mobile/lib` or `packages/design_kit/lib` outside the generated localizations. Copy and the review list: `docs/L10N.md`.
 
