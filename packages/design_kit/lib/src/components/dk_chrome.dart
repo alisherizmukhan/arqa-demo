@@ -6,10 +6,18 @@ import 'package:flutter/material.dart';
 /// «Дневник смен» in `wordmark`; row min height 48.
 class DkWordmark extends StatelessWidget {
   /// Creates the wordmark.
-  const new({this.title = 'Дневник смен', this.trailing, super.key});
+  const new({
+    this.title = 'Дневник смен',
+    this.trailing,
+    this.caption,
+    super.key,
+  });
 
   /// App title.
   final String title;
+
+  /// Small line under the title («Администратор» on the admin screen).
+  final String? caption;
 
   /// Right-aligned action (e.g. [DkTodayButton]).
   final Widget? trailing;
@@ -36,11 +44,24 @@ class DkWordmark extends StatelessWidget {
           Expanded(
             child: Semantics(
               header: true,
-              child: Text(
-                title,
-                style: context.dkText.wordmark.copyWith(
-                  color: colors.textPrimary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: context.dkText.wordmark.copyWith(
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  if (caption case final value?)
+                    Text(
+                      value,
+                      style: context.dkText.caption.copyWith(
+                        color: colors.textTertiary,
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -123,8 +144,12 @@ class DkModalAppBar extends StatelessWidget {
     required this.onClose,
     this.subtitle,
     this.closeLabel = 'Закрыть',
+    this.leadingIcon = DkIcons.close,
     super.key,
   });
+
+  /// ✕ for a modal form; [DkIcons.previous] for a pushed page («Назад»).
+  final IconData leadingIcon;
 
   /// Title.
   final String title;
@@ -158,7 +183,7 @@ class DkModalAppBar extends StatelessWidget {
                   onTap: onClose,
                   borderRadius: BorderRadius.circular(context.dkRadii.md),
                   child: Icon(
-                    DkIcons.close,
+                    leadingIcon,
                     size: sizes.iconNav,
                     color: colors.textPrimary,
                   ),
@@ -234,7 +259,7 @@ class DkBottomBar extends StatelessWidget {
   }
 }
 
-/// 48×48 icon button, DESIGN.md §8.0: transparent, radius md, icon 22
+/// 48×48 icon button, DESIGN.md §8.0: transparent, radius md, icon 24
 /// (`textPrimary`, or `accent` when [active]). [label] is its spoken name.
 class DkIconButton extends StatelessWidget {
   /// Creates the button.
@@ -273,7 +298,7 @@ class DkIconButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(context.dkRadii.md),
           child: Icon(
             icon,
-            size: sizes.iconAction,
+            size: sizes.iconNav,
             color: active ? colors.accent : colors.textPrimary,
           ),
         ),

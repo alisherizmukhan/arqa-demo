@@ -19,6 +19,45 @@ abstract final class DkIcons {
   /// Jump to today.
   static const IconData today = LucideIcons.calendarCheck400;
 
+  /// Header button that opens the Menu.
+  static const IconData menu = LucideIcons.circleUserRound400;
+
+  /// Profile tile in the Menu.
+  static const IconData user = LucideIcons.userRound400;
+
+  /// Withdrawals.
+  static const IconData wallet = LucideIcons.wallet400;
+
+  /// Language.
+  static const IconData languages = LucideIcons.languages400;
+
+  /// Log out.
+  static const IconData logOut = LucideIcons.logOut400;
+
+  /// Info line.
+  static const IconData info = LucideIcons.info400;
+
+  /// Show password.
+  static const IconData eye = LucideIcons.eye400;
+
+  /// Hide password.
+  static const IconData eyeOff = LucideIcons.eyeOff400;
+
+  /// Pending status.
+  static const IconData pending = LucideIcons.clock400;
+
+  /// Rejected status.
+  static const IconData rejected = LucideIcons.circleX400;
+
+  /// Block an account.
+  static const IconData block = LucideIcons.ban400;
+
+  /// Unblock an account.
+  static const IconData unblock = LucideIcons.lockOpen400;
+
+  /// End all sessions of an account.
+  static const IconData signOutEverywhere = LucideIcons.monitorSmartphone400;
+
   /// Sort order of a list.
   static const IconData sort = LucideIcons.arrowUpDown400;
 

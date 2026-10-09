@@ -161,6 +161,9 @@ class DkTextField extends StatefulWidget {
     this.autofocus = false,
     this.focusNode,
     this.onChanged,
+    this.onSubmitted,
+    this.obscureText = false,
+    this.autofillHints,
     super.key,
   });
 
@@ -177,8 +180,11 @@ class DkTextField extends StatefulWidget {
     this.autofocus = false,
     this.focusNode,
     this.onChanged,
+    this.onSubmitted,
     super.key,
   }) : prefixIcon = null,
+       obscureText = false,
+       autofillHints = null,
        suffix = DkMoney.currency,
        style = null,
        keyboardType = TextInputType.number,
@@ -231,6 +237,15 @@ class DkTextField extends StatefulWidget {
 
   /// Change handler.
   final ValueChanged<String>? onChanged;
+
+  /// Keyboard action pressed (Enter).
+  final ValueChanged<String>? onSubmitted;
+
+  /// Hide the text (passwords).
+  final bool obscureText;
+
+  /// Autofill hints (login, password).
+  final Iterable<String>? autofillHints;
 
   @override
   State<DkTextField> createState() => _DkTextFieldState();
@@ -308,6 +323,11 @@ class _DkTextFieldState extends State<DkTextField> {
                 textInputAction: widget.textInputAction,
                 inputFormatters: widget.inputFormatters,
                 onChanged: widget.onChanged,
+                onSubmitted: widget.onSubmitted,
+                obscureText: widget.obscureText,
+                enableSuggestions: !widget.obscureText,
+                autocorrect: !widget.obscureText,
+                autofillHints: widget.autofillHints,
                 cursorColor: colors.accent,
                 style: base.copyWith(
                   color: widget.enabled
@@ -327,7 +347,9 @@ class _DkTextFieldState extends State<DkTextField> {
               ),
             if (widget.trailing case final trailing?) ...[
               SizedBox(width: context.dkSpacing.s8),
-              trailing,
+              // Its own node, so a trailing button (the password eye) stays
+              // reachable by screen readers instead of merging into the field.
+              Semantics(container: true, child: trailing),
             ],
           ],
         ),

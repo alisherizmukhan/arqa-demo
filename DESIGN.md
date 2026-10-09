@@ -442,3 +442,89 @@ Keep copy in one file (`core/l10n/strings_ru.dart` or ARB). No English strings i
 - [x] Money formatting tests assert U+202F and U+2212. *(`dk_money_test.dart`)*
 - [x] All tap targets ≥ 48; Semantics labels as listed. *(`apps/mobile/test/screens/accessibility_test.dart`, every state, light + dark)*
 - [x] Text scale 1.3: no clipping on Day and Add trip screens. *(`layout_matrix_test.dart`: 390×844 and 360×780, 1.0 and 1.3, real fonts; no overflow, no truncated text)*
+
+---
+
+## 8. New screens (accounts, menu, withdrawals, admin)
+
+### 8.0 New kit components
+- DkIconButton: 48×48, radius md, icon 24, transparent; used in headers.
+- DkListGroup + DkListRow: DkCard(padding 0, clip) with rows min 56, padding 0 16, gap 12: leading icon tile 40 (surfaceMuted, icon 22), title bodyStrong (or titleM-weight 600 16/24), optional subtitle caption textTertiary, trailing (chevron-right 20 textTertiary | value | control). Dividers 1px divider inset 68. Destructive row: title + icon in `error`.
+- DkStatusChip: height 24, radius sm, padding h 8, gap 4, icon 14 + text badge style.
+  pending: bg surfaceMuted, fg textSecondary, icon clock; paid: bg successSoft, fg success, icon circle-check; rejected: bg errorSoft, fg error, icon circle-x. Always icon + text.
+- DkPasswordField: DkTextField + trailing DkIconButton eye / eye-off («Показать пароль» / «Скрыть пароль»).
+- DkLanguageSwitch: DkSegmentedControl with two segments «Русский» / «Қазақша» (no icons). Labels are always in their own language, never translated.
+- DkFilterChips: horizontal scroll row of chips height 40 (tap area 48), radius pill, padding h 16; selected bg accent fg onAccent; unselected bg surface, border 1 border, fg textPrimary; label 14/600.
+
+### 8.1 Login
+- bg `bg`, SafeArea, padding 16. Top-right: DkLanguageSwitch compact (width 200, height 48).
+- Centered block (max width 360): wordmark (accent square 16 + «Дневник смен» wordmark style), gap 32, title «Вход» titleL, gap 24, fields «Логин» (DkTextField, autofill username), gap 16 «Пароль» (DkPasswordField, autofill password), gap 24, DkButton primary expand «Войти» (loading «Входим…»).
+- Error: under the password field, error row «Неверный логин или пароль». Rate-limit: «Слишком много попыток. Попробуйте через 15 минут.» Offline: error snackbar «Нет связи. Проверьте интернет.»
+- Keyboard: Enter on login → focus password; Enter on password → submit.
+
+### 8.2 Day screen header change (only change to existing screens)
+- Wordmark row gets a trailing DkIconButton (icon `circle-user-round`, Semantics «Меню»). Opens Menu (8.3). Nothing else changes.
+
+### 8.3 Menu («Меню»)
+- Pushed page. App bar like Add trip but with back arrow (`chevron-left`, «Назад») instead of close; title «Меню».
+- Profile card (DkCard, padding 16, row gap 12): icon tile 40 with `user-round`, column: display_name titleM, «@user_1 · Водитель» caption textTertiary (admin: «Администратор»).
+- gap 16, DkListGroup:
+  1. «Вывод средств» — icon `wallet`, subtitle «Доступно 1 815 ₸» (from /balance), chevron → 8.4. (Drivers only.)
+  2. «Язык» — icon `languages`, trailing nothing; below the row inside the group: DkLanguageSwitch full width (padding 0 16 16).
+- gap 16, DkListGroup: «Выйти» destructive row (icon `log-out`). Tap → DkDialog: icon log-out (errorSoft/error), title «Выйти из аккаунта?», message «Чтобы снова увидеть поездки, нужно будет войти по логину и паролю.», primary «Выйти», secondary «Отмена».
+- Footer caption textTertiary centered: app version.
+
+### 8.4 Withdraw («Вывод средств»)
+- Pushed page, back arrow, title «Вывод средств». Scrollable, padding 16, gap 16; bottom bar like Add trip with DkButton «Вывести».
+- Balance card = DkCard hero (radius xl, padding 20, gap 16): label «Доступно к выводу» → moneyHero accent amount; divider; 3-col DkSummaryTile grid: «Безнал» (Σ card), «Комиссия» (−Σ commission), «Выведено» (−Σ pending+paid).
+  Helper under the card (caption textTertiary): «Наличные остаются у вас, поэтому комиссия за них тоже списывается с безнала.»
+- Amount: DkTextField money «Сумма вывода», helper «Не больше 1 815 ₸». Trailing text button «Всё» (fills the available amount).
+- History: DkListHeader «История» + DkTripTile-like rows in a DkCard: icon tile `wallet` / title amount bodyStrong / subtitle date «5 октября 2026, 14:20» caption / trailing DkStatusChip («В обработке» / «Выплачено» / «Отклонено»; rejected shows reason as second subtitle line).
+- States:
+  - loading: skeleton of balance card + 3 history rows;
+  - empty history: small text «Заявок на вывод пока не было.» in the history card;
+  - balance ≤ 0: amount field disabled, button disabled, info row (icon `info`, textSecondary) «Сейчас нечего выводить.»;
+  - validation: «Сумма больше доступной», «Сумма должна быть больше 0»;
+  - saving: button loading «Отправляем…»;
+  - offline: error snackbar «Нет связи. Повторим запрос — деньги не уйдут дважды.» + «Повторить»;
+  - success: back to the top, new row highlighted (accentSoft 2 s), success snackbar «Заявка на вывод создана»;
+  - 409: DkDialog «Эта заявка уже отправлена с другой суммой», primary «Понятно» (refresh history).
+
+### 8.5 Session ended
+- Any 401 → Login with error snackbar «Сессия завершена. Войдите снова.»
+
+### 8.6 Admin («Админка»)
+- Day-screen layout reused. Header: wordmark + caption «Администратор» + DkIconButton menu (Menu without «Вывод средств»).
+- Under the header: DkSegmentedControl with 3 segments: «Поездки» / «Выводы» / «Водители».
+- Поездки: DkFilterChips «Все водители», «Водитель 1», «Водитель 2» (from /admin/users) → DkDaySwitcher → summary card + payment card + trip list for the selection. In «Все водители» each trip row's meta line is «22 мин · Карта · Водитель 1». No FAB (admin does not create trips).
+- Выводы: DkFilterChips «В обработке», «Все»; list rows: driver name, amount, date, status chip; pending rows have two buttons under the row content: DkButton secondary «Отклонить» and primary «Выплатить» (each 48 high, side by side). Reject opens a dialog with a text field «Причина» (required). Approve → no dialog, button loading then row updates; success snackbar «Отмечено как выплачено».
+- Водители: DkListGroup rows: display name, «@user_1», trailing balance moneyM; row tap → bottom sheet with actions: «Заблокировать» / «Разблокировать» (is_active), «Сбросить все сессии» (confirm dialog «Водитель выйдет на всех устройствах»).
+- Empty / error / loading states reuse DkEmptyState, DkErrorState, DkSkeleton.
+
+### 8.7 Copy additions (ru; kk goes to app_kk.arb)
+login «Логин», password «Пароль», loginTitle «Вход», signIn «Войти», signingIn «Входим…», showPassword «Показать пароль», hidePassword «Скрыть пароль», errInvalidCredentials «Неверный логин или пароль», errRateLimited «Слишком много попыток. Попробуйте через 15 минут.», sessionEnded «Сессия завершена. Войдите снова.», menu «Меню», back «Назад», roleDriver «Водитель», roleAdmin «Администратор», withdraw «Вывод средств», available «Доступно {amount}», language «Язык», logout «Выйти», logoutTitle «Выйти из аккаунта?», logoutMessage «Чтобы снова увидеть поездки, нужно будет войти по логину и паролю.», cancel «Отмена», availableToWithdraw «Доступно к выводу», cardTotal «Безнал», withdrawn «Выведено», cashNote «Наличные остаются у вас, поэтому комиссия за них тоже списывается с безнала.», withdrawAmount «Сумма вывода», maxHint «Не больше {amount}», all «Всё», history «История», noWithdrawals «Заявок на вывод пока не было.», nothingToWithdraw «Сейчас нечего выводить.», errInsufficient «Сумма больше доступной», withdrawButton «Вывести», sending «Отправляем…», withdrawOffline «Нет связи. Повторим запрос — деньги не уйдут дважды.», withdrawCreated «Заявка на вывод создана», withdrawConflict «Эта заявка уже отправлена с другой суммой», ok «Понятно», statusPending «В обработке», statusPaid «Выплачено», statusRejected «Отклонено», admin «Админка», tabTrips «Поездки», tabWithdrawals «Выводы», tabDrivers «Водители», allDrivers «Все водители», approve «Выплатить», reject «Отклонить», rejectReason «Причина», markedPaid «Отмечено как выплачено», block «Заблокировать», unblock «Разблокировать», revokeSessions «Сбросить все сессии», revokeSessionsMessage «Водитель выйдет на всех устройствах».
+
+### 8.8 Kit implementation (stage 4)
+
+Components live in `packages/design_kit/lib/src/components/dk_accounts.dart` unless noted. They have **no texts of their own** — every label is a parameter — so the app can translate them (stage 5). Showcase: `packages/design_kit/example`, «Аккаунты» tab and `example/test/accounts_screens_test.dart` (renders every screen state, light + dark).
+
+| §8.0 item | Kit API |
+|---|---|
+| DkIconButton | `DkIconButton(icon, label, onPressed, active)` in `dk_chrome.dart`; icon 24 (`iconNav`); `active` draws the icon in `accent` (the sort button). |
+| DkListGroup + DkListRow | `DkListGroup(children)` inserts the inset-68 dividers; `DkListAttachment(child)` sits under the row above it without a divider (the language switch under «Язык»). `DkListRow(title, icon, subtitle, trailing, onTap, destructive)` — a chevron when tappable and no trailing. |
+| DkStatusChip | `DkStatusChip(kind: DkStatusKind.pending/paid/rejected, label)`. |
+| DkPasswordField | `DkPasswordField(label, controller, showLabel, hideLabel, …)`; `DkTextField` gained `obscureText`, `autofillHints`, `onSubmitted`, and its `trailing` is now a separate semantics node (otherwise the eye button merged into the field and was unreachable for screen readers). |
+| DkLanguageSwitch | `DkLanguageSwitch(languages: [(code, name)], selected, onChanged)`. **Deviation (pending approval):** always 56 high, also on the login screen — a 48-high track (§8.1 "compact") leaves 40-high segments, below the 48 dp tap target of §1. The login switch keeps width 200. |
+| DkFilterChips | `DkFilterChips<T>(options: [(value, label)], selected, onChanged)`. |
+
+Also added for §8.3–8.6:
+
+- `DkModalAppBar(leadingIcon: DkIcons.previous, closeLabel: …)` — the back-arrow app bar of a pushed page.
+- `DkWordmark(caption: …)` — «Администратор» under the wordmark (§8.6); `trailing` takes the header buttons.
+- `DkProfileCard(name, caption)` — §8.3 profile card.
+- `DkBalanceCard(label, amount, tiles)` — §8.4 balance card (summary-card layout; tiles marked `deduction` show `−`).
+- `DkWithdrawalTile(title, subtitle, status, note, actions, highlighted)` and `DkDecisionButtons(…)` — §8.4 history rows and §8.6 rows with «Отклонить» / «Выплатить» (`DkButton(compact: true)` = 48 high).
+- `DkInfoRow(text)` — «Сейчас нечего выводить.»
+- `showDkActionSheet(title, subtitle, actions)` / `DkActionSheet` — §8.6 driver actions.
+- `DkDialogView` / `showDkDialog`: `content` slot (the «Причина» field), `primaryEnabled`, `primaryLoading`.
+

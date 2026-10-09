@@ -286,6 +286,7 @@ Future<void> showDkDialog(
   required VoidCallback onPrimary,
   String? secondaryLabel,
   VoidCallback? onSecondary,
+  Widget? content,
 }) {
   return showGeneralDialog<void>(
     context: context,
@@ -299,6 +300,7 @@ Future<void> showDkDialog(
       onPrimary: onPrimary,
       secondaryLabel: secondaryLabel,
       onSecondary: onSecondary,
+      content: content,
     ),
   );
 }
@@ -317,8 +319,21 @@ class DkDialogView extends StatelessWidget {
     this.secondaryLabel,
     this.onSecondary,
     this.popOnAction = true,
+    this.content,
+    this.primaryEnabled = true,
+    this.primaryLoading = false,
     super.key,
   });
+
+  /// Extra content between the message and the buttons (e.g. the reject
+  /// reason field, DESIGN.md §8.6).
+  final Widget? content;
+
+  /// False disables the primary button (e.g. while the reason is empty).
+  final bool primaryEnabled;
+
+  /// The primary action is in flight (spinner, buttons disabled).
+  final bool primaryLoading;
 
   /// Icon in the error tile.
   final IconData icon;
@@ -418,6 +433,7 @@ class DkDialogView extends StatelessWidget {
                           ),
                         ],
                       ),
+                      ?content,
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         spacing: spacing.s8,
@@ -425,7 +441,10 @@ class DkDialogView extends StatelessWidget {
                           DkButton(
                             label: primaryLabel,
                             expand: true,
-                            onPressed: () => close(onPrimary),
+                            isLoading: primaryLoading,
+                            onPressed: primaryEnabled && !primaryLoading
+                                ? () => close(onPrimary)
+                                : null,
                           ),
                           if (secondary != null && onSecondary != null)
                             DkButton(

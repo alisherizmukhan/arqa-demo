@@ -4,6 +4,7 @@
 /// via `context.dkColors`, `context.dkText`, `context.dkSpacing`, ...
 library;
 
+export 'src/components/dk_accounts.dart';
 export 'src/components/dk_button.dart';
 export 'src/components/dk_card.dart';
 export 'src/components/dk_chrome.dart';

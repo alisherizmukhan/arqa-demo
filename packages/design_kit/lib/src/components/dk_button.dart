@@ -26,6 +26,7 @@ class DkButton extends StatelessWidget {
     this.isLoading = false,
     this.icon,
     this.expand = false,
+    this.compact = false,
     super.key,
   });
 
@@ -47,6 +48,9 @@ class DkButton extends StatelessWidget {
   /// Stretch to the available width.
   final bool expand;
 
+  /// 48 high instead of 56 (two buttons under a list row, DESIGN.md §8.6).
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
@@ -66,7 +70,9 @@ class DkButton extends StatelessWidget {
     final radius = BorderRadius.circular(isText ? radii.md : radii.lg);
     final leading = isLoading || icon != null;
     final labelStyle = context.dkText.bodyStrong;
-    final minHeight = isText ? sizes.textButtonHeight : sizes.buttonHeight;
+    final minHeight = isText || compact
+        ? sizes.textButtonHeight
+        : sizes.buttonHeight;
     // The spec's height is one label line plus equal insets (56 = 24 + 2·16;
     // text: 48 = 24 + 2·12). Keeping those insets means a label that grows
     // (text scale, a narrow dialog) never touches the button's edges.
