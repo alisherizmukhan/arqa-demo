@@ -127,3 +127,38 @@ So Railway's `X-Forwarded-For` never contains the client and `X-Real-IP` does �
 | `GET /summary?date=2026-10-01` without a token | 3 900 / 585 / 3 315, cash 1 500 / card 2 400 — exact |
 
 The `lock-probe` and `xff-probe*` failure rows expire on their own within 15 minutes (old rows are deleted as new failures are recorded).
+
+## Stage 3 — withdrawals (2026-10-09)
+
+- Rehearsed with the production image on a fresh local database (`AUTH_REQUIRED=false`): user_2 2 280 → 1 280 after one withdrawal (its retry: 200); user_1 without a token: 200 327.
+- Deployed from `main` at `6386aca` (CI green, concurrency tests on CI's Postgres) with `railway up --service api --ci`. Deployment `951e4254-3b1d-4bb9-aeea-27909ae1a9ca`: **SUCCESS**.
+
+| Check (deployed API) | Result |
+|---|---|
+| `GET /health` | 200 |
+| `GET /summary?date=2026-10-01` without a token | 3 900 / 585 / 3 315, cash 1 500 / card 2 400 — exact |
+| `GET /balance` without a token (user_1) | `available` **200 327** = card 258 450 − commission 58 123 − withdrawn 0, the SQL formula of stage 1 |
+
+**Withdrawals, user_2 only** (balance after each step):
+
+| Step | Response | available |
+|---|---|---|
+| start | — | 2 280 |
+| W1 = `345e8474-e0bc-4e74-a969-8c051f5bb4c2`, 1 000 | 201 pending | 1 280 |
+| W1 again, same amount | 200, the same withdrawal | 1 280 |
+| W1 with 900 | 409 `withdrawal_conflict` | 1 280 |
+| a new id with 2 000 | 422 `insufficient_funds` (no row) | 1 280 |
+| W2 = `b8f3b52f-50d1-43a8-970e-7137684dfeff`, 500 | 201 pending | 780 |
+| admin approves W1, twice | paid; 200 both times | 780 (paid stays spent) |
+| admin rejects W2 «Проверка деплоя», twice | rejected; 200 both times | **1 280** (money back) |
+| admin rejects W1 (already paid) | 409 `withdrawal_already_decided` | 1 280 |
+
+(The first reject attempt from Git Bash sent the Cyrillic reason in a non-UTF-8 encoding and got 400 `http_error`; it was repeated with escaped JSON. This led to the `invalid_json` fix below.)
+
+### Cleanup of the test withdrawals
+
+- Backup first: `C:\Users\alish\Documents\arqa-backups\prod-2026-10-09-before-withdrawal-cleanup.sql` (29 709 bytes, outside the repository). Restored into a throwaway PostgreSQL 18: revision `0004`, 133 trips, 2 withdrawals.
+- One transaction (`psql --single-transaction`, `ON_ERROR_STOP`): `DELETE FROM withdrawals WHERE id IN (W1, W2) RETURNING …` in a `DO` block that raises (and so rolls back) unless exactly 2 rows were deleted.
+- Deleted: `345e8474-e0bc-4e74-a969-8c051f5bb4c2` (1 000, paid) and `b8f3b52f-50d1-43a8-970e-7137684dfeff` (500, rejected). Withdrawals: **2 → 0**, checked again from a new connection.
+- After: user_2 `GET /balance` → available **2 280** (card 3 000, commission 720, withdrawn 0), `GET /withdrawals` → `[]`; user_1 still 200 327.
+
