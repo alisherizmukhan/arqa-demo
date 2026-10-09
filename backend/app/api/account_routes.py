@@ -102,7 +102,7 @@ async def login(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
         auth.LoginRequest(
             login=body.login,
             password=body.password,
-            client_ip=client_ip(request, settings.trusted_proxy_hops),
+            client_ip=client_ip(request, settings.trusted_proxy_hops, settings.client_ip_header),
             user_agent=request.headers.get("user-agent"),
         ),
         now,

@@ -236,11 +236,11 @@ async def test_last_used_at_is_updated_at_most_hourly(
 async def test_the_lock_is_per_client_ip_behind_the_proxy(
     app: FastAPI, anonymous: AsyncClient
 ) -> None:
-    app.state.settings = app.state.settings.model_copy(update={"trusted_proxy_hops": 1})
+    # As on Railway: the proxy sets X-Real-IP; X-Forwarded-For is forgeable.
+    app.state.settings = app.state.settings.model_copy(update={"client_ip_header": "x-real-ip"})
 
     def from_ip(ip: str) -> dict[str, str]:
-        # A stranger can forge the left part; the proxy appends the real IP.
-        return {"X-Forwarded-For": f"10.9.9.9, {ip}"}
+        return {"X-Real-IP": ip, "X-Forwarded-For": "10.9.9.9"}
 
     for _ in range(10):
         response = await anonymous.post(

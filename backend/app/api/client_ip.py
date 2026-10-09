@@ -1,14 +1,17 @@
-"""The client's IP address behind a known number of proxies.
+"""The client's IP address behind our own proxy, never a value the client chose.
 
-Each proxy appends the address it received the request from to
-`X-Forwarded-For`, so only the last `trusted_hops` entries were written by our
-own proxies; everything to their left came from the client and can be forged.
-With `trusted_hops = 1` (Railway's edge) the client is the last entry.
+Two ways, by what the proxy in front of the API does:
 
-Railway also sends `X-Real-IP` (documented as the client's address). It is used
-only as a cross-check: a mismatch is logged, so a wrong TRUSTED_PROXY_HOPS or a
-change in the proxy chain shows up in the logs instead of silently weakening
-the login rate limit.
+- `client_ip_header` (Railway: `x-real-ip`): the proxy **sets** this header to
+  the address it received the request from and overwrites any value the client
+  sent. Checked on Railway: a forged `X-Real-IP: 9.9.9.9` arrived as the real
+  address. Railway's `X-Forwarded-For` does *not* contain the client at all
+  (only what the client sent plus Railway's own hop), so it cannot be used there.
+- `trusted_hops` (proxies that append to `X-Forwarded-For`): only the last
+  `trusted_hops` entries were written by our proxies; everything to their left
+  came from the client and can be forged.
+
+Neither configured (local): the peer address.
 """
 
 import logging
@@ -20,7 +23,16 @@ logger = logging.getLogger(__name__)
 UNKNOWN_CLIENT = "unknown"
 
 
-def client_ip(request: Request, trusted_hops: int) -> str:
+def client_ip(request: Request, trusted_hops: int, header: str | None = None) -> str:
+    peer = request.client.host if request.client else UNKNOWN_CLIENT
+    if header:
+        value = request.headers.get(header, "").strip()
+        if value:
+            return value
+        # Misconfiguration or a request that bypassed the proxy: say so, and
+        # fall back to the peer (never to a header the client controls).
+        logger.warning("client IP header %r is missing; using the peer address", header)
+        return peer
     if trusted_hops > 0:
         forwarded = [
             part.strip()
@@ -28,18 +40,6 @@ def client_ip(request: Request, trusted_hops: int) -> str:
             if part.strip()
         ]
         if len(forwarded) >= trusted_hops:
-            ip = forwarded[-trusted_hops]
-            real_ip = request.headers.get("x-real-ip")
-            if real_ip != ip:
-                logger.warning(
-                    "client IP from X-Forwarded-For (%s, %d entries, %d trusted) "
-                    "differs from X-Real-IP (%s): check TRUSTED_PROXY_HOPS",
-                    ip,
-                    len(forwarded),
-                    trusted_hops,
-                    real_ip,
-                )
-            return ip
-        # Fewer entries than proxies: the request did not come through them
-        # (e.g. a direct internal call); fall back to the peer address.
-    return request.client.host if request.client else UNKNOWN_CLIENT
+            return forwarded[-trusted_hops]
+        # Fewer entries than proxies: the request did not come through them.
+    return peer

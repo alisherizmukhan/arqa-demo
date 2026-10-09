@@ -15,8 +15,9 @@ export default defineRailway(() => {
       // Requests without a token act as user_1 until the app supports login
       // (end of stage 5); then "true" together with the app release.
       AUTH_REQUIRED: "false",
-      // Railway's edge appends the client IP to X-Forwarded-For (login rate limit).
-      TRUSTED_PROXY_HOPS: "1",
+      // The client IP for the login rate limit: Railway's edge sets X-Real-IP
+      // (and overwrites a forged one); its X-Forwarded-For lacks the client.
+      CLIENT_IP_HEADER: "x-real-ip",
     },
   });
 

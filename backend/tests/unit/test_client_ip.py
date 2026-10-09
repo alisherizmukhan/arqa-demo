@@ -47,20 +47,17 @@ def test_no_peer_at_all() -> None:
     assert client_ip(_request(None, peer=None), trusted_hops=0) == UNKNOWN_CLIENT
 
 
-def test_agreement_with_x_real_ip_is_silent(caplog: pytest.LogCaptureFixture) -> None:
+def test_proxy_set_header_wins_over_forwarded_for() -> None:
+    # Railway: X-Real-IP is the client; X-Forwarded-For has the forged value
+    # and Railway's own hop, but not the client.
+    request = _request("1.2.3.4, 152.233.12.241", real_ip="147.30.27.152")
+
+    assert client_ip(request, trusted_hops=0, header="x-real-ip") == "147.30.27.152"
+
+
+def test_missing_proxy_header_falls_back_to_the_peer(caplog: pytest.LogCaptureFixture) -> None:
     with caplog.at_level(logging.WARNING):
-        ip = client_ip(_request("1.2.3.4, 203.0.113.7", real_ip="203.0.113.7"), trusted_hops=1)
+        ip = client_ip(_request("1.2.3.4"), trusted_hops=0, header="x-real-ip")
 
-    assert ip == "203.0.113.7"
-    assert not caplog.records
-
-
-@pytest.mark.parametrize("real_ip", ["198.51.100.9", None])
-def test_disagreement_with_x_real_ip_is_logged(
-    caplog: pytest.LogCaptureFixture, real_ip: str | None
-) -> None:
-    with caplog.at_level(logging.WARNING):
-        ip = client_ip(_request("1.2.3.4, 203.0.113.7", real_ip=real_ip), trusted_hops=1)
-
-    assert ip == "203.0.113.7"  # still the trusted hop, never the header's choice
-    assert "check TRUSTED_PROXY_HOPS" in caplog.text
+    assert ip == "10.0.0.5"  # never the client's X-Forwarded-For
+    assert "is missing" in caplog.text

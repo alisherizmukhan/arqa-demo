@@ -45,8 +45,10 @@ class Settings(BaseSettings):
     # (production until the app supports login): requests without a token act
     # as user_1, like before accounts existed; a token that is sent is checked.
     auth_required: bool = True
-    # Proxies in front of the API that append to X-Forwarded-For (Railway: 1).
-    # 0: the peer address is the client. Used for the login rate limit.
+    # Where the client IP comes from (login rate limit), see app/api/client_ip.py:
+    # a header our proxy sets and overwrites (Railway: "x-real-ip"), or else the
+    # last TRUSTED_PROXY_HOPS entries of X-Forwarded-For; neither: the peer.
+    client_ip_header: str | None = None
     trusted_proxy_hops: int = Field(default=0, ge=0)
     # One switch for all demo data: the demo accounts and the trips file.
     seed_on_startup: bool = True
