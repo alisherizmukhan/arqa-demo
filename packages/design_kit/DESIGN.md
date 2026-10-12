@@ -538,3 +538,65 @@ Also added for §8.3–8.6:
 - Money looks the same in every language (`DkMoney.format`).
 - CI fails on a Cyrillic literal in `apps/mobile/lib` or `packages/design_kit/lib` outside the generated localizations. Copy and the review list: `docs/L10N.md`.
 
+## 10. Layout stability
+
+Every control keeps its size; the text adapts inside it. A label that is longer than its control — a Kazakh text, a larger system font, a narrow phone — never makes the control taller or wider and never pushes the layout around. Audit of the old behaviour: `docs/UI_STABILITY_AUDIT.md`.
+
+### 10.1 Rules
+
+1. **Text scale is clamped to ×1.3** app-wide (`MediaQuery.withClampedTextScaling(maxScaleFactor: dkMaxTextScale)` in `MaterialApp.builder`). Up to it, everything follows the rules below. Why, and what it costs: DECISIONS.md.
+2. **Fixed heights**, never content-driven:
+
+   | Control | Height |
+   |---|---|
+   | `DkButton` | 56 (text and compact: 48) |
+   | `DkFab` | 56 |
+   | `DkSegmentedControl` (tabs, payment method) | 56 |
+   | `DkLanguageSwitch` | 56 |
+   | `DkFilterChips` | 40 chip, 48 tap area |
+   | `DkBadge`, `DkStatusChip` | 24 |
+   | `DkIconButton`, `DkTodayButton` | 48 |
+   | `DkTextField`, `DkTimeField` (the box) | 56 |
+   | `DkDaySwitcher` | 56 (title and subtitle scaled together) |
+   | `DkListRow` | 56; **64 with a subtitle** (two-line variant) |
+   | `DkSummaryTile` text block (summary and payment tiles) | **48** (label over amount) |
+3. **Labels in these controls are one line.** A label that does not fit first scales down, to at most 85 % of its style size (`dkMinFitScale`). If it still does not fit, it ends in «…». The full text stays the accessible name and shows in a tooltip on long press. Labels never wrap and never grow their control. Kit: `DkFitText` / `DkFitLines`.
+4. **Width.** Full-width buttons stay full width. Inline controls get a maximum width and follow rule 3 inside it:
+   - FAB ≤ 60 % of the screen width (`dkFabMaxWidthShare`);
+   - an inline button or «Всё» ≤ the content column.
+5. **Segmented controls and tabs:** segments share the width equally, and each label follows rule 3. Filter chips scroll horizontally and never wrap to a second row.
+6. **Multi-line text is only for content:** body text, messages, helpers, errors, dialog titles and messages. Never inside a control. Dialog buttons follow rule 3; this replaces the earlier rule that let «Сохранить как новую поездку» wrap onto two lines.
+7. **Amounts are never cut.** An amount is one line and shrinks to 85 % at most. In a row, the text column gives way first: its lines scale, then end in «…».
+8. **Kazakh copy:** where a Kazakh label would end in «…» at 360 dp and text ×1.0, a shorter wording is proposed in `docs/L10N.md` (marked «предложено»). The layout test fails on any cut text at ×1.0.
+
+### 10.2 Additions (stage 2 review)
+
+- **A. Two-line controls** have a fixed two-line height: list row with a subtitle 64, day switcher 56, summary/payment tile text block 48. Each line follows rule 3; the lines scale **together** to fit the height (still ≥ 85 %). Nothing wraps inside them.
+- **B. Decision buttons are never cut.** «Выплатить» / «Отклонить» (and the Kazakh labels) shrink to 85 % at most. If either label cannot fit in half the row at 85 %, the pair stacks: one above the other, both full width, each still 48 high (`DkAdaptivePair`).
+  - The 409 dialog buttons are already stacked full width.
+  - Where a dialog label still ends in «…» (only above ×1.0), a shorter wording is the fix (rule 8), not a second line.
+- **C. Amounts in rows** (`DkAmountRow`, the trip row):
+  - the amount column keeps at least 85 % of its width;
+  - the text column gives way first;
+  - if even that cannot fit, the amount column moves to its own line under the text. Digits are never cut.
+- **Header** (`DkWordmark`, `DkPriorityRow`): the title shrinks to 85 % first, then the actions give way (the «Сегодня» pill shrinks, then ends in «…»), and only then is the title cut. The header never grows.
+
+### 10.3 Kit API
+
+| Need | Kit |
+|---|---|
+| One fitting line | `DkFitText(text, style, ellipsis: true, textAlign)` |
+| Several lines that fit together | `DkFitLines([DkLine(text, style, ellipsis, trailing), DkLine.span(span, text: …), DkLine.money(amount)], gap)`. `ellipsis: false` = never cut (times, amounts); such a line reports 85 % of its width as its minimum intrinsic width. |
+| Two controls that stack when they cannot fit | `DkAdaptivePair(first, second, gap)` |
+| Text column + amount column | `DkAmountRow(start, end, gap)` |
+| Title + actions | `DkPriorityRow(start, end, gap)` |
+| Amount anywhere | `DkMoneyText` — one line, never cut, ≤ 85 % shrink |
+| Limits | `dkMaxTextScale = 1.3`, `dkMinFitScale = 0.85`, `dkFabMaxWidthShare = 0.6`, `dkListRowTwoLineHeight = 64`, `dkTileTextHeight = 48` |
+
+The lines are ordinary one-line `Text` widgets (`maxLines: 1`, `softWrap: false`), scaled when painted, so finders, semantics and the money-gap checks see real text.
+
+### 10.4 Deviations from the mockups
+
+- **Summary and payment tiles are 6 dp taller** (text block 48 instead of 42 at ×1.0): the fixed height must hold label and amount at ×1.3 at 85 %.
+- **List rows with a subtitle are 64** (8 dp more than the 56 minimum).
+- **At ×1.15 and ×1.3 controls keep their ×1.0 height** (buttons 56, not 60–63); their labels shrink instead.

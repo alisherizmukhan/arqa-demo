@@ -284,6 +284,25 @@ The audit is in `docs/PROD_AUDIT.md` (findings F1–F8). Decisions approved afte
 - **Screenshot scenarios check their own state, a missed tap fails, and identical images fail.** After the review found two screenshots that never reached their state: the login-error, offline, day-header and driver-filter scenarios assert what they are named after; `WidgetController.hitTestWarningShouldBeFatal` is on for the app's tests; the screenshot generator (now a CI step) fails when two states render the same image, except a listed pair that is identical by design.
 - **Layout checks run every scenario in ru and kk** at 360 / 390 dp × text 1.0 / 1.3 (320 runs). A horizontal scroll row (filter chips, §8.0) may run past the screen edge by design; its texts are still checked for truncation.
 
+## UI stability — stage 2 (rules and kit)
+
+- **The system text scale is clamped to ×1.3 — a deliberate accessibility trade-off** (`MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3)` in `MaterialApp.builder`, DESIGN.md §10 rule 1).
+  - *Why:* the app is read at a glance while driving. Controls must sit where the hand expects them, with the same size on every screen, whatever the label or the setting. Above ×1.3, fixed 56 dp controls can no longer hold one line of text at ≥ 85 %, and the screen would have to grow or cut most labels.
+  - *What we lose:* people who set the phone's font above 130 % (Android allows up to 200 %) get 130 % in this app, not their setting. The text stays at least 85 % × 130 % ≈ 110 % of the base size inside controls, and screen readers still read every full label.
+  - *Revisit if:* real drivers ask for larger text. The alternative is a «large text» layout with taller controls, not unbounded growth.
+- **Controls have fixed heights; labels shrink to 85 %, then end in «…»** (`DkFitText` / `DkFitLines`). → Before, every control set only a minimum height and grew with its label (audit: `docs/UI_STABILITY_AUDIT.md`).
+  - The lines are real one-line `Text` widgets, scaled when painted, so screen readers, finders and the money-gap checks see the text as before.
+  - A first version drew the text itself (a render object with its own `TextPainter`s); it was replaced before any commit because it hid the text from all three.
+- **Amounts and times are never cut** (`ellipsis: false`). They shrink to 85 % at most and report that width as their minimum, so a row can make room: `DkAmountRow` lets the text column give way first and moves the amount to its own line if even that does not fit.
+- **Decision buttons stack instead of being cut** (`DkAdaptivePair`). Approve/reject must never read «Выпла…»; when a label cannot fit in half the row at 85 %, the two buttons go one above the other, each full width, still 48 high.
+- **The header title has priority over its actions** (`DkPriorityRow`): it shrinks to 85 %, then «Сегодня» shrinks or is cut, and only then the title. → With equal priority, «Дневник смен» ended in «…» at 360 dp ×1.3 next to the «Сегодня» pill.
+- **Fixed two-line heights** (addition A): list row with a subtitle 64; the summary/payment tile text block 48, 6 dp taller than the mockup's 42, because label + amount must fit at ×1.3 at 85 %; day switcher 56, both lines scaled together.
+- **The layout matrix follows the new rule:**
+  - at text ×1.0 nothing may be cut, except next to the stress amounts, where the text gives way by rule 7;
+  - above ×1.0 labels may end in «…»;
+  - an amount is never cut at any scale.
+- **«Нақты» proposed for the Kazakh «Наличные» (`cash`), instead of «Қолма-қол»** (DESIGN.md §10 rule 8, `docs/L10N.md`: «предложено»). «Қолма-қол · 38%» does not fit the payment tile at 360 dp ×1.0 even at 85 %. «Нақты» (from «нақты ақша») is in use pending approval.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
