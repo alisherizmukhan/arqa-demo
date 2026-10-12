@@ -560,6 +560,24 @@ abstract class AppLocalizations {
   /// **'Проверьте данные поездки'**
   String get errTripGeneric;
 
+  /// No description provided for @errIncompleteRoute.
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите и начало, и конец поездки'**
+  String get errIncompleteRoute;
+
+  /// No description provided for @errOutsideArea.
+  ///
+  /// In ru, this message translates to:
+  /// **'Точка вне Алматы'**
+  String get errOutsideArea;
+
+  /// No description provided for @errSamePlaces.
+  ///
+  /// In ru, this message translates to:
+  /// **'Начало и конец совпадают'**
+  String get errSamePlaces;
+
   /// No description provided for @tripOffline.
   ///
   /// In ru, this message translates to:

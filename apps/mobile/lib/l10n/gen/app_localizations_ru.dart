@@ -274,6 +274,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get errTripGeneric => 'Проверьте данные поездки';
 
   @override
+  String get errIncompleteRoute => 'Укажите и начало, и конец поездки';
+
+  @override
+  String get errOutsideArea => 'Точка вне Алматы';
+
+  @override
+  String get errSamePlaces => 'Начало и конец совпадают';
+
+  @override
   String get tripOffline =>
       'Нет связи. Повторим отправку — поездка не задвоится.';
 

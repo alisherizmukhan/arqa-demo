@@ -181,4 +181,17 @@ void main() {
     expect(sums('1000', '1500').net, isNull);
     expect(sums('0', '0').net, isNull);
   });
+
+  test('the server codes for trip places have their own texts', () {
+    final kk = lookupAppLocalizations(const Locale('kk'));
+    expect(
+      validationMessage(_ru, 'incomplete_route'),
+      'Укажите и начало, и конец поездки',
+    );
+    expect(validationMessage(_ru, 'outside_service_area'), 'Точка вне Алматы');
+    expect(validationMessage(_ru, 'same_places'), 'Начало и конец совпадают');
+    expect(validationMessage(kk, 'outside_service_area'), kk.errOutsideArea);
+    // A label over 200 characters is a client bug: the generic text.
+    expect(validationMessage(_ru, 'label_too_long'), _ru.errTripGeneric);
+  });
 }

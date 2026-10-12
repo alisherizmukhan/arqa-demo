@@ -272,6 +272,15 @@ class AppLocalizationsKk extends AppLocalizations {
   String get errTripGeneric => 'Сапар деректерін тексеріңіз';
 
   @override
+  String get errIncompleteRoute => 'Сапардың басын да, соңын да көрсетіңіз';
+
+  @override
+  String get errOutsideArea => 'Нүкте Алматыдан тыс';
+
+  @override
+  String get errSamePlaces => 'Басы мен соңы бірдей';
+
+  @override
   String get tripOffline =>
       'Байланыс жоқ. Қайта жібереміз — сапар екі рет жазылмайды.';
 

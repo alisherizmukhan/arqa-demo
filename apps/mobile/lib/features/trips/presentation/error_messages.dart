@@ -32,5 +32,9 @@ String validationMessage(AppLocalizations l10n, String code) => switch (code) {
   'datetime_out_of_range' => l10n.errDateOutOfRange,
   'naive_datetime' || 'invalid_datetime' => l10n.errInvalidTime,
   'invalid_payment' => l10n.errInvalidPayment,
+  // Trip places (maps); a too-long label is a client bug: the generic text.
+  'incomplete_route' => l10n.errIncompleteRoute,
+  'outside_service_area' => l10n.errOutsideArea,
+  'same_places' => l10n.errSamePlaces,
   _ => l10n.errTripGeneric,
 };
