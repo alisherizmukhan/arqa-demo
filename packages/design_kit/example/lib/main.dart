@@ -1,5 +1,6 @@
 import 'package:design_kit/design_kit.dart';
 import 'package:design_kit_example/accounts_preview.dart';
+import 'package:design_kit_example/maps_preview.dart';
 import 'package:design_kit_example/ru.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -70,7 +71,7 @@ class ShowcasePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
     return DefaultTabController(
-      length: 3,
+      length: 4,
       initialIndex: initialTab,
       child: Scaffold(
         appBar: AppBar(
@@ -85,10 +86,14 @@ class ShowcasePage extends StatelessWidget {
             ),
           ],
           bottom: const TabBar(
+            // Four tabs do not fit a 360 dp phone side by side.
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: 'Компоненты'),
               Tab(text: 'Токены'),
               Tab(text: 'Аккаунты'),
+              Tab(text: 'Карты'),
             ],
           ),
         ),
@@ -143,6 +148,7 @@ class ShowcasePage extends StatelessWidget {
               ],
             ),
             const AccountsPreviewList(),
+            const MapsPreviewList(),
           ],
         ),
       ),

@@ -403,6 +403,30 @@ Three guards fail the build when DESIGN.md §10 breaks:
   - It now says `"true"` and `ORS_API_KEY: preserve()`. → A `railway config apply` would otherwise have switched login off and could have removed the key. Not applied: the file only describes the service.
   - `tool/check_railway_config.sh` (CI and `ci_local.sh`) fails when the file declares `AUTH_REQUIRED` other than `"true"`, or not at all.
 
+## Maps — stage 2 (design addendum, kit components, review)
+
+- **DESIGN.md §9 added** (root and kit copy) from the prompt's addendum, plus §9.8 «Kit implementation». The kit copy of DESIGN.md had lost the stage 4 «Guards» paragraph of §10; it is the same file as the root one again.
+- **Five color tokens**, all in the §2.1 table, so the conformance test checks them:
+  - `routeLine`, `routeCasing`, `markerA`, `markerB` as the prompt gives them;
+  - `markerRing` for the prompt's «white 2 dp ring» (white in both themes).
+  - A's letter is `surface` and B's is `onAccent`, so both letters contrast in both themes without more tokens.
+- **The map is in the kit** (`flutter_map` ^8.3.2, `latlong2` ^0.10.1 are kit dependencies). → The app and the showcase use the same `DkMapView`, so map rules like no rotation, the attribution and the dark tiles live in one place.
+- **Tiles in tests and previews are drawn on the device** (`DkSketchTileProvider`): a street grid with parks and water, the same every time. → No network in any test (prompt) and no image files to keep. `offline: true` gives a map whose tiles never come (the no-network and tiles-failed states).
+- **The previews use real routes**: the ORS polylines of the stage 1 seed trips, stored in `example/lib/maps_routes.dart` (with ORS / OSM attribution). → The review shows how the real geometry looks: the jagged airport route, routes that share a place.
+- **«В пути» is the trip's own time** (end − start, the same figure as the trip row), not ORS's estimate. → The prompt's example is «22 мин» for 08:10–08:32. ORS said 12 min for that route, so its duration would contradict the row above it. It also works for straight lines, which have no duration.
+- **Picker: the map is exactly the area between the two panels**, which are flat (`surface`, shadow `e3`) and do not overlap it. → The chosen point is the map's center, under the center pin. With panels over a full-screen map, the visible center and the camera center would differ.
+- **The trip row's route line spans the full width**, under the time, meta and amounts. → Beside the amounts it showed only «Зелёный базар → ТРЦ …» at 390 dp.
+- **`DkTextField(onClear, clearLabel)`, not `trailing`, for the search clear button.** → `trailing` takes half the row (so «Всё» can shrink), which would leave the typed address half the field.
+- **The camera fit keeps markers clear of the attribution:**
+  - the padding shrinks on small maps (a quarter of the shorter side);
+  - the bottom padding has up to 32 extra.
+  - → In the first screenshots marker B was under the attribution chip.
+- **Marker names on the map are not exposed to screen readers by flutter_map** (its moving layer). The place fields under the map read «Начало поездки — Зелёный базар». A day-map list for screen readers is a stage 3 question.
+- **Previews in Russian and Kazakh** through `example/lib/maps_copy.dart`.
+  - The Kazakh copy is machine-translated; it goes to `app_kk.arb` in stage 3, marked «needs native review» in L10N.md.
+  - Copy not in the prompt is marked «proposed» in DESIGN.md §9.7: «Очистить», «Поездка», «N маршрутов», «м» / «км».
+- **The showcase has a fourth tab, «Карты»**, with a ru / kk switch. The tab bar scrolls: four tabs do not fit a 360 dp phone.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
