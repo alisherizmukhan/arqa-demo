@@ -41,8 +41,12 @@ Why not a free style with its own dark variant:
   - The key is free. Business use is free up to 1 M requests a month and non-commercial use up to 5 M; above that it is paid ($500/month for 10 M).
   - It needs a registration and a key in the app. It is the ready swap: two `--dart-define`s, no code change.
 - **Stadia Maps** (Alidade Smooth / Dark): the free plan is 200 000 credits a month (1 tile = 1 credit), commercial use is not allowed, and apps need a key.
-- **The app ships with the light theme only** (`ThemeMode.light`, DECISIONS «Post-redesign UI fixes»). The dark tile URL only matters for the dark goldens, and those use fake tiles, never the network.
-  - For a dark map, OSM tiles can be shown through `darkModeTileBuilder`. To be decided in stage 2 against the dark mockup.
+- **The app ships with the light theme only** (`ThemeMode.light`, DECISIONS «Post-redesign UI fixes»), but the map must still work in the dark theme (dark goldens, and a dark mode later).
+
+**Dark theme: the same OSM tiles, darkened in the app.**
+- In the dark theme the tile layer gets `tileBuilder: darkModeTileBuilder` (flutter_map's inverting colour filter), or an equivalent `ColorFilter`, so the map is not a bright white block next to dark cards. `TILE_URL_DARK` defaults to the same OSM URL; when a real dark style is configured (CARTO `dark_all` with a key), the filter is switched off for it.
+- Only the tiles are filtered. The route line, the markers and the attribution are drawn in layers above the tile layer, so the filter never touches them, and they take their colours from the theme tokens.
+- Readability on both themes is checked in stage 2: the route line and the markers against light and darkened tiles, and the attribution on its own surface chip (theme surface colour, ≥ 4.5:1 text contrast), in light and dark goldens.
 
 OSM tile usage policy (operations.osmfoundation.org/policies/tiles):
 - Send a stable, app-specific User-Agent.
@@ -134,13 +138,11 @@ No package, and why:
   - **Production option.**
 - **Public OSRM demo server:** «restricted to reasonable, non-commercial use-cases», at most 1 request a second, with no guarantees. Not for an app.
 
-## Open item
+## ORS key
 
-**`ORS_API_KEY` is not set.** On 2026-10-12:
-- Railway, project `driver-shift-diary`, environment `production`: not on the `api` service, not on `Postgres`, and not among staged changes.
-- No `.env` file in the repository.
-
-Stage 1 needs it locally, for the one optional live test and the seed check, and on Railway for the deploy.
+`ORS_API_KEY` (checked 2026-10-12, names only, the value never printed):
+- **Local:** in `backend/.env`, which `.gitignore` ignores (`git check-ignore -v backend/.env` → `.gitignore:10:.env`). One reverse-geocode request from the developer machine returned `200`.
+- **Railway** (`api`, production): added as a staged change, not yet applied, so the running service does not have it yet.
 
 ## Sources
 

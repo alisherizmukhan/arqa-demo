@@ -344,7 +344,7 @@ Three guards fail the build when DESIGN.md §10 breaks:
 - **Map:** `flutter_map` 8.3.2 + `latlong2` 0.10.1. It is pure Dart and needs no key or native setup. Tile caching to disk and request cancellation are built in since 8.2, so no extra plugins.
 - **Demo tiles: OpenStreetMap standard for both themes**, with URLs and attribution from `--dart-define`.
   - CARTO's free light/dark pair needs a key since 29 September 2026 (watermark without one). It is the ready swap.
-  - The app ships light-only, so the dark tile URL matters only for goldens, which use fake tiles.
+  - Dark theme: the same OSM tiles through `darkModeTileBuilder` (an inverting colour filter on the tile layer only), so the map is not a white block. The route line, markers and attribution sit above the tile layer, unfiltered, in theme colours; the attribution has its own surface chip. Off when a real dark style (CARTO `dark_all` with a key) is configured.
   - Production needs a paid or own tile provider (OSM tile policy).
 - **Routes and addresses: OpenRouteService, called only from the backend.** The Standard plan gives directions 2 000/day (40/min) and each geocode endpoint 1 000/day (100/min). A route is built once per trip; geocoding is cached for 24 h and rate-limited per user.
 - **Polyline: our own ~20-line encoder and decoder** (Google format, precision 5, tested on Google's reference string). The Dart packages are outdated or tied to Google Directions.
