@@ -4,17 +4,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/account_scenarios.dart';
 import '../helpers/app_harness.dart';
+import '../helpers/control_metrics.dart';
 import '../helpers/scenarios.dart';
 
 /// Every mockup state at the mockup size (390×844) and a small phone
-/// (360×780), text scale 1.0 and 1.3, in Russian and Kazakh, with the real
-/// fonts: any overflow or other layout exception fails the test, and so does
-/// any truncated text or text reaching past the screen edge.
+/// (360×780), text scale 1.0, 1.15 and 1.3, in Russian and Kazakh, with the
+/// real fonts: any overflow or other layout exception fails the test, and so
+/// does any truncated text, text reaching past the screen edge, or a control
+/// off its designed height (DESIGN.md §10).
 void main() {
   setUpAll(loadAppFonts);
 
   const sizes = [Size(390, 844), Size(360, 780)];
-  const scales = [1.0, 1.3];
+  const scales = [1.0, 1.15, 1.3];
 
   final stressIds = {for (final s in stressScenarios) s.id};
 
@@ -74,6 +76,23 @@ void main() {
               );
             }
             expect(checked, greaterThan(5), reason: 'texts were inspected');
+            // DESIGN.md §10 rule 2: every control at its designed height,
+            // whatever the label, language or text scale; one-line labels.
+            for (final c in measureControls(tester)) {
+              if (c['control'] == 'money text') continue;
+              final what = '${c['control']} (${c['place']}): ${c['labels']}';
+              expect(c['bodyFound'], isTrue, reason: 'no fixed body: $what');
+              expect(
+                c['bodyHeight'],
+                closeTo(c['designedHeight']! as double, 0.5),
+                reason: what,
+              );
+              expect(
+                c['maxLines'],
+                lessThanOrEqualTo(1),
+                reason: 'wraps: $what',
+              );
+            }
             await disposeApp(tester);
           });
         }

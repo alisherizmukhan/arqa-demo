@@ -64,4 +64,7 @@ dart format --output=none --set-exit-if-changed apps/mobile/lib apps/mobile/test
 (cd apps/mobile && flutter test)
 (cd apps/mobile && SCREENSHOTS_DIR=build/screens flutter test test/screens/screenshots_test.dart)
 
+step "mobile: layout stability audit (strict, 360 dp)"
+(cd apps/mobile && rm -rf build/audit && AUDIT_DIR=build/audit AUDIT_STRICT=1 AUDIT_CHEAP=1   flutter test test/audit/ui_stability_audit_test.dart)
+
 step "all CI steps passed"
