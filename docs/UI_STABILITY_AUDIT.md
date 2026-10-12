@@ -170,3 +170,37 @@ cd apps/mobile
 AUDIT_DIR=build/audit flutter test test/audit/ui_stability_audit_test.dart
 AUDIT_DIR=build/shots AUDIT_SHOTS="a16_admin_trips_all|kk|360|1.3" flutter test test/audit/ui_stability_audit_test.dart
 ```
+
+## After (stages 2–3, 2026-10-12)
+
+The same harness on the fixed code (480 renders, 2 758 controls):
+
+| | Before | After |
+|---|---|---|
+| Controls taller than designed | 540 | **0** |
+| Controls whose label wraps | 86 | **0** |
+| Layout exceptions | 0 | 0 |
+| Amounts that wrap or are cut | 193 + 6 (stress) | **0** (only the reject dialog's title sentence wraps, allowed) |
+| Cut labels | 0 (everything wrapped instead) | only «Сегодня» / «Бүгін» at ×1.3 (allowed: header priority) |
+| Probes: size depends on the label | 15 of 18 controls | **0**, except the decision pair, which stacks by design (each button stays 48) |
+
+What changed (DESIGN.md §10):
+- every control from rule 2 has a fixed height;
+- labels are one line: they shrink to 85 %, then use a short form or end in «…»;
+- amounts and times are never cut;
+- the decision buttons stack;
+- the header title has priority over its actions;
+- the text scale is clamped to ×1.3.
+
+Copy shortened instead of cut: «Сохранить как новую», and the proposed Kazakh «Жаңа етіп сақтау», «Шығару», «Жүргізуші» (`docs/L10N.md`).
+
+| State | Before | After |
+|---|---|---|
+| Admin tabs, kk, 360 dp ×1.3 | <img src="design/audit/stability/before/a16_admin_trips_all_kk_360_1.3.png" width="150"> | <img src="design/audit/stability/after/a16_admin_trips_all_kk_360_1.3.png" width="150"> |
+| 409 dialog, kk, ×1.3 | <img src="design/audit/stability/before/12_add_trip_conflict_409_kk_360_1.3.png" width="150"> | <img src="design/audit/stability/after/12_add_trip_conflict_409_kk_360_1.3.png" width="150"> |
+| 409 dialog, ru, ×1.0 | <img src="design/audit/stability/before/12_add_trip_conflict_409_ru_360_1.0.png" width="150"> | <img src="design/audit/stability/after/12_add_trip_conflict_409_ru_360_1.0.png" width="150"> |
+| Decision buttons, kk, ×1.3 | <img src="design/audit/stability/before/a18_admin_withdrawals_kk_360_1.3.png" width="150"> | <img src="design/audit/stability/after/a18_admin_withdrawals_kk_360_1.3.png" width="150"> |
+| Decision buttons, kk, ×1.0 | <img src="design/audit/stability/before/a18_admin_withdrawals_kk_360_1.0.png" width="150"> | <img src="design/audit/stability/after/a18_admin_withdrawals_kk_360_1.0.png" width="150"> |
+| «+1 күн» field, kk, ×1.3 | <img src="design/audit/stability/before/11_add_trip_midnight_kk_360_1.3.png" width="150"> | <img src="design/audit/stability/after/11_add_trip_midnight_kk_360_1.3.png" width="150"> |
+
+All «after» renders: `docs/design/audit/stability/after/`.

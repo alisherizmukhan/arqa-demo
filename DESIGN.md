@@ -560,14 +560,21 @@ Every control keeps its size; the text adapts inside it. A label that is longer 
    | `DkDaySwitcher` | 56 (title and subtitle scaled together) |
    | `DkListRow` | 56; **64 with a subtitle** (two-line variant) |
    | `DkSummaryTile` text block (summary and payment tiles) | **48** (label over amount) |
-3. **Labels in these controls are one line.** A label that does not fit first scales down, to at most 85 % of its style size (`dkMinFitScale`). If it still does not fit, it ends in «…». The full text stays the accessible name and shows in a tooltip on long press. Labels never wrap and never grow their control. Kit: `DkFitText` / `DkFitLines`.
+3. **Labels in these controls are one line.** A label that does not fit first scales down, to at most 85 % of its style size (`dkMinFitScale`). If it still does not fit:
+   - a label that has a **short form** shows it (`DkLine.short`): the payment tile «Наличные · 38%» → «Наличные» (the split bar shows the share), the badge «+1 день» → «+1»;
+   - otherwise it ends in «…».
+
+   Screen readers always get the full text (the share, «+1 день»); a cut label also shows in a tooltip on long press. Labels never wrap and never grow their control, and shrinking to fit the width never changes their height. Kit: `DkFitText` / `DkFitLines`.
+   - **Action buttons are never cut up to text ×1.15** (only at ×1.3). Tabs too.
+   - Ensured by copy (rule 8): the 409 dialog's «Сохранить как новую» and the proposed Kazakh tab labels.
 4. **Width.** Full-width buttons stay full width. Inline controls get a maximum width and follow rule 3 inside it:
    - FAB ≤ 60 % of the screen width (`dkFabMaxWidthShare`);
-   - an inline button or «Всё» ≤ the content column.
+   - an inline button ≤ the content column (screen width − 2 gutters), even in an unbounded row;
+   - a field's trailing button («Всё») ≤ half the field's inner row; its label shrinks with that space.
 5. **Segmented controls and tabs:** segments share the width equally, and each label follows rule 3. Filter chips scroll horizontally and never wrap to a second row.
 6. **Multi-line text is only for content:** body text, messages, helpers, errors, dialog titles and messages. Never inside a control. Dialog buttons follow rule 3; this replaces the earlier rule that let «Сохранить как новую поездку» wrap onto two lines.
 7. **Amounts are never cut.** An amount is one line and shrinks to 85 % at most. In a row, the text column gives way first: its lines scale, then end in «…».
-8. **Kazakh copy:** where a Kazakh label would end in «…» at 360 dp and text ×1.0, a shorter wording is proposed in `docs/L10N.md` (marked «предложено»). The layout test fails on any cut text at ×1.0.
+8. **Copy, not ellipsis:** where a label would end in «…» at 360 dp and text ×1.0 (action buttons: up to ×1.15), a shorter wording is proposed in `docs/L10N.md` (marked «предложено»). The layout test fails on any cut text at ×1.0.
 
 ### 10.2 Additions (stage 2 review)
 
@@ -586,11 +593,12 @@ Every control keeps its size; the text adapts inside it. A label that is longer 
 | Need | Kit |
 |---|---|
 | One fitting line | `DkFitText(text, style, ellipsis: true, textAlign)` |
-| Several lines that fit together | `DkFitLines([DkLine(text, style, ellipsis, trailing), DkLine.span(span, text: …), DkLine.money(amount)], gap)`. `ellipsis: false` = never cut (times, amounts); such a line reports 85 % of its width as its minimum intrinsic width. |
+| Several lines that fit together | `DkFitLines([DkLine(text, style, ellipsis, trailing, short), DkLine.span(span, text: …), DkLine.money(amount)], gap)`. `ellipsis: false` = never cut (times, amounts); such a line reports 85 % of its width as its minimum intrinsic width. |
 | Two controls that stack when they cannot fit | `DkAdaptivePair(first, second, gap)` |
 | Text column + amount column | `DkAmountRow(start, end, gap)` |
 | Title + actions | `DkPriorityRow(start, end, gap)` |
 | Amount anywhere | `DkMoneyText` — one line, never cut, ≤ 85 % shrink |
+| Badge with a short form | `DkBadge(text, short: …)` («+1 день» / «+1») |
 | Limits | `dkMaxTextScale = 1.3`, `dkMinFitScale = 0.85`, `dkFabMaxWidthShare = 0.6`, `dkListRowTwoLineHeight = 64`, `dkTileTextHeight = 48` |
 
 The lines are ordinary one-line `Text` widgets (`maxLines: 1`, `softWrap: false`), scaled when painted, so finders, semantics and the money-gap checks see real text.

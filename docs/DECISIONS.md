@@ -301,7 +301,21 @@ The audit is in `docs/PROD_AUDIT.md` (findings F1–F8). Decisions approved afte
   - at text ×1.0 nothing may be cut, except next to the stress amounts, where the text gives way by rule 7;
   - above ×1.0 labels may end in «…»;
   - an amount is never cut at any scale.
-- **«Нақты» proposed for the Kazakh «Наличные» (`cash`), instead of «Қолма-қол»** (DESIGN.md §10 rule 8, `docs/L10N.md`: «предложено»). «Қолма-қол · 38%» does not fit the payment tile at 360 dp ×1.0 even at 85 %. «Нақты» (from «нақты ақша») is in use pending approval.
+- **(Superseded in stage 3.)** «Нақты» was proposed for the Kazakh `cash` and is reverted: on its own it means "actual", not "cash". See stage 3.
+
+## UI stability — stage 3 (fixes)
+
+- **Short forms instead of an ellipsis where the meaning survives** (`DkLine.short`, chosen only when the full text cannot fit at 85 %, drawn at full size; screen readers keep the full text):
+  - payment tile «Наличные · 38%» / «Қолма-қол · 38%» → «Наличные» / «Қолма-қол». The split bar under it shows the share; the tile's spoken label keeps «38%». This replaces the «Нақты» proposal.
+  - «+1 день» / «+1 күн» → «+1» (`DkBadge(short:)`, ARB `nextDayBadgeShort`). Wherever the badge is used.
+- **Action buttons are never cut up to text ×1.15:**
+  - 409 dialog: «Сохранить как новую поездку» → **«Сохранить как новую»** (approved); Kazakh **«Жаңа етіп сақтау»** proposed (was «Жаңа сапар ретінде сақтау»).
+  - Admin tabs in Kazakh: **«Шығару»**, **«Жүргізуші»** proposed (were «Шығарулар», «Жүргізушілер»). With them nothing on the tabs is cut, even at ×1.3.
+  - The «Сегодня» / «Бүгін» pill may still be cut at ×1.3, by the header's priority rule.
+- **Shrinking to fit the width never changes a line's height.**
+  - Fields used to measure a few dp off with a long label. In stage 1 the label wrapped onto a second line; after stage 2 the shrunken label's box got shorter (20 → 17 dp at 85 %).
+  - Now the box keeps the natural height and the scaled text is centred in it. Only a fixed height smaller than the text shrinks it.
+- **A field's trailing button gets at most half the row; an inline button at most the content column.** → A long «Всё» used to overflow the field (RenderFlex), and an inline button in an unbounded row could grow past the screen.
 
 ## Post-redesign UI fixes (user feedback)
 
