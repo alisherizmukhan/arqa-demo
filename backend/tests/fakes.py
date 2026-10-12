@@ -4,7 +4,11 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.application.ports import ActiveSession, OwnedTrip
+from app.application.errors import MapsUnavailableError
+from app.application.ports import ActiveSession, GeoResult, OwnedTrip
+from app.domain import polyline
+from app.domain.geo import GeoPoint, Place, ServiceArea, haversine_m
+from app.domain.route import RouteStatus, TripRoute
 from app.domain.trip import Trip
 from app.domain.user import Role, User
 from app.domain.withdrawal import RESERVED_STATUSES, Balance, Withdrawal, WithdrawalStatus
@@ -51,7 +55,26 @@ class InMemoryTripRepository:
     async def insert_if_absent(self, trip: Trip) -> bool:
         if trip.id in self._store:
             return False
-        self._store[trip.id] = OwnedTrip(trip=trip, driver_id=self.driver_id)
+        route = TripRoute.pending() if trip.has_places else TripRoute.none()
+        self._store[trip.id] = OwnedTrip(trip=trip, driver_id=self.driver_id, route=route)
+        return True
+
+    async def save_route(self, trip_id: str, route: TripRoute) -> None:
+        owned = self._store[trip_id]
+        self._store[trip_id] = replace(owned, route=route)
+
+    async def list_pending_routes(self, limit: int) -> list[OwnedTrip]:
+        pending = [o for o in self._store.values() if o.route.status is RouteStatus.PENDING]
+        return pending[:limit]
+
+    async def set_places_if_missing(self, trip_id: str, pickup: Place, dropoff: Place) -> bool:
+        owned = self._store.get(trip_id)
+        if owned is None or owned.driver_id != self.driver_id or owned.trip.pickup is not None:
+            return False
+        trip = replace(owned.trip, pickup=pickup, dropoff=dropoff)
+        self._store[trip_id] = OwnedTrip(
+            trip=trip, driver_id=owned.driver_id, route=TripRoute.pending()
+        )
         return True
 
     async def count(self) -> int:
@@ -223,3 +246,41 @@ class InMemoryWithdrawalStore:
             and (status is None or w.status is status)
         ]
         return sorted(found, key=lambda w: w.created_at, reverse=True)
+
+
+class FakeMaps:
+    """Router and Geocoder without network. `fail` makes every call raise
+    MapsUnavailableError (as ORS does on a timeout or over quota); `calls`
+    counts the calls that reached the "engine"."""
+
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
+        self.calls: list[str] = []
+        self.labels: dict[tuple[float, float], str | None] = {}
+        self.places: list[GeoResult] = []
+
+    def _call(self, name: str) -> None:
+        self.calls.append(name)
+        if self.fail:
+            raise MapsUnavailableError("fake: down")
+
+    async def route(self, a: GeoPoint, b: GeoPoint) -> TripRoute:
+        self._call("route")
+        # A road route: via a corner point, 1.3 x the straight length, 30 km/h.
+        corner = GeoPoint(a.lat, b.lng)
+        distance = round(1.3 * haversine_m(a, b))
+        return TripRoute(
+            status=RouteStatus.READY,
+            polyline=polyline.encode([a, corner, b]),
+            distance_m=distance,
+            duration_s=round(distance / (30 / 3.6)),
+        )
+
+    async def reverse(self, point: GeoPoint) -> str | None:
+        self._call("reverse")
+        return self.labels.get((point.lat, point.lng), "проспект Абая, 10")
+
+    async def search(self, text: str, area: ServiceArea, limit: int) -> list[GeoResult]:
+        del area  # the service filters by area itself
+        self._call(f"search:{text}")
+        return [p for p in self.places if text in p.label.lower()][:limit]

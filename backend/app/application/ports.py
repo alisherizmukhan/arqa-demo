@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from app.domain.geo import GeoPoint, Place, ServiceArea
+from app.domain.route import NO_ROUTE, TripRoute
 from app.domain.trip import Trip
 from app.domain.user import Role, User
 from app.domain.withdrawal import Balance, Withdrawal, WithdrawalStatus
@@ -13,6 +15,7 @@ from app.domain.withdrawal import Balance, Withdrawal, WithdrawalStatus
 class OwnedTrip:
     trip: Trip
     driver_id: UUID
+    route: TripRoute = NO_ROUTE
 
 
 class TripRepository(Protocol):
@@ -31,8 +34,47 @@ class TripRepository(Protocol):
         """Atomically insert unless a trip with this id exists. True if inserted.
 
         Must be enforced by the storage itself (unique key), never by a
-        separate existence check, so concurrent callers are safe.
+        separate existence check, so concurrent callers are safe. A trip with
+        places is stored with a pending route, one without with none.
         """
+        ...
+
+    async def save_route(self, trip_id: str, route: TripRoute) -> None: ...
+
+    async def list_pending_routes(self, limit: int) -> list[OwnedTrip]:
+        """Trips (any driver) whose route has not been built yet, oldest first."""
+        ...
+
+    async def set_places_if_missing(self, trip_id: str, pickup: Place, dropoff: Place) -> bool:
+        """Seed only: give this driver's existing trip places (route pending)
+        unless it already has some. True if changed."""
+        ...
+
+
+class Router(Protocol):
+    """The road routing engine (OpenRouteService in production)."""
+
+    async def route(self, a: GeoPoint, b: GeoPoint) -> TripRoute:
+        """A `ready` route by road. Raises MapsUnavailableError when the engine
+        fails, times out or is over its quota."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class GeoResult:
+    label: str
+    point: GeoPoint
+
+
+class Geocoder(Protocol):
+    async def reverse(self, point: GeoPoint) -> str | None:
+        """A short Russian address for the point (street + house, or a place
+        name; no city or country); None when nothing is near.
+        Raises MapsUnavailableError."""
+        ...
+
+    async def search(self, text: str, area: ServiceArea, limit: int) -> list[GeoResult]:
+        """Places matching `text` inside `area`, best first. Raises MapsUnavailableError."""
         ...
 
 

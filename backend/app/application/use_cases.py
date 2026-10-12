@@ -3,8 +3,17 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.application.errors import TripConflictError
-from app.application.ports import OwnedTrip, PasswordHasher, TripRepository, UserRepository
+from app.application.ports import (
+    OwnedTrip,
+    PasswordHasher,
+    Router,
+    TripRepository,
+    UserRepository,
+)
+from app.application.routing import route_and_save
 from app.domain.day import DayWindow
+from app.domain.geo import ServiceArea, ensure_in_area
+from app.domain.route import TripRoute
 from app.domain.summary import DailySummary, calculate_daily_summary
 from app.domain.trip import Trip
 from app.domain.user import DemoAccount
@@ -23,11 +32,23 @@ async def get_daily_summary(repo: TripRepository, window: DayWindow) -> DailySum
 class CreateTripResult:
     trip: Trip
     created: bool
+    route: TripRoute
 
 
-async def create_trip(repo: TripRepository, trip: Trip, driver_id: UUID) -> CreateTripResult:
+async def create_trip(
+    repo: TripRepository,
+    trip: Trip,
+    driver_id: UUID,
+    *,
+    router: Router,
+    area: ServiceArea,
+) -> CreateTripResult:
     """Idempotent create keyed by the client-generated trip id, for `driver_id`
     (`repo` is that driver's scope).
+
+    A new trip with places gets its route right away (one routing call; a
+    straight line if the engine fails, never an error). The places must be
+    inside `area`.
 
     - new id                                   -> created
     - same id, same driver, same payload       -> the stored trip, not created
@@ -35,15 +56,19 @@ async def create_trip(repo: TripRepository, trip: Trip, driver_id: UUID) -> Crea
     - same id, another driver                  -> TripConflictError (same message:
       nothing about the other driver's trip is revealed)
     """
+    ensure_in_area(area, pickup=trip.pickup, dropoff=trip.dropoff)
     if await repo.insert_if_absent(trip):
-        return CreateTripResult(trip=trip, created=True)
+        owned = OwnedTrip(trip=trip, driver_id=driver_id, route=TripRoute.none())
+        if trip.has_places:
+            owned = await route_and_save(repo, router, owned)
+        return CreateTripResult(trip=trip, created=True, route=owned.route)
 
     existing = await repo.get(trip.id)
     if existing is None:  # pragma: no cover - trips are never deleted by the API
         raise RuntimeError(f"trip {trip.id!r} conflicted on insert but cannot be read")
     if existing.driver_id != driver_id or not existing.trip.has_same_payload(trip):
         raise TripConflictError(trip.id)
-    return CreateTripResult(trip=existing.trip, created=False)
+    return CreateTripResult(trip=existing.trip, created=False, route=existing.route)
 
 
 async def seed_trips(repo: TripRepository, trips: Sequence[Trip]) -> int:
@@ -57,6 +82,17 @@ async def seed_trips(repo: TripRepository, trips: Sequence[Trip]) -> int:
     for trip in trips:
         inserted += await repo.insert_if_absent(trip)
     return inserted
+
+
+async def seed_trip_places(repo: TripRepository, trips: Sequence[Trip]) -> int:
+    """Give seed trips that already exist (a database seeded before trips had
+    places) the places from the seed file; their routes are then pending.
+    Never touches a trip that has places, or another driver's trip."""
+    changed = 0
+    for trip in trips:
+        if trip.pickup is not None and trip.dropoff is not None:
+            changed += await repo.set_places_if_missing(trip.id, trip.pickup, trip.dropoff)
+    return changed
 
 
 @dataclass(frozen=True, slots=True)

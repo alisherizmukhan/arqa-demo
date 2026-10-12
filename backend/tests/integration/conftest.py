@@ -32,9 +32,10 @@ from app.infrastructure.repository import (
 )
 from app.infrastructure.seed import load_seed_trips
 from app.infrastructure.settings import Settings
-from app.main import create_app
+from app.main import Maps, create_app
 from tests.conftest import STARTUP_TIMEOUT
 from tests.factories import SEED_FILE
+from tests.fakes import FakeMaps
 
 TEST_DATABASE_URL = os.environ.get(
     "TEST_DATABASE_URL", "postgresql://postgres:postgres@localhost:5433/driver_diary_test"
@@ -80,9 +81,18 @@ def bearer(login: str) -> dict[str, str]:
 
 
 @pytest.fixture
-async def app(database_url: str) -> AsyncIterator[FastAPI]:
+def fake_maps() -> FakeMaps:
+    """The map service the `app` uses: no network; set `.fail` to make it down."""
+    return FakeMaps()
+
+
+@pytest.fixture
+async def app(database_url: str, fake_maps: FakeMaps) -> AsyncIterator[FastAPI]:
     """The API on empty tables plus the three demo accounts (no trips)."""
-    application = create_app(Settings(database_url=database_url, seed_on_startup=False))
+    application = create_app(
+        Settings(database_url=database_url, seed_on_startup=False),
+        maps=Maps(fake_maps, fake_maps),
+    )
     async with LifespanManager(application, startup_timeout=STARTUP_TIMEOUT):
         async with application.state.sessionmaker() as session:
             await session.execute(

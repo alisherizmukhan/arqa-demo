@@ -3,10 +3,16 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from app.domain.geo import GeoPoint, Place, ServiceArea
 from app.domain.trip import PaymentMethod, Trip
 
 KZ = timezone(timedelta(hours=5))
 SEED_FILE = Path(__file__).resolve().parents[2] / "data" / "trips.json"
+
+# The default service area (Settings), and two places in it ~5.4 km apart.
+ALMATY = ServiceArea(south=43.05, north=43.45, west=76.70, east=77.20)
+BAZAAR = Place(point=GeoPoint(43.26275, 76.95519), label="Зелёный базар")
+ESENTAI = Place(point=GeoPoint(43.2185, 76.928), label="Есентай Молл")
 
 
 def make_trip(**overrides: Any) -> Trip:
@@ -32,7 +38,15 @@ def trip_from_json(raw: dict[str, Any]) -> Trip:
         amount=raw["amount"],
         payment=PaymentMethod.parse(raw["payment"]),
         commission=raw["commission"],
+        pickup=_place(raw.get("pickup")),
+        dropoff=_place(raw.get("dropoff")),
     )
+
+
+def _place(raw: dict[str, Any] | None) -> Place | None:
+    if raw is None:
+        return None
+    return Place(point=GeoPoint(raw["lat"], raw["lng"]), label=raw.get("label"))
 
 
 def load_seed_trips(driver: str | None = "user_1") -> list[Trip]:

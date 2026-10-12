@@ -92,6 +92,18 @@ def test_account_endpoints_are_documented(spec: dict[str, Any]) -> None:
             "post",
             {"403": "forbidden", "404": "not_found", "409": "withdrawal_already_decided"},
         ),
+        ("/trips/{trip_id}", "get", {"401": "unauthorized", "404": "not_found"}),
+        (
+            "/trips/{trip_id}/route",
+            "post",
+            {"404": "not_found", "409": "no_places", "429": "rate_limited"},
+        ),
+        (
+            "/geo/reverse",
+            "get",
+            {"401": "unauthorized", "429": "rate_limited", "503": "maps_unavailable"},
+        ),
+        ("/geo/search", "get", {"429": "rate_limited", "503": "maps_unavailable"}),
     ],
 )
 def test_error_responses_have_the_shape_and_an_example(
@@ -111,3 +123,15 @@ def test_withdrawal_endpoints_are_documented(spec: dict[str, Any]) -> None:
     assert "post" in paths["/admin/withdrawals/{withdrawal_id}/approve"]
     assert "post" in paths["/admin/withdrawals/{withdrawal_id}/reject"]
     assert {"200", "201"} <= paths["/withdrawals"]["post"]["responses"].keys()
+
+
+def test_trips_carry_places_and_a_server_built_route(spec: dict[str, Any]) -> None:
+    schemas = spec["components"]["schemas"]
+    assert {"pickup", "dropoff"} <= schemas["TripIn"]["properties"].keys()
+    assert "route" not in schemas["TripIn"]["properties"]
+    assert {"pickup", "dropoff", "route"} <= schemas["TripOut"]["properties"].keys()
+    route = schemas["RouteOut"]["properties"]
+    assert route["distance_m"]["anyOf"][0]["type"] == "integer"
+    assert set(schemas["RouteStatus"]["enum"]) == {"none", "pending", "ready", "straight", "failed"}
+    body = spec["paths"]["/trips"]["post"]["requestBody"]["content"]["application/json"]
+    assert "with places" in body["examples"]

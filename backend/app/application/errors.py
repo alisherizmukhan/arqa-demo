@@ -74,3 +74,22 @@ class WithdrawalAlreadyDecidedError(DomainError):
     def __init__(self, withdrawal_id: object, status: str) -> None:
         super().__init__(f"withdrawal {withdrawal_id} is already {status}")
         self.status = status
+
+
+class MapsUnavailableError(DomainError):
+    """The routing / geocoding engine failed, timed out, is over its quota, or
+    is not configured."""
+
+    def __init__(self, message: str = "the map service is unavailable") -> None:
+        super().__init__(message)
+
+
+class GeoRateLimitedError(DomainError):
+    def __init__(self, retry_after: timedelta) -> None:
+        super().__init__("too many map requests, try again later")
+        self.retry_after = retry_after
+
+
+class TripHasNoPlacesError(DomainError):
+    def __init__(self, trip_id: str) -> None:
+        super().__init__(f"trip {trip_id!r} has no pickup and dropoff, so it has no route")

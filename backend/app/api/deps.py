@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.errors import ApiError, ApiErrorCode
 from app.application import access, auth
 from app.application.errors import NotAuthenticatedError
-from app.application.ports import Accounts, TripRepository
+from app.application.geocoding import GeoService
+from app.application.ports import Accounts, Router, TripRepository
 from app.domain.day import (
     DEFAULT_DRIVER_TZ,
     MAX_SUPPORTED_YEAR,
@@ -46,6 +47,20 @@ def get_settings(request: Request) -> Settings:
 
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+
+
+def get_router(request: Request) -> Router:
+    return cast(Router, request.app.state.router)
+
+
+RouterDep = Annotated[Router, Depends(get_router)]
+
+
+def get_geo(request: Request) -> GeoService:
+    return cast(GeoService, request.app.state.geo)
+
+
+GeoDep = Annotated[GeoService, Depends(get_geo)]
 
 
 def get_now() -> datetime:

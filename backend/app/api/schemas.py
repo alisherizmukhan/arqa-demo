@@ -2,10 +2,21 @@ from datetime import date, datetime, timezone, tzinfo
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, BeforeValidator, ConfigDict, Field, StrictInt
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    Strict,
+    StrictInt,
+)
 from pydantic_core import PydanticCustomError
 
+from app.application.ports import GeoResult
 from app.domain.day import format_utc_offset
+from app.domain.geo import GeoPoint, Place
+from app.domain.route import NO_ROUTE, RouteStatus, TripRoute
 from app.domain.summary import DailySummary
 from app.domain.trip import MAX_AMOUNT, PaymentMethod, Trip
 from app.domain.user import Role, User
@@ -34,6 +45,65 @@ def _iso_string_only(value: object) -> object:
 # An ISO 8601 string with an explicit offset; numbers and naive values fail.
 Timestamp = Annotated[AwareDatetime, BeforeValidator(_iso_string_only)]
 
+# A JSON number (not a string, not NaN / Infinity), in degrees.
+Coordinate = Annotated[float, Strict(), Field(allow_inf_nan=False)]
+
+
+class PlaceIn(BaseModel):
+    """A point picked on the map and the address shown for it."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [{"lat": 43.26275, "lng": 76.95519, "label": "Зелёный базар"}]
+        },
+    )
+
+    lat: Coordinate = Field(description="Latitude, inside the service area (Almaty)")
+    lng: Coordinate = Field(description="Longitude, inside the service area (Almaty)")
+    label: str | None = Field(
+        default=None, description="Address or place name as the driver saw it, ≤ 200 chars"
+    )
+
+    def to_domain(self) -> Place:
+        return Place(point=GeoPoint(self.lat, self.lng), label=self.label)
+
+
+class PlaceOut(BaseModel):
+    lat: float
+    lng: float
+    label: str | None
+
+    @classmethod
+    def from_domain(cls, place: Place | None) -> "PlaceOut | None":
+        if place is None:
+            return None
+        return cls(lat=place.point.lat, lng=place.point.lng, label=place.label)
+
+
+class RouteOut(BaseModel):
+    """Built by the server; never part of the request."""
+
+    status: RouteStatus = Field(
+        description=(
+            "none: the trip has no places; pending: not built yet; ready: by road; "
+            "straight: the map service was unavailable, a straight line instead "
+            "(POST /trips/{id}/route builds it again); failed: reserved"
+        )
+    )
+    polyline: str | None = Field(description="Google encoded polyline, precision 5 (1e5)")
+    distance_m: int | None = Field(description="Metres; by road, or the straight-line length")
+    duration_s: int | None = Field(description="Seconds by road; null unless ready")
+
+    @classmethod
+    def from_domain(cls, route: TripRoute) -> "RouteOut":
+        return cls(
+            status=route.status,
+            polyline=route.polyline,
+            distance_m=route.distance_m,
+            duration_s=route.duration_s,
+        )
+
 
 class TripIn(BaseModel):
     """A trip to create. Re-sending the same id and payload is safe (200, no duplicate)."""
@@ -60,6 +130,10 @@ class TripIn(BaseModel):
     amount: StrictInt = Field(description=f"Fare in whole tenge, 0 < amount <= {MAX_AMOUNT}")
     payment: PaymentMethod
     commission: StrictInt = Field(description="Platform commission in tenge, 0..amount")
+    pickup: PlaceIn | None = Field(
+        default=None, description="Where the trip started; both pickup and dropoff, or neither"
+    )
+    dropoff: PlaceIn | None = Field(default=None, description="Where the trip ended")
 
     def to_domain(self) -> Trip:
         return Trip(
@@ -69,6 +143,8 @@ class TripIn(BaseModel):
             amount=self.amount,
             payment=self.payment,
             commission=self.commission,
+            pickup=self.pickup.to_domain() if self.pickup else None,
+            dropoff=self.dropoff.to_domain() if self.dropoff else None,
         )
 
 
@@ -81,9 +157,14 @@ class TripOut(BaseModel):
     payment: PaymentMethod
     commission: int
     net: int = Field(description="amount - commission")
+    pickup: PlaceOut | None
+    dropoff: PlaceOut | None
+    route: RouteOut
 
     @classmethod
-    def from_domain(cls, trip: Trip, tz: tzinfo, driver_id: UUID) -> "TripOut":
+    def from_domain(
+        cls, trip: Trip, tz: tzinfo, driver_id: UUID, route: TripRoute = NO_ROUTE
+    ) -> "TripOut":
         return cls(
             id=trip.id,
             driver_id=driver_id,
@@ -93,6 +174,9 @@ class TripOut(BaseModel):
             payment=trip.payment,
             commission=trip.commission,
             net=trip.net,
+            pickup=PlaceOut.from_domain(trip.pickup),
+            dropoff=PlaceOut.from_domain(trip.dropoff),
+            route=RouteOut.from_domain(route),
         )
 
 
@@ -312,3 +396,25 @@ class RejectIn(BaseModel):
     )
 
     reason: str = Field(max_length=1000, description="Required; shown to the driver")
+
+
+class GeoLabelOut(BaseModel):
+    model_config = ConfigDict(json_schema_extra={"examples": [{"label": "площадь Республики, 2"}]})
+
+    label: str | None = Field(
+        description="Street and house, or a place name; no city or country. null: nothing near"
+    )
+
+
+class GeoResultOut(BaseModel):
+    label: str
+    lat: float
+    lng: float
+
+    @classmethod
+    def from_domain(cls, result: GeoResult) -> "GeoResultOut":
+        return cls(label=result.label, lat=result.point.lat, lng=result.point.lng)
+
+
+class GeoSearchOut(BaseModel):
+    results: list[GeoResultOut] = Field(description="At most 5, inside the service area")

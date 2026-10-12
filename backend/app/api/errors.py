@@ -15,12 +15,15 @@ from app.application.errors import (
     AccountDisabledError,
     DemoAccountProtectedError,
     ForbiddenError,
+    GeoRateLimitedError,
     InsufficientFundsError,
     InvalidCredentialsError,
+    MapsUnavailableError,
     NotAuthenticatedError,
     NotFoundError,
     TooManyLoginAttemptsError,
     TripConflictError,
+    TripHasNoPlacesError,
     WithdrawalAlreadyDecidedError,
     WithdrawalConflictError,
 )
@@ -53,6 +56,8 @@ class ApiErrorCode(StrEnum):
     WITHDRAWAL_CONFLICT = "withdrawal_conflict"
     WITHDRAWAL_ALREADY_DECIDED = "withdrawal_already_decided"
     NOT_FOUND = "not_found"
+    NO_PLACES = "no_places"
+    MAPS_UNAVAILABLE = "maps_unavailable"
     METHOD_NOT_ALLOWED = "method_not_allowed"
     HTTP_ERROR = "http_error"
     DATABASE_UNAVAILABLE = "database_unavailable"
@@ -88,8 +93,12 @@ _PYDANTIC_CODES: dict[str, str] = {
     "int_parsing": ApiErrorCode.INVALID_TYPE,
     "int_from_float": ApiErrorCode.INVALID_TYPE,
     "string_type": ApiErrorCode.INVALID_TYPE,
+    "float_type": ApiErrorCode.INVALID_TYPE,
+    "float_parsing": ApiErrorCode.INVALID_TYPE,
+    "finite_number": ApiErrorCode.INVALID_TYPE,
     "enum": ErrorCode.INVALID_PAYMENT,
 }
+_OBJECT_TYPES = {"model_type", "model_attributes_type"}
 _FIELD_CODES: dict[str, str] = {"id": ErrorCode.INVALID_ID, "payment": ErrorCode.INVALID_PAYMENT}
 
 
@@ -98,6 +107,10 @@ def _from_pydantic_error(error: dict[str, Any]) -> tuple[str, str, str | None]:
     # loc is ("body", "amount") or ("query", "date"); a bare ("body",) has no field.
     field = ".".join(loc[1:]) if len(loc) > 1 and error["type"] != "json_invalid" else None
     code = _PYDANTIC_CODES.get(error["type"])
+    # A nested object (e.g. "pickup") that is not an object; the body itself
+    # not being an object stays invalid_request.
+    if error["type"] in _OBJECT_TYPES and field is not None:
+        code = ApiErrorCode.INVALID_TYPE
     if code is None or (code == ApiErrorCode.INVALID_TYPE and field in _FIELD_CODES):
         code = _FIELD_CODES.get(field or "", ApiErrorCode.INVALID_REQUEST)
     return code, str(error.get("msg", "invalid request")), field
@@ -152,6 +165,28 @@ def install_error_handlers(app: FastAPI) -> None:
         )
         response.headers["Retry-After"] = str(max(1, math.ceil(exc.retry_after.total_seconds())))
         return response
+
+    @app.exception_handler(GeoRateLimitedError)
+    async def _geo_rate_limited(_: Request, exc: GeoRateLimitedError) -> JSONResponse:
+        response = error_response(
+            status.HTTP_429_TOO_MANY_REQUESTS, ApiErrorCode.RATE_LIMITED, str(exc)
+        )
+        response.headers["Retry-After"] = str(max(1, math.ceil(exc.retry_after.total_seconds())))
+        return response
+
+    @app.exception_handler(MapsUnavailableError)
+    async def _maps_unavailable(_: Request, exc: MapsUnavailableError) -> JSONResponse:
+        # The reason (timeout, quota, no key) goes to the log, not to clients.
+        logger.warning("map service unavailable: %s", exc)
+        return error_response(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            ApiErrorCode.MAPS_UNAVAILABLE,
+            "the map service is unavailable, try again later",
+        )
+
+    @app.exception_handler(TripHasNoPlacesError)
+    async def _no_places(_: Request, exc: TripHasNoPlacesError) -> JSONResponse:
+        return error_response(status.HTTP_409_CONFLICT, ApiErrorCode.NO_PLACES, str(exc))
 
     @app.exception_handler(ForbiddenError)
     async def _forbidden(_: Request, exc: ForbiddenError) -> JSONResponse:

@@ -6,9 +6,11 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    Double,
     ForeignKey,
     Identity,
     Index,
+    Integer,
     MetaData,
     String,
     Text,
@@ -87,14 +89,40 @@ class TripRow(Base):
     payment: Mapped[str] = mapped_column(String(8))
     commission: Mapped[int] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # Places (both or neither) and the route the server built between them.
+    pickup_lat: Mapped[float | None] = mapped_column(Double)
+    pickup_lng: Mapped[float | None] = mapped_column(Double)
+    dropoff_lat: Mapped[float | None] = mapped_column(Double)
+    dropoff_lng: Mapped[float | None] = mapped_column(Double)
+    pickup_label: Mapped[str | None] = mapped_column(Text)
+    dropoff_label: Mapped[str | None] = mapped_column(Text)
+    route_polyline: Mapped[str | None] = mapped_column(Text)
+    route_distance_m: Mapped[int | None] = mapped_column(Integer)
+    route_duration_s: Mapped[int | None] = mapped_column(Integer)
+    route_status: Mapped[str] = mapped_column(Text, server_default=text("'none'"))
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
         CheckConstraint("commission >= 0 AND commission <= amount", name="commission_range"),
         CheckConstraint("end_at > start_at", name="time_range"),
         CheckConstraint("payment IN ('cash', 'card')", name="payment_method"),
+        CheckConstraint(
+            "route_status IN ('none', 'pending', 'ready', 'straight', 'failed')",
+            name="route_status",
+        ),
+        CheckConstraint(
+            "(pickup_lat IS NULL) = (pickup_lng IS NULL)"
+            " AND (pickup_lat IS NULL) = (dropoff_lat IS NULL)"
+            " AND (pickup_lat IS NULL) = (dropoff_lng IS NULL)",
+            name="places_complete",
+        ),
         Index("ix_trips_start_at", "start_at"),
         Index("ix_trips_driver_id_start_at", "driver_id", "start_at"),
+        Index(
+            "ix_trips_route_pending",
+            "created_at",
+            postgresql_where=text("route_status = 'pending'"),
+        ),
     )
 
 

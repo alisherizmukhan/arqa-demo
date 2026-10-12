@@ -16,6 +16,10 @@ class ErrorCode(StrEnum):
     DATETIME_OUT_OF_RANGE = "datetime_out_of_range"
     TRIP_TOO_LONG = "trip_too_long"
     INVALID_REASON = "invalid_reason"
+    INCOMPLETE_ROUTE = "incomplete_route"
+    OUTSIDE_SERVICE_AREA = "outside_service_area"
+    SAME_PLACES = "same_places"
+    LABEL_TOO_LONG = "label_too_long"
 
 
 class DomainError(Exception):

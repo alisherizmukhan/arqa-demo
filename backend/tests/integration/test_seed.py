@@ -10,9 +10,10 @@ from app.infrastructure.models import TripRow, UserRow
 from app.infrastructure.passwords import Argon2PasswordHasher
 from app.infrastructure.seed import load_seed_trips
 from app.infrastructure.settings import Settings
-from app.main import create_app
+from app.main import Maps, create_app
 from tests.conftest import STARTUP_TIMEOUT
 from tests.factories import SEED_FILE
+from tests.fakes import FakeMaps
 from tests.integration.conftest import count_trips, seed_trips_file
 
 
@@ -26,11 +27,15 @@ async def test_seed_trips_is_idempotent(
     assert await count_trips(sessionmaker) == total
 
 
-async def _start(database_url: str, admin_password: str = "admin") -> None:
+async def _start(
+    database_url: str, admin_password: str = "admin", maps: FakeMaps | None = None
+) -> None:
     settings = Settings(
         database_url=database_url, seed_on_startup=True, seed_admin_password=admin_password
     )
-    async with LifespanManager(create_app(settings), startup_timeout=STARTUP_TIMEOUT):
+    fake = maps or FakeMaps()
+    app = create_app(settings, maps=Maps(fake, fake))
+    async with LifespanManager(app, startup_timeout=STARTUP_TIMEOUT):
         pass
 
 
@@ -179,3 +184,86 @@ async def test_restart_unblocks_demo_accounts_and_restores_passwords(
         active = await session.scalar(select(UserRow.is_active).where(UserRow.login == "user_1"))
     assert active is True
     assert Argon2PasswordHasher().verify((await _hashes(sessionmaker))["user_1"], "password_1")
+
+
+SEEDED_WITH_PLACES = ["t1", "t2", "t3", "t4"]
+
+
+async def _routes(
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> dict[str, tuple[str | None, str]]:
+    """id -> (pickup label, route status) for trips with places."""
+    async with sessionmaker() as session:
+        rows = await session.execute(
+            select(TripRow.id, TripRow.pickup_label, TripRow.route_status).where(
+                TripRow.pickup_lat.is_not(None)
+            )
+        )
+        return {trip_id: (label, status) for trip_id, label, status in rows.all()}
+
+
+async def test_seed_trips_get_places_and_routes_on_first_start(
+    database_url: str, sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _clear(sessionmaker)
+    maps = FakeMaps()
+
+    await _start(database_url, maps=maps)
+
+    routes = await _routes(sessionmaker)
+    assert sorted(routes) == SEEDED_WITH_PLACES
+    assert routes["t1"] == ("Зелёный базар", "ready")
+    assert all(status == "ready" for _, status in routes.values())
+    assert maps.calls == ["route"] * 4
+
+    # A restart builds nothing again.
+    again = FakeMaps()
+    await _start(database_url, maps=again)
+    assert again.calls == []
+
+
+async def test_seed_routes_fall_back_to_straight_lines_when_maps_are_down(
+    database_url: str, sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
+    await _clear(sessionmaker)
+
+    await _start(database_url, maps=FakeMaps(fail=True))
+
+    assert {status for _, status in (await _routes(sessionmaker)).values()} == {"straight"}
+
+
+async def test_seed_adds_places_to_seed_trips_stored_before_maps(
+    database_url: str, sessionmaker: async_sessionmaker[AsyncSession], users: dict[str, User]
+) -> None:
+    # A database seeded before trips had places (production): t1 and t2 exist
+    # without places; t3 has places the driver set (never overwritten).
+    async with sessionmaker() as session:
+        await session.execute(
+            text(
+                "INSERT INTO trips (id, driver_id, start_at, end_at, amount, payment, commission)"
+                " VALUES ('t1', :d, '2026-10-01T03:10Z', '2026-10-01T03:32Z', 2400, 'card', 360),"
+                " ('t2', :d, '2026-10-01T04:05Z', '2026-10-01T04:20Z', 1500, 'cash', 225)"
+            ),
+            {"d": users["user_1"].id},
+        )
+        await session.execute(
+            text(
+                "INSERT INTO trips (id, driver_id, start_at, end_at, amount, payment, commission,"
+                " pickup_lat, pickup_lng, dropoff_lat, dropoff_lng, pickup_label, route_status)"
+                " VALUES ('t3', :d, '2026-09-30T13:40Z', '2026-09-30T14:05Z', 2100, 'card', 315,"
+                " 43.25, 76.95, 43.22, 76.93, 'мой адрес', 'straight')"
+            ),
+            {"d": users["user_1"].id},
+        )
+        await session.commit()
+    maps = FakeMaps()
+
+    await _start(database_url, maps=maps)
+
+    routes = await _routes(sessionmaker)
+    assert routes["t1"] == ("Зелёный базар", "ready")
+    assert routes["t2"] == ("Есентай Молл", "ready")
+    assert routes["t3"] == ("мой адрес", "straight")
+    assert routes["t4"] == ("MEGA Alma-Ata", "ready")
+    # t1, t2 (places added) and t4 (inserted) were routed; t3 was left alone.
+    assert maps.calls == ["route"] * 3

@@ -7,6 +7,7 @@ from enum import StrEnum
 
 from app.domain.day import MAX_SUPPORTED_INSTANT, MIN_SUPPORTED_INSTANT
 from app.domain.errors import DomainValidationError, ErrorCode
+from app.domain.geo import Place, validate_places
 
 TRIP_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 
@@ -46,6 +47,9 @@ class Trip:
     amount: int
     payment: PaymentMethod
     commission: int
+    # Where the trip started and ended: both or neither (old trips have none).
+    pickup: Place | None = None
+    dropoff: Place | None = None
 
     def __post_init__(self) -> None:
         _validate(self)
@@ -54,15 +58,22 @@ class Trip:
     def net(self) -> int:
         return self.amount - self.commission
 
+    @property
+    def has_places(self) -> bool:
+        return self.pickup is not None and self.dropoff is not None
+
     def has_same_payload(self, other: Trip) -> bool:
         """Compare everything except the id. Datetimes compare as instants,
-        so 08:10+05:00 and 03:10Z are the same payload."""
+        so 08:10+05:00 and 03:10Z are the same payload. The places (points and
+        labels) are payload; the route is built by the server and is not."""
         return (
             self.start == other.start
             and self.end == other.end
             and self.amount == other.amount
             and self.payment == other.payment
             and self.commission == other.commission
+            and self.pickup == other.pickup
+            and self.dropoff == other.dropoff
         )
 
 
@@ -123,3 +134,4 @@ def _validate(trip: Trip) -> None:
             "commission must not exceed amount",
             field="commission",
         )
+    validate_places(trip.pickup, trip.dropoff)

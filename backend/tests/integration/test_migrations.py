@@ -8,6 +8,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.infrastructure.settings import Settings
@@ -82,3 +83,53 @@ def test_empty_database_gets_no_placeholder_user(database_url: str, at_0001: Con
     command.upgrade(at_0001, "head")
 
     assert _run(database_url, "SELECT count(*) FROM users") == [(0,)]
+
+
+@pytest.fixture
+def at_0004(database_url: str) -> Iterator[Config]:
+    """The schema before trips had places; head again afterwards."""
+    config = _config(database_url)
+    command.downgrade(config, "base")
+    command.upgrade(config, "0004")
+    yield config
+    command.downgrade(config, "base")
+    command.upgrade(config, "head")
+
+
+def test_old_trips_have_no_places_and_no_route(database_url: str, at_0004: Config) -> None:
+    _run(
+        database_url,
+        "INSERT INTO users (login, password_hash, role, display_name)"
+        " VALUES ('user_1', '!', 'driver', 'Водитель 1')",
+        "INSERT INTO trips (id, driver_id, start_at, end_at, amount, payment, commission)"
+        " SELECT 'old-1', id, '2026-10-01T03:10Z', '2026-10-01T03:32Z', 2400, 'card', 360"
+        " FROM users",
+    )
+
+    command.upgrade(at_0004, "head")
+
+    rows = _run(
+        database_url,
+        "SELECT id, route_status, pickup_lat, route_polyline FROM trips",
+    )
+    assert rows == [("old-1", "none", None, None)]
+
+
+def test_places_must_be_complete_and_status_known(database_url: str, at_0004: Config) -> None:
+    command.upgrade(at_0004, "head")
+    _run(
+        database_url,
+        "INSERT INTO users (login, password_hash, role, display_name)"
+        " VALUES ('user_1', '!', 'driver', 'Водитель 1')",
+    )
+    insert = (
+        "INSERT INTO trips (id, driver_id, start_at, end_at, amount, payment, commission, {cols})"
+        " SELECT 'x', id, '2026-10-01T03:10Z', '2026-10-01T03:32Z', 2400, 'card', 360, {vals}"
+        " FROM users"
+    )
+    for cols, vals in [
+        ("pickup_lat, pickup_lng", "43.2, 76.9"),
+        ("route_status", "'lost'"),
+    ]:
+        with pytest.raises(IntegrityError):
+            _run(database_url, insert.format(cols=cols, vals=vals))

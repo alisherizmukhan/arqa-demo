@@ -6,6 +6,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.ports import ActiveSession, OwnedTrip
+from app.domain.geo import GeoPoint, Place
+from app.domain.route import RouteStatus, TripRoute
 from app.domain.trip import PaymentMethod, Trip
 from app.domain.user import Role, User
 from app.infrastructure.models import LoginFailureRow, SessionRow, TripRow, UserRow
@@ -30,14 +32,11 @@ class SqlTripRepository:
         )
         if self._driver_id is not None:
             stmt = stmt.where(TripRow.driver_id == self._driver_id)
-        return [
-            OwnedTrip(trip=_to_domain(row), driver_id=row.driver_id)
-            for row in await self._session.scalars(stmt)
-        ]
+        return [_owned(row) for row in await self._session.scalars(stmt)]
 
     async def get(self, trip_id: str) -> OwnedTrip | None:
         row = await self._session.scalar(select(TripRow).where(TripRow.id == trip_id))
-        return None if row is None else OwnedTrip(trip=_to_domain(row), driver_id=row.driver_id)
+        return None if row is None else _owned(row)
 
     async def insert_if_absent(self, trip: Trip) -> bool:
         # INSERT ... ON CONFLICT DO NOTHING: the primary key decides, atomically.
@@ -55,6 +54,8 @@ class SqlTripRepository:
                 amount=trip.amount,
                 payment=trip.payment.value,
                 commission=trip.commission,
+                **_place_columns(trip.pickup, trip.dropoff),
+                route_status=(RouteStatus.PENDING if trip.has_places else RouteStatus.NONE).value,
             )
             .on_conflict_do_nothing(index_elements=[TripRow.id])
             .returning(TripRow.id)
@@ -62,6 +63,44 @@ class SqlTripRepository:
         inserted_id = await self._session.scalar(stmt)
         await self._session.commit()
         return inserted_id is not None
+
+    async def save_route(self, trip_id: str, route: TripRoute) -> None:
+        await self._session.execute(
+            update(TripRow)
+            .where(TripRow.id == trip_id)
+            .values(
+                route_status=route.status.value,
+                route_polyline=route.polyline,
+                route_distance_m=route.distance_m,
+                route_duration_s=route.duration_s,
+            )
+        )
+        await self._session.commit()
+
+    async def list_pending_routes(self, limit: int) -> list[OwnedTrip]:
+        stmt = (
+            select(TripRow)
+            .where(TripRow.route_status == RouteStatus.PENDING.value)
+            .order_by(TripRow.created_at, TripRow.id)
+            .limit(limit)
+        )
+        return [_owned(row) for row in await self._session.scalars(stmt)]
+
+    async def set_places_if_missing(self, trip_id: str, pickup: Place, dropoff: Place) -> bool:
+        if self._driver_id is None:
+            raise ValueError("places can only be set on a driver's trip")
+        changed = await self._session.scalar(
+            update(TripRow)
+            .where(
+                TripRow.id == trip_id,
+                TripRow.driver_id == self._driver_id,
+                TripRow.pickup_lat.is_(None),
+            )
+            .values(**_place_columns(pickup, dropoff), route_status=RouteStatus.PENDING.value)
+            .returning(TripRow.id)
+        )
+        await self._session.commit()
+        return changed is not None
 
 
 class SqlUserRepository:
@@ -121,6 +160,23 @@ class SqlUserRepository:
         await self._session.commit()
 
 
+def _place_columns(pickup: Place | None, dropoff: Place | None) -> dict[str, object]:
+    return {
+        "pickup_lat": pickup.point.lat if pickup else None,
+        "pickup_lng": pickup.point.lng if pickup else None,
+        "pickup_label": pickup.label if pickup else None,
+        "dropoff_lat": dropoff.point.lat if dropoff else None,
+        "dropoff_lng": dropoff.point.lng if dropoff else None,
+        "dropoff_label": dropoff.label if dropoff else None,
+    }
+
+
+def _place(lat: float | None, lng: float | None, label: str | None) -> Place | None:
+    if lat is None or lng is None:
+        return None
+    return Place(point=GeoPoint(lat, lng), label=label)
+
+
 def _to_domain(row: TripRow) -> Trip:
     return Trip(
         id=row.id,
@@ -129,6 +185,21 @@ def _to_domain(row: TripRow) -> Trip:
         amount=row.amount,
         payment=PaymentMethod(row.payment),
         commission=row.commission,
+        pickup=_place(row.pickup_lat, row.pickup_lng, row.pickup_label),
+        dropoff=_place(row.dropoff_lat, row.dropoff_lng, row.dropoff_label),
+    )
+
+
+def _owned(row: TripRow) -> OwnedTrip:
+    return OwnedTrip(
+        trip=_to_domain(row),
+        driver_id=row.driver_id,
+        route=TripRoute(
+            status=RouteStatus(row.route_status),
+            polyline=row.route_polyline,
+            distance_m=row.route_distance_m,
+            duration_s=row.route_duration_s,
+        ),
     )
 
 

@@ -2,9 +2,10 @@ import re
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.domain.geo import ServiceArea
 from app.domain.user import DemoAccount, Role
 
 _REPO_SEED_FILE = Path(__file__).resolve().parents[3] / "data" / "trips.json"
@@ -62,6 +63,19 @@ class Settings(BaseSettings):
     # Browser origins allowed to call the API (Flutter web). JSON list in env,
     # e.g. CORS_ORIGINS='["https://example.com"]'. Public, read-mostly API: "*".
     cors_origins: list[str] = ["*"]
+    # Maps (docs/MAPS.md). Without a key routes fall back to straight lines
+    # and address lookups answer 503. The key never leaves the backend.
+    ors_api_key: SecretStr | None = None
+    ors_base_url: str = "https://api.openrouteservice.org"
+    ors_timeout_seconds: float = Field(default=5.0, gt=0)
+    # The service area: places outside it are rejected (Almaty).
+    area_south: float = 43.05
+    area_north: float = 43.45
+    area_west: float = 76.70
+    area_east: float = 77.20
+    # Per user, all /geo endpoints and route rebuilds together.
+    geo_requests_per_minute: int = Field(default=30, gt=0)
+    geo_cache_hours: int = Field(default=24, gt=0)
 
     @model_validator(mode="after")
     def _require_database_url_in_production(self) -> Self:
@@ -93,6 +107,18 @@ class Settings(BaseSettings):
                 display_name="Администратор",
             ),
         ]
+
+    @property
+    def service_area(self) -> ServiceArea:
+        return ServiceArea(
+            south=self.area_south, north=self.area_north, west=self.area_west, east=self.area_east
+        )
+
+    @property
+    def ors_key(self) -> str | None:
+        """The key, or None when unset or blank."""
+        value = self.ors_api_key.get_secret_value().strip() if self.ors_api_key else ""
+        return value or None
 
     @property
     def async_database_url(self) -> str:

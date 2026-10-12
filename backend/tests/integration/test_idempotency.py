@@ -20,7 +20,15 @@ async def test_new_trip_is_created(
     response = await client.post("/trips", json=payload)
 
     assert response.status_code == 201
-    assert response.json() == {**payload, "net": 1870, "driver_id": str(users["user_1"].id)}
+    assert response.json() == {
+        **payload,
+        "net": 1870,
+        "driver_id": str(users["user_1"].id),
+        # No places: no route, and nothing was asked of the map service.
+        "pickup": None,
+        "dropoff": None,
+        "route": {"status": "none", "polyline": None, "distance_m": None, "duration_s": None},
+    }
     assert await count_trips(sessionmaker, payload["id"]) == 1
 
 
