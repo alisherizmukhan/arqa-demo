@@ -385,20 +385,23 @@ Three guards fail the build when DESIGN.md §10 breaks:
   - ORS's `label` ends in «, AC, Казахстан».
   - Reverse prefers a house address within 75 m over the nearest «venue», because venues are often shops inside a mall.
   - → What ORS returns is recorded in MAPS.md «Stage 1».
+- **`lang=ru` for reverse always, for search only when the text has Cyrillic.** → Checked live: ORS accepts `lang`; it turns «Достық» into «Достык» for a Cyrillic query, but gives English names («Abay Avenue») for a Latin one, where the default gives «Абая». Where OSM has no Russian name ORS falls back to the default name itself.
 - **ORS sits behind two application ports, `Router` and `Geocoder`.**
   - `OrsClient` implements both. `MapsNotConfigured` is used when there is no key (straight lines, 503 for lookups).
   - `create_app(maps=…)` lets tests inject `FakeMaps`.
   - → No test touches the network. `tests/conftest.py` blanks `ORS_API_KEY`, which beats `backend/.env`. One `live` test, skipped unless `RUN_LIVE=1`, makes 3 real calls.
 - **Snap radius 1000 m** (`radiuses`), against ORS's default 350 m. → Points inside the market or the airport area failed to snap with the default.
-- **Seed: places on the existing t1–t4, times and money unchanged.**
-  - The prompt's t3 (10:00–10:40) and t4 (12:15–12:35) do not match the real seed trips t3 / t4 (30 September 18:40 and 23:50).
-  - Changing their times or amounts would change the reference day (3 315 ₸) and every summary test, so only the places are added, by id. The payment methods match the prompt.
+- **Seed: places on t1–t4 and on user_2's u2-t1 / u2-t2; times and money unchanged.**
+  - The prompt's «t3 10:00–10:40» and «t4 12:15–12:35» are user_2's trips u2-t1 and u2-t2 (confirmed by the user). They got Площадь Республики → Аэропорт and ТРЦ MEGA → ТРЦ Есентай Молл, a different pair from t4, so the admin's day map is not a copy.
+  - user_1's t3 / t4 (30 September, t4 crosses midnight) keep their places too.
+  - No time or amount changed, so the reference numbers (3 315 ₸ for user_1, 4 080 ₸ for user_2, 7 395 ₸ for all) stay.
   - Seed trips that already exist get their places once, and only if they have none (`set_places_if_missing`). → Production has t1–t4 without places; the deploy (stage 4) does this, after a backup.
-  - Two seed coordinates were moved to the OSM object, being more than 100 m off: Зелёный базар (105 m) and MEGA (132 m). The labels are short names for the trip tile («Есентай Молл», «MEGA Alma-Ata»).
+  - Two seed coordinates were moved to the OSM object, being more than 100 m off: Зелёный базар (105 m) and MEGA (132 m). The labels are explicit Russian names stored in the seed file («ТРЦ Есентай Молл», «ТРЦ MEGA Alma-Ata»), never what reverse geocoding returns.
 - **`httpx` is now a runtime dependency** (it was dev-only for the test client). The lock changed only in that.
 - **`.railway/railway.ts` matches production again.**
   - It still said `AUTH_REQUIRED: "false"`, though production has been `true` since 2026-10-12, and it did not list `ORS_API_KEY`.
   - It now says `"true"` and `ORS_API_KEY: preserve()`. → A `railway config apply` would otherwise have switched login off and could have removed the key. Not applied: the file only describes the service.
+  - `tool/check_railway_config.sh` (CI and `ci_local.sh`) fails when the file declares `AUTH_REQUIRED` other than `"true"`, or not at all.
 
 ## Post-redesign UI fixes (user feedback)
 

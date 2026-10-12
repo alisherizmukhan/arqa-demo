@@ -210,3 +210,19 @@ def test_blank_key_counts_as_no_key() -> None:
     assert Settings().service_area == ALMATY
     secret = "secret-ors-key-123"
     assert secret not in repr(Settings(ors_api_key=secret))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("text", "lang"),
+    [("зелёный базар", "ru"), ("достык 5", "ru"), ("Esentai Mall", None), ("Abay", None)],
+)
+async def test_search_asks_for_russian_only_for_cyrillic_text(text: str, lang: str | None) -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"features": []})
+
+    await client(handler).search(text, ALMATY, 5)
+
+    assert seen[0].url.params.get("lang") == lang

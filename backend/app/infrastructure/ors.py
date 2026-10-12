@@ -4,6 +4,7 @@ The key travels only from here to ORS: never to the app, never into logs."""
 
 import logging
 import math
+import re
 from typing import Any
 
 import httpx
@@ -23,6 +24,8 @@ SNAP_RADIUS_M = 1000
 REVERSE_LAYERS = "address,venue,street"
 # An address farther than this from the point is not "the point's address".
 ADDRESS_MAX_DISTANCE_KM = 0.075
+
+_CYRILLIC = re.compile(r"[\u0400-\u04FF]")
 
 
 class OrsClient:
@@ -91,7 +94,7 @@ class OrsClient:
             "/geocode/autocomplete",
             params={
                 "text": text,
-                "lang": "ru",
+                **_search_lang(text),
                 "size": limit,
                 "boundary.country": "KZ",
                 "boundary.rect.min_lat": area.south,
@@ -107,6 +110,14 @@ class OrsClient:
             if label:
                 results.append(GeoResult(label=label, point=GeoPoint(float(lat), float(lng))))
         return results
+
+
+def _search_lang(text: str) -> dict[str, str]:
+    """Russian names for a Cyrillic query («Достык», not «Достық»). A Latin
+    query with lang=ru gets English names («Abay Avenue»), without it the
+    default (mostly Russian) ones, so then no lang (docs/MAPS.md, stage 1).
+    Where OSM has no Russian name, ORS falls back to the default name itself."""
+    return {"lang": "ru"} if _CYRILLIC.search(text) else {}
 
 
 def _features(data: Any) -> list[dict[str, Any]]:

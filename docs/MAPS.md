@@ -109,7 +109,7 @@ Terms:
 - **Language of labels:**
   - OSM names in Almaty are often in Kazakh: Nominatim gave «Көк Базар», «Республика алаңы».
   - The prompt wants Russian labels («Зелёный базар»). ORS geocoding (Pelias) takes a `lang` parameter.
-  - Stage 1 asks for `lang=ru` and checks what comes back. Where OSM has no Russian name, the label stays as OSM has it.
+  - Checked in stage 1: see «Does `lang=ru` work?» below.
 
 ## Polyline
 
@@ -164,13 +164,26 @@ Checked with the key, about 25 requests in all.
 - Otherwise the name OSM has: «Esentai Mall», «MEGA Alma-Ata», «Almaty International Airport» (the terminal node), «Rozybakiev Street» (one street segment).
 - ORS's own `label` always ends in «, AC, Казахстан». We build the label ourselves: the place name, or «street, house», or the street.
 
+**Does `lang=ru` work?** Yes, ORS accepts it. Its answer echoes `lang: Russian, via: querystring, defaulted: false`; without the parameter it is `English, defaulted: true`. What it changes:
+
+| Request | Without `lang` | With `lang=ru` |
+|---|---|---|
+| search «Достык» | «Достық», «Достық даңғылы» (Kazakh) | «Достык», «Достык плаза» |
+| search «аэропорт» | «Аэропорт», «Кольцо Аэропорт» | «Международный аэропорт Алматы» first |
+| search «Абая» | the same 4 places | the same |
+| search «Abay» (Latin) | «Абая», «Театр оперы и балета им. Абая» | «Abay», «Abay Avenue (West)» — English |
+| reverse at 3 points | the same names | the same names |
+
+- Where OSM has no Russian name, ORS falls back to the default name by itself («Almaty International Airport»), so no fallback code is needed.
+- **So:** reverse always sends `lang=ru`; search sends it only when the text contains Cyrillic, because for a Latin query it gives English names and the default gives Russian ones.
+
 **Reverse geocoding picks the address first.**
 - The nearest objects are often shops inside a mall («Dolce & Gabbana» at Esentai, «Бургер Кинг» at the market).
 - So the label is the nearest house address within 75 m («площадь Республики, 2»). If there is none, it is the nearest named place («Almaty International Airport»), then the street.
 
 **Seed points against `/geo/search`.**
 
-Coordinates more than 100 m from the OSM object were corrected; the labels are short names chosen for the trip tile.
+Coordinates more than 100 m from the OSM object were corrected. The seed labels are explicit Russian names stored in `data/trips.json` («Зелёный базар», «ТРЦ Есентай Молл», «Площадь Республики», «Аэропорт Алматы», «ТРЦ MEGA Alma-Ata»), never what reverse geocoding returns.
 
 | Seed point | Prompt | `/geo/search` | Gap | Used |
 |---|---|---|---|---|
@@ -180,14 +193,16 @@ Coordinates more than 100 m from the OSM object were corrected; the labels are s
 | Аэропорт Алматы | 43.3521, 77.0405 | area centre 43.35896, 77.02110 (1.7 km); reverse: the terminal «Almaty International Airport», 3 m | — | prompt (the terminal) |
 | MEGA Alma-Ata | 43.2016, 76.8920 | 43.20243, 76.89317 | 132 m | **43.20243, 76.89317** |
 
-The seed routes as built on the developer database:
+The seed trips with places (times and money as before). The routes were built on the developer database; user_2's routes are built the same way on the next start.
 
-| Trip | Route | Distance | Time |
-|---|---|---|---|
-| t1 | Зелёный базар → Есентай Молл | 7 203 m | 738 s |
-| t2 | Есентай Молл → Площадь Республики | 5 211 m | 600 s |
-| t3 | Площадь Республики → Аэропорт Алматы | 25 641 m | 2 867 s |
-| t4 | MEGA Alma-Ata → Зелёный базар | 12 356 m | 1 071 s |
+| Trip | Driver, time | Route | Distance | Time |
+|---|---|---|---|---|
+| t1 | user_1, 1 Oct 08:10 | Зелёный базар → ТРЦ Есентай Молл | 7 203 m | 738 s |
+| t2 | user_1, 1 Oct 09:05 | ТРЦ Есентай Молл → Площадь Республики | 5 211 m | 600 s |
+| t3 | user_1, 30 Sep 18:40 | Площадь Республики → Аэропорт Алматы | 25 641 m | 2 867 s |
+| t4 | user_1, 30 Sep 23:50 (crosses midnight) | ТРЦ MEGA Alma-Ata → Зелёный базар | 12 356 m | 1 071 s |
+| u2-t1 | user_2, 1 Oct 10:00 | Площадь Республики → Аэропорт Алматы | — | — |
+| u2-t2 | user_2, 1 Oct 12:15 | ТРЦ MEGA Alma-Ata → ТРЦ Есентай Молл | — | — |
 
 ## Sources
 
