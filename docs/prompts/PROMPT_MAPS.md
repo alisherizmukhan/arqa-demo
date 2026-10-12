@@ -1,11 +1,11 @@
 # Промпт: карта и маршруты поездок (Алматы)
 
-Запускать **после** итерации с аккаунтами (`PROMPT_ACCOUNTS_ADMIN_WITHDRAW.md`), в отдельной ветке `feature/maps`.
+Запускать **после** промпта на стабильность интерфейса (`PROMPT_UI_STABILITY.md`). Работа идёт в `main`, как в прошлой итерации.
 Перед запуском: зарегистрируйтесь на openrouteservice.org (бесплатно), создайте API-ключ и добавьте его переменной `ORS_API_KEY`
 в сервис бэкенда на Railway (и в локальный `.env`, который не коммитится).
 
 ```
-Next iteration: trip locations and route maps (Almaty). Work in the branch feature/maps. Stages; stop after each with screenshots / command output and wait for my "ok". Decisions → docs/DECISIONS.md, AI mistakes → docs/AI_NOTES.md. All existing rules stay (integer money, +05:00 day boundaries, idempotency, roles, design_kit only, l10n ru/kk, zero warnings).
+Next iteration: trip locations and route maps (Almaty). Work on main (rules from DECISIONS.md «Branches and deploys»: every commit green, run tool/ci_local.sh before pushing, prod deploys only after my ok, backup before any prod data change, test rows on prod deleted only after my "delete"). All new screens must follow the UI stability rules (DESIGN.md §10). Stages; stop after each with screenshots / command output and wait for my "ok". Decisions → docs/DECISIONS.md, AI mistakes → docs/AI_NOTES.md. All existing rules stay (integer money, +05:00 day boundaries, idempotency, roles, design_kit only, l10n ru/kk, zero warnings).
 
 Goal: when adding a trip the driver may set where it started (A) and ended (B) on a map. The server builds the road route once and stores it. The driver (and admin) can open a past trip and see its route on a map with distance and duration.
 
@@ -43,7 +43,7 @@ Seed routes are computed via the routing service on first start (status pending 
 Tests: validation; idempotency with coordinates; route stored on success; fallback 'straight' on ORS failure/timeout (fake); retry endpoint; roles (driver can't read others' trip by id → 404); geocode caching; no real network in unit tests (one optional live test tagged `live`).
 
 ────────────────────────────────────────
-2. Design addendum → DESIGN.md §9 (show showcase screenshots before wiring; wait for "ok")
+2. Design addendum → DESIGN.md §9 (show showcase screenshots in ru and kk, light + dark, on a review page before wiring; wait for "ok")
 Tokens: add DkColors routeLine (light = accent #2450D8, dark = accent #7B9BFF), routeCasing (light #FFFFFF, dark #0B0D10), markerA (= textPrimary), markerB (= accent). Map tiles follow the theme (light/dark style).
 New components:
 - DkMapView: wraps flutter_map; radius lg, clip; attribution always visible (small, bottom-right); disables rotation; fit-to-bounds with padding 48.
@@ -71,5 +71,5 @@ Formatting: distance < 1000 m → «850 м», else «7,4 км» (comma, one deci
 ────────────────────────────────────────
 4. Deploy + verify (docs/DEPLOY_CHECK.md): ORS_API_KEY set on Railway (names only, never print values); migration applied; seed routes ready; create a trip with A/B on the deployed API → 201 with route_status ready and distance; same request again → 200; ORS key temporarily invalid → trip still 201 with 'straight' (do this locally, not in prod). README: maps section (providers, quotas, attribution, how to swap the tile provider, production options: 2GIS / self-hosted OSRM), screenshots: picker, trip details light + dark, day map.
 
-Constraints: small Conventional Commits; never commit keys; analyzers and all tests green; merge to main only after my approval.
+Constraints: small Conventional Commits; never commit keys; analyzers and all tests green. Release: new APK as GitHub release v2.1.0 and tag v2.1 after the deployed verification.
 ```
