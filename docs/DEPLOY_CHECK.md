@@ -308,3 +308,29 @@ Note from the run: at 360-ish widths the third chip «Водитель 2» is pa
 - One transaction (`BEGIN … COMMIT`, `ON_ERROR_STOP`), a `DO` block that deletes the row matching id, amount 200 327, status `rejected` and reason «g», and raises (so rolls back) unless exactly 1 row was deleted. Result: `NOTICE: deleted 1 withdrawal`, `COMMIT`.
 - Checked from a new connection: trips **133**, withdrawals **1 → 0**.
 - After: user_1 `GET /balance` → available **200 327** (card 258 450, commission 58 123, withdrawn 0), `GET /withdrawals` → `[]`.
+
+## Release v2.0.1 (2026-10-12)
+
+The UI stability fixes (DESIGN.md §10) and their guard tests. Mobile app only: the backend is unchanged and was not deployed.
+
+- `flutter build apk --release` from `main` at `44f43a6` (CI green, app version `0.2.1+3`): `app-release.apk`, 56 538 952 bytes, sha256 `263b889a6361c12513982a8224713c291c1cd1e5001fb668c77ae3b444756764`. Published as `driver-diary.apk` in GitHub release `v2.0.1`.
+- Installed over v2.0.0 on the Android emulator (`Medium_Phone_API_37.0`, 1080×2400), app data cleared, against prod.
+- The same read-only check as for v2.0.0. No trips or withdrawals were created, no withdrawal was decided. The two logins opened two sessions, both closed with «Шығу».
+- Screenshots: `docs/design/release_check/v2.0.1/`.
+
+| Step | Seen on the device | |
+|---|---|---|
+| Start | login screen, «Русский» selected | ✅ `01_login` |
+| Sign in `user_1` / `password_1` (first try) | Day screen, today (12 October) empty | ✅ `02_day_today` |
+| ‹ ×11 → 1 October | net **3 315 ₸**, revenue 3 900, commission −585, «Наличные · 38%» 1 500 / «Карта · 62%» 2 400, 2 trips | ✅ `03_user1_oct1_ru` |
+| Menu | «Водитель 1», «@user_1 · Водитель», «Вывод средств · Доступно 200 327 ₸», «Версия 0.2.1» | ✅ `04_menu_ru` |
+| «Қазақша» in the menu | applied at once: «Мәзір», «Қолжетімді: 200 327 ₸», «Нұсқа 0.2.1» | ✅ `05_menu_kk` |
+| «Қаражат шығару» (not sent) | balance 200 327 (card 258 450, commission −58 123, withdrawn 0); history empty after the cleanup above | ✅ `06_withdraw_kk` |
+| Back to the day | «Қолға 3 315 теңге», «2026 ж. 1 қазан» | ✅ `07_user1_oct1_kk` |
+| «Шығу» → confirm | dialog «Аккаунттан шығу керек пе?», then the login screen in Kazakh | ✅ `08`, `09` |
+| Sign in `admin` / `admin` | admin screen, the new short tabs «Сапарлар / Шығару / Жүргізуші» on one line | ✅ `10_admin_today_kk` |
+| ‹ ×11 → 1 October, all drivers | **7 395 ₸**, revenue 8 700, commission −1 305, 4 trips, rows labelled «Водитель 1» / «Водитель 2» | ✅ `11_admin_all_oct1_kk` |
+| Chip «Водитель 2» | **4 080 ₸**, revenue 4 800, commission −720, 2 trips | ✅ `12_admin_driver2_oct1_kk` |
+| Tab «Шығару» (view only) | «Өңделуде» filter, «Өтінім жоқ» | ✅ `13_admin_withdrawals_kk` |
+| «Шығу» → confirm, «Русский» | login screen in Russian | ✅ `14_logged_out_ru` |
+
