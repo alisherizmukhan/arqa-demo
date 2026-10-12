@@ -22,7 +22,7 @@ final class AppConfig {
 
   /// The app version shown in the menu; equals `version` in pubspec.yaml
   /// (a test checks).
-  static const version = '0.2.0';
+  static const version = '0.2.1';
 
   /// The deployed API on Railway.
   static const defaultApiUrl = 'https://api-production-6e8b.up.railway.app';
