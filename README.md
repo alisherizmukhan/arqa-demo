@@ -450,6 +450,14 @@ curl -s -X POST $API/withdrawals -H "Authorization: Bearer $TOKEN" \
 
 Код, тесты и документацию писал ИИ-ассистент (Claude Code) по этапам. После каждого этапа я проверял результат и давал согласие на следующий. Ошибки ИИ ловились тестами, скриншотами с настоящими шрифтами и ручными проверками API. Среди них неверная валидация дат, кнопка, растянутая на весь экран, и голдены, которые отличаются между Windows и Linux. Все такие случаи и способы их поймать записаны в [`docs/AI_NOTES.md`](docs/AI_NOTES.md).
 
+Промпты, по которым шла каждая итерация, лежат в [`docs/prompts/`](docs/prompts/):
+- редизайн по макетам — [`PROMPT_REDESIGN.md`](docs/prompts/PROMPT_REDESIGN.md);
+- аккаунты, админка и вывод денег — [`PROMPT_ACCOUNTS_ADMIN_WITHDRAW.md`](docs/prompts/PROMPT_ACCOUNTS_ADMIN_WITHDRAW.md);
+- стабильность интерфейса — [`PROMPT_UI_STABILITY.md`](docs/prompts/PROMPT_UI_STABILITY.md);
+- карта и маршруты — [`PROMPT_MAPS.md`](docs/prompts/PROMPT_MAPS.md).
+
+Промпты редизайна и стабильности восстановлены дословно из сессий, в которых они были вставлены.
+
 ---
 
 ## Скриншоты
