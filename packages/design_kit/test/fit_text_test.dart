@@ -51,7 +51,8 @@ void main() {
     final fit = _each<RenderDkFitLines>(tester).single;
     expect(fit.scale, dkMinFitScale);
     expect(fit.cut, isTrue);
-    expect(fit.size.height, closeTo(20 * dkMinFitScale, 0.01));
+    // The box keeps the natural height: a long label is as tall as a short.
+    expect(fit.size.height, 20);
     expect(find.byType(Tooltip), findsOneWidget);
     expect(tester.widget<Tooltip>(find.byType(Tooltip)).message, long);
   });
@@ -176,6 +177,42 @@ void main() {
       expect(render.stacked, isTrue);
       expect(fits.every((f) => !f.cut), isTrue);
       expect(render.size.height, greaterThan(40));
+    });
+  });
+
+  group('short form', () {
+    Widget line(double width) => _box(
+      const DkFitLines([
+        DkLine('abcdefgh 38', short: 'abcdefgh', style: style),
+      ]),
+      width: width,
+    );
+
+    testWidgets('the full text while it fits at 85 %', (tester) async {
+      // 11 glyphs × 20 = 220; 220 × 0.85 = 187 ≤ 200.
+      await tester.pumpWidget(line(200));
+      // Both forms are built; only the chosen one is drawn and hit.
+      expect(find.text('abcdefgh 38').hitTestable(), findsOneWidget);
+      expect(find.text('abcdefgh').hitTestable(), findsNothing);
+      final fit = _each<RenderDkFitLines>(tester).single;
+      expect(fit.scale, closeTo(200 / 220, 0.001));
+    });
+
+    testWidgets('the short form, at full size, when it does not', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      // 187 > 170: the short form (8 × 20 = 160) fits without shrinking.
+      await tester.pumpWidget(line(170));
+      final fit = _each<RenderDkFitLines>(tester).single;
+      expect(fit.scale, 1.0);
+      expect(fit.cut, isFalse);
+      expect(
+        find.bySemanticsLabel('abcdefgh 38'),
+        findsOneWidget,
+        reason: 'screen readers keep the full text',
+      );
+      handle.dispose();
     });
   });
 }

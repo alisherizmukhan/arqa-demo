@@ -351,7 +351,10 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                               trailing:
                                   input.endsNextDay &&
                                       !errors.containsKey(TripField.end)
-                                  ? DkBadge(l10n.nextDayBadge)
+                                  ? DkBadge(
+                                      l10n.nextDayBadge,
+                                      short: l10n.nextDayBadgeShort,
+                                    )
                                   : null,
                               onTap: () => _pickTime(isStart: false),
                             ),

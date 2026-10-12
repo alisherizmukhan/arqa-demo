@@ -139,7 +139,7 @@ class AppLocalizationsKk extends AppLocalizations {
   String get summaryTrips => 'Сапар саны';
 
   @override
-  String get cash => 'Нақты';
+  String get cash => 'Қолма-қол';
 
   @override
   String get card => 'Карта';
@@ -201,6 +201,9 @@ class AppLocalizationsKk extends AppLocalizations {
 
   @override
   String get nextDayBadge => '+1 күн';
+
+  @override
+  String get nextDayBadgeShort => '+1';
 
   @override
   String get save => 'Сақтау';
@@ -283,7 +286,7 @@ class AppLocalizationsKk extends AppLocalizations {
   String get conflictKeep => 'Сақталғанын қалдыру';
 
   @override
-  String get conflictNew => 'Жаңа сапар ретінде сақтау';
+  String get conflictNew => 'Жаңа етіп сақтау';
 
   @override
   String get discardTitle => 'Сақтамай жабу керек пе?';
@@ -448,10 +451,10 @@ class AppLocalizationsKk extends AppLocalizations {
   String get tabTrips => 'Сапарлар';
 
   @override
-  String get tabWithdrawals => 'Шығарулар';
+  String get tabWithdrawals => 'Шығару';
 
   @override
-  String get tabDrivers => 'Жүргізушілер';
+  String get tabDrivers => 'Жүргізуші';
 
   @override
   String get allDrivers => 'Барлық жүргізушілер';

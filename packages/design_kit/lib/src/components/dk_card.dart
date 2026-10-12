@@ -93,6 +93,9 @@ class DkSummaryTile extends StatelessWidget {
         child: DkFitLines(gap: context.dkSpacing.s2, [
           DkLine(
             caption,
+            // Too narrow for « · 38%» at 85 %: the label alone (the split
+            // bar shows the share; screen readers still get it).
+            short: hint == null ? null : label,
             style: text.captionStrong.copyWith(color: colors.textTertiary),
           ),
           DkLine(

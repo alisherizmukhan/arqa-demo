@@ -102,17 +102,17 @@ void main() {
   testWidgets('409 dialog at 390: both labels on one line', (tester) async {
     await run(tester, '12_add_trip_conflict_409', size: const Size(390, 844));
 
-    expect(lines(tester, 'Сохранить как новую поездку'), 1);
+    expect(lines(tester, 'Сохранить как новую'), 1);
     expect(lines(tester, 'Оставить сохранённую'), 1);
     await disposeApp(tester);
   });
 
   // At 360 dp the label gets 216 dp (dialog 312 − 2·24 padding − 2·24 button
-  // padding) and needs ~240. DESIGN.md §10 (replaces the earlier two-line
+  // padding). DESIGN.md §10 (replaces the earlier two-line
   // rule): one line, the button keeps 56; at text ×1.0 the label shrinks to
   // fit (≥ 85 %), above that it may end in «…» with the full text kept for
   // screen readers.
-  for (final scale in [1.0, 1.3]) {
+  for (final scale in [1.0, 1.15, 1.3]) {
     testWidgets('409 dialog at 360, text $scale: the long label is one line, '
         'the button keeps 56', (tester) async {
       await run(
@@ -122,11 +122,12 @@ void main() {
         textScale: scale,
       );
 
-      const text = 'Сохранить как новую поездку';
+      const text = 'Сохранить как новую';
       final label = find.text(text);
       final paragraph = tester.renderObject<RenderParagraph>(label);
       expect(paragraph.maxLines, 1);
-      if (scale == 1.0) expect(paragraph.didExceedMaxLines, isFalse);
+      // Action buttons are never cut up to ×1.15 (stage 3 decision).
+      if (scale <= 1.15) expect(paragraph.didExceedMaxLines, isFalse);
       final button = find.ancestor(of: label, matching: find.byType(DkButton));
       expect(tester.getSize(button).height, 56);
       final labelBox = tester.getRect(label);

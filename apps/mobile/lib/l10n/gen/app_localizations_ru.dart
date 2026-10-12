@@ -205,6 +205,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get nextDayBadge => '+1 день';
 
   @override
+  String get nextDayBadgeShort => '+1';
+
+  @override
   String get save => 'Сохранить';
 
   @override
@@ -285,7 +288,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get conflictKeep => 'Оставить сохранённую';
 
   @override
-  String get conflictNew => 'Сохранить как новую поездку';
+  String get conflictNew => 'Сохранить как новую';
 
   @override
   String get discardTitle => 'Закрыть без сохранения?';

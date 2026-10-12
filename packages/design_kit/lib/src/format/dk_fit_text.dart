@@ -18,8 +18,13 @@ class DkLine {
   /// A line of [text] in [style]. U+202F gaps are widened as in
   /// `DkGroupedText`. With [ellipsis] false the line is never cut: it
   /// shrinks to [dkMinFitScale] and no further (times, amounts — rule 7).
-  const new(this.text, {this.style, this.ellipsis = true, this.trailing})
-    : span = null;
+  const new(
+    this.text, {
+    this.style,
+    this.ellipsis = true,
+    this.trailing,
+    this.short,
+  }) : span = null;
 
   /// A line drawn from a ready [span] (e.g. a number and a `₸` in another
   /// style). [text] is its plain text.
@@ -28,6 +33,7 @@ class DkLine {
     required this.text,
     this.ellipsis = true,
     this.trailing,
+    this.short,
   }) : style = null;
 
   /// An amount (`DkMoney.format`): never cut.
@@ -53,6 +59,11 @@ class DkLine {
   /// A small widget after the text on the same line (the day switcher's
   /// chevron); the text gives way to it.
   final Widget? trailing;
+
+  /// A shorter form shown instead when the line cannot fit at 85 % (the
+  /// payment tile «Наличные · 38%» → «Наличные», the badge «+1 день» →
+  /// «+1»). Screen readers always get [text].
+  final String? short;
 }
 
 /// Text that never wraps and never grows its control (DESIGN.md §10):
@@ -97,6 +108,30 @@ class DkFitLines extends StatefulWidget {
 class _DkFitLinesState extends State<DkFitLines> {
   bool _cut = false;
 
+  Widget _text(DkLine line, InlineSpan span) => Text.rich(
+    span,
+    maxLines: 1,
+    softWrap: false,
+    textAlign: widget.textAlign,
+    overflow: line.ellipsis ? TextOverflow.ellipsis : TextOverflow.visible,
+  );
+
+  Widget _lineText(DkLine line, TextStyle base) {
+    TextSpan plain(String text) {
+      final style = base.merge(line.style);
+      return TextSpan(style: style, children: dkGroupedSpans(text, style));
+    }
+
+    final full = _text(line, line.span ?? plain(line.text));
+    final short = line.short;
+    if (short == null) return full;
+    return Semantics(
+      label: line.text,
+      excludeSemantics: true,
+      child: _LineChoice(full: full, short: _text(line, plain(short))),
+    );
+  }
+
   static Widget _withTrailing(Widget? trailing, Widget text) {
     if (trailing == null) return text;
     return Row(
@@ -136,25 +171,7 @@ class _DkFitLinesState extends State<DkFitLines> {
           for (final line in widget.lines)
             _LineMinWidth(
               minScale: line.ellipsis ? 0 : widget.minScale,
-              child: _withTrailing(
-                line.trailing,
-                Text.rich(
-                  line.span ??
-                      () {
-                        final style = base.merge(line.style);
-                        return TextSpan(
-                          style: style,
-                          children: dkGroupedSpans(line.text, style),
-                        );
-                      }(),
-                  maxLines: 1,
-                  softWrap: false,
-                  textAlign: widget.textAlign,
-                  overflow: line.ellipsis
-                      ? TextOverflow.ellipsis
-                      : TextOverflow.visible,
-                ),
-              ),
+              child: _withTrailing(line.trailing, _lineText(line, base)),
             ),
         ],
       ),
@@ -328,8 +345,11 @@ class RenderDkFitLines extends RenderProxyBox {
   double _scaleFor(BoxConstraints constraints) {
     final child = this.child;
     if (child == null) return 1;
-    final width = child.getMaxIntrinsicWidth(double.infinity);
+    var width = child.getMaxIntrinsicWidth(double.infinity);
     final height = child.getMaxIntrinsicHeight(width);
+    if (constraints.hasBoundedWidth) {
+      width = _fittedWidth(child, constraints.maxWidth, width);
+    }
     var s = 1.0;
     if (constraints.hasBoundedWidth && width > 0) {
       s = math.min(s, constraints.maxWidth / width);
@@ -369,7 +389,7 @@ class RenderDkFitLines extends RenderProxyBox {
     if (child == null) return constraints.smallest;
     final s = _scaleFor(constraints);
     final size = child.getDryLayout(_childConstraints(constraints, s));
-    return constraints.constrain(size * s);
+    return constraints.constrain(Size(size.width * s, size.height));
   }
 
   @override
@@ -381,7 +401,13 @@ class RenderDkFitLines extends RenderProxyBox {
     }
     scale = _scaleFor(constraints);
     child.layout(_childConstraints(constraints, scale), parentUsesSize: true);
-    size = constraints.constrain(child.size * scale);
+    // Shrinking to fit the width never changes the height: the box keeps the
+    // lines' natural height (the scaled text is centred in it), so a control
+    // is as tall with a long label as with a short one. Only a fixed height
+    // smaller than that shrinks it.
+    size = constraints.constrain(
+      Size(child.size.width * scale, child.size.height),
+    );
     final free = size.width - child.size.width * scale;
     final ltr = _textDirection == TextDirection.ltr;
     final dx = switch (_textAlign) {
@@ -396,6 +422,51 @@ class RenderDkFitLines extends RenderProxyBox {
     onCut(cut);
   }
 
+  /// The lines' natural width when every line that has a short form and
+  /// cannot fit at the smallest scale is measured by that short form.
+  double _fittedWidth(RenderBox column, double maxWidth, double natural) {
+    if (column is! RenderFlex) return natural;
+    var width = 0.0;
+    var line = column.firstChild;
+    while (line != null) {
+      var w = line.getMaxIntrinsicWidth(double.infinity);
+      final choice = _choiceOf(line);
+      if (choice != null && w * _minScale > maxWidth) {
+        w = choice.shortWidth;
+      }
+      width = math.max(width, w);
+      line = (line.parentData! as FlexParentData).nextSibling;
+    }
+    return width;
+  }
+
+  static _RenderLineChoice? _choiceOf(RenderObject? node) {
+    var n = node;
+    while (n is RenderProxyBox && n is! _RenderLineChoice) {
+      n = n.child;
+    }
+    if (n is RenderFlex) n = n.firstChild;
+    while (n is RenderProxyBox && n is! _RenderLineChoice) {
+      n = n.child;
+    }
+    return n is _RenderLineChoice ? n : null;
+  }
+
+  /// The paragraph a line shows: its text, the chosen form of a line with a
+  /// short form, or the text before a trailing widget.
+  static RenderParagraph? _lineParagraph(RenderObject? node) {
+    var n = node;
+    while (n is RenderProxyBox && n is! _RenderLineChoice) {
+      n = n.child;
+    }
+    if (n is RenderFlex) n = n.firstChild;
+    while (n is RenderProxyBox && n is! _RenderLineChoice) {
+      n = n.child;
+    }
+    if (n is _RenderLineChoice) n = n.chosen;
+    return n is RenderParagraph ? n : null;
+  }
+
   /// Whether a line's own text ended in «…» (each line is a
   /// [_RenderLineMinWidth] over the text, or over a row of the text and its
   /// trailing widget). Other paragraphs (icons, `+1`) are not looked at.
@@ -403,9 +474,8 @@ class RenderDkFitLines extends RenderProxyBox {
     var found = false;
     column.visitChildren((line) {
       if (found || line is! _RenderLineMinWidth) return;
-      var text = line.child;
-      if (text is RenderFlex) text = text.firstChild;
-      if (text is RenderParagraph && text.didExceedMaxLines) found = true;
+      final text = _lineParagraph(line.child);
+      if (text != null && text.didExceedMaxLines) found = true;
     });
     return found;
   }
@@ -454,4 +524,90 @@ class RenderDkFitLines extends RenderProxyBox {
         hitTest: (result, position) =>
             child?.hitTest(result, position: position) ?? false,
       );
+}
+
+/// A line with a short form: the full text when it fits the width it is
+/// given, else the short one (see [DkLine.short]).
+class _LineChoice extends MultiChildRenderObjectWidget {
+  new({required Widget full, required Widget short})
+    : super(children: [full, short]);
+
+  @override
+  _RenderLineChoice createRenderObject(BuildContext context) =>
+      _RenderLineChoice();
+}
+
+class _ChoiceParentData extends ContainerBoxParentData<RenderBox>;
+
+class _RenderLineChoice extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _ChoiceParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _ChoiceParentData> {
+  bool useShort = false;
+
+  RenderBox get _full => firstChild!;
+  RenderBox get _short => lastChild!;
+
+  /// The child on screen.
+  RenderBox get chosen => useShort ? _short : _full;
+
+  double get shortWidth => _short.getMaxIntrinsicWidth(double.infinity);
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _ChoiceParentData) {
+      child.parentData = _ChoiceParentData();
+    }
+  }
+
+  bool _usesShort(BoxConstraints constraints) =>
+      constraints.hasBoundedWidth &&
+      _full.getMaxIntrinsicWidth(double.infinity) > constraints.maxWidth + 0.5;
+
+  @override
+  double computeMinIntrinsicWidth(double height) =>
+      _short.getMinIntrinsicWidth(height);
+
+  @override
+  double computeMaxIntrinsicWidth(double height) =>
+      _full.getMaxIntrinsicWidth(height);
+
+  @override
+  double computeMinIntrinsicHeight(double width) => math.max(
+    _full.getMinIntrinsicHeight(width),
+    _short.getMinIntrinsicHeight(width),
+  );
+
+  @override
+  double computeMaxIntrinsicHeight(double width) => math.max(
+    _full.getMaxIntrinsicHeight(width),
+    _short.getMaxIntrinsicHeight(width),
+  );
+
+  @override
+  Size computeDryLayout(covariant BoxConstraints constraints) =>
+      (_usesShort(constraints) ? _short : _full).getDryLayout(constraints);
+
+  @override
+  void performLayout() {
+    useShort = _usesShort(constraints);
+    // The form not shown is laid out at its natural width, so it never
+    // reads as cut.
+    final unbounded = BoxConstraints(maxHeight: constraints.maxHeight);
+    _full.layout(useShort ? unbounded : constraints, parentUsesSize: true);
+    _short.layout(useShort ? constraints : unbounded, parentUsesSize: true);
+    size = constraints.constrain(chosen.size);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      context.paintChild(chosen, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      chosen.hitTest(result, position: position);
+
+  @override
+  void visitChildrenForSemantics(RenderObjectVisitor visitor) =>
+      visitor(chosen);
 }

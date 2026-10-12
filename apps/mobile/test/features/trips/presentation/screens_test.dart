@@ -373,7 +373,7 @@ void main() {
       await disposeApp(tester);
     });
 
-    testWidgets('409: dialog; «Сохранить как новую поездку» sends a new id', (
+    testWidgets('409: dialog; «Сохранить как новую» sends a new id', (
       tester,
     ) async {
       final repository = FakeTripsRepository()
@@ -392,7 +392,7 @@ void main() {
       );
 
       repository.onCreate = null;
-      await tester.tap(find.text('Сохранить как новую поездку'));
+      await tester.tap(find.text('Сохранить как новую'));
       await tester.pumpAndSettle();
       final ids = repository.created.map((t) => t.id).toList();
       expect(ids, hasLength(2));

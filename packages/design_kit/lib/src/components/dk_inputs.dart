@@ -351,7 +351,9 @@ class _DkTextFieldState extends State<DkTextField> {
               SizedBox(width: context.dkSpacing.s8),
               // Its own node, so a trailing button (the password eye) stays
               // reachable by screen readers instead of merging into the field.
-              Semantics(container: true, child: trailing),
+              // At most half the row: a long label shrinks inside it
+              // (DESIGN.md §10, rule 4).
+              Flexible(child: Semantics(container: true, child: trailing)),
             ],
           ],
         ),
@@ -485,11 +487,15 @@ class DkTimeField extends StatelessWidget {
 /// Small accent label, e.g. «+1 день». DESIGN.md §4 and §10: 24 high, radius
 /// sm; the text is one line (shrinks to 85 %, then «…»).
 class DkBadge extends StatelessWidget {
-  /// Creates a badge.
-  const new(this.text, {super.key});
+  /// Creates a badge. [short] is shown when [text] cannot fit at 85 %
+  /// (screen readers still get [text]).
+  const new(this.text, {this.short, super.key});
 
   /// Badge text.
   final String text;
+
+  /// Shorter form, e.g. «+1» for «+1 день».
+  final String? short;
 
   @override
   Widget build(BuildContext context) {
@@ -503,10 +509,13 @@ class DkBadge extends StatelessWidget {
         color: colors.accentSoft,
         borderRadius: BorderRadius.circular(context.dkRadii.sm),
       ),
-      child: DkFitText(
-        text,
-        style: context.dkText.badge.copyWith(color: colors.accent),
-      ),
+      child: DkFitLines([
+        DkLine(
+          text,
+          short: short,
+          style: context.dkText.badge.copyWith(color: colors.accent),
+        ),
+      ]),
     );
   }
 }

@@ -131,6 +131,11 @@ class DkButton extends StatelessWidget {
               minHeight: height,
               maxHeight: height,
               minWidth: expand ? double.infinity : sizes.tapTargetMin,
+              // An inline button is at most the content column wide
+              // (DESIGN.md §10, rule 4), even in an unbounded row.
+              maxWidth: expand
+                  ? double.infinity
+                  : MediaQuery.sizeOf(context).width - 2 * spacing.screenGutter,
             ),
             child: Padding(
               padding: EdgeInsetsDirectional.only(

@@ -514,7 +514,7 @@ class _TimeFields extends StatelessWidget {
                 label: 'Окончание',
                 value: '00:20',
                 onTap: () {},
-                trailing: const DkBadge('+1 день'),
+                trailing: const DkBadge('+1 день', short: '+1'),
               ),
             ),
           ],

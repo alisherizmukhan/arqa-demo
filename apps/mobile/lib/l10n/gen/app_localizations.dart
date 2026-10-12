@@ -434,6 +434,12 @@ abstract class AppLocalizations {
   /// **'+1 день'**
   String get nextDayBadge;
 
+  /// The badge when «+1 день» does not fit (DESIGN.md §10).
+  ///
+  /// In ru, this message translates to:
+  /// **'+1'**
+  String get nextDayBadgeShort;
+
   /// No description provided for @save.
   ///
   /// In ru, this message translates to:
@@ -581,7 +587,7 @@ abstract class AppLocalizations {
   /// No description provided for @conflictNew.
   ///
   /// In ru, this message translates to:
-  /// **'Сохранить как новую поездку'**
+  /// **'Сохранить как новую'**
   String get conflictNew;
 
   /// No description provided for @discardTitle.
