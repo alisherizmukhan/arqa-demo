@@ -334,3 +334,20 @@ The UI stability fixes (DESIGN.md §10) and their guard tests. Mobile app only: 
 | Tab «Шығару» (view only) | «Өңделуде» filter, «Өтінім жоқ» | ✅ `13_admin_withdrawals_kk` |
 | «Шығу» → confirm, «Русский» | login screen in Russian | ✅ `14_logged_out_ru` |
 
+
+## Maps — ORS_API_KEY on the api service (2026-10-12)
+
+Configuration only: no code change, no migration, no data change. The key is for the maps iteration (`docs/MAPS.md`); the running code does not read it yet.
+
+- The variable was added in the Railway dashboard as a staged change. Before deploying, the staged patch held exactly one change: `api` → variable `ORS_API_KEY` added, not destructive.
+- Deployed by committing the staged change (deployment `181eee4b`, 15:29 UTC, `SUCCESS`).
+- Locally the key is in `backend/.env`, ignored by git (`git check-ignore -v backend/.env` → `.gitignore:10:.env`). One reverse-geocode request to ORS from the developer machine returned 200.
+- The value was never printed; only the name was checked.
+
+| Check after the deploy | Result | |
+|---|---|---|
+| `GET /health` | 200 `{"status":"ok","database":"ok"}` | ✅ |
+| `POST /auth/login` user_1 | 200, role driver | ✅ |
+| `GET /summary?date=2026-10-01&tz=%2B05:00` with its token | 2 trips, 3 900 / 585 / **3 315**, cash 1 500 / card 2 400 — exact | ✅ |
+| `POST /auth/logout` | 204 | ✅ |
+| Variable names on `api` | `ORS_API_KEY` present (non-empty) | ✅ |
