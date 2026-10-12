@@ -350,6 +350,56 @@ Three guards fail the build when DESIGN.md §10 breaks:
 - **Polyline: our own ~20-line encoder and decoder** (Google format, precision 5, tested on Google's reference string). The Dart packages are outdated or tied to Google Directions.
 - **Production candidates:** 2GIS (best Almaty data; paid, native SDK) or self-hosted OSRM + Nominatim on a Kazakhstan extract.
 
+## Maps — stage 1 (backend: places, routes, addresses)
+
+- **Places are part of the trip; the route is the server's.**
+  - The API takes `pickup` / `dropoff` as `{lat, lng, label}` objects (both or neither) and returns them with `route: {status, polyline, distance_m, duration_s}`.
+  - The places are in the idempotency payload: the same id with another label or point is 409.
+  - `route` is never accepted from the client (`unknown_field`) and never compared.
+  - → A retry after a lost answer gets the stored route; a client cannot invent distances.
+- **Validation codes:**
+  - `incomplete_route` — only one place;
+  - `outside_service_area` — outside the box, or not a real point;
+  - `same_places` — ≤ 50 m apart;
+  - `label_too_long` — over 200 characters.
+  - → The box is config (`AREA_*`, default Almaty 43.05..43.45 N, 76.70..77.20 E) and is checked in the use case. The rules that need no config live in the domain `Trip`, like the money rules.
+  - The app has texts for the first three. `label_too_long` can only be a client bug, so it shows the generic text.
+- **One routing call inside the create request, never a failure.**
+  - The trip is inserted (route `pending`), then routed once: 5 s timeout, `ready`.
+  - On any ORS failure — timeout, network, 403/429 quota, an unreadable answer — the route is a straight line: `straight`, haversine metres, no duration. The answer is still 201.
+  - → «Never block trip creation on routing». A background queue would leave the driver without a route on the screen they just saved.
+- **Routes still `pending` are built on every start** (at most 50 per start).
+  - This covers the seed trips and a create cut off between the insert and the route.
+  - → No job scheduler. It costs nothing when nothing is pending (a partial index).
+- **`POST /trips/{id}/route` rebuilds a route.**
+  - Owner or admin. Another driver gets 404, as for `GET /trips/{id}`, so ids of other drivers' trips cannot be probed.
+  - A trip without places is 409 `no_places`.
+  - It counts against the per-user map limit.
+  - Status `failed` is allowed by the CHECK constraint as the prompt asks, but nothing sets it: a straight line is always possible.
+- **Geocoding: a per-user limit (30 requests a minute), then a 24 h cache, then ORS.** Both live in process memory.
+  - Reverse lookups are cached by the point rounded to 4 decimals (~11 m), and ORS is asked for that rounded point, so the cached label is exact for the key.
+  - Search is cached by the lower-cased, space-collapsed text.
+  - «Nothing here» (`label: null`) is cached too; failures are not.
+  - → One replica on Railway. A second replica would only mean a colder cache and a looser limit, never wrong data, so a database table is not worth it now.
+- **Labels are built by us, not taken from ORS.**
+  - ORS's `label` ends in «, AC, Казахстан».
+  - Reverse prefers a house address within 75 m over the nearest «venue», because venues are often shops inside a mall.
+  - → What ORS returns is recorded in MAPS.md «Stage 1».
+- **ORS sits behind two application ports, `Router` and `Geocoder`.**
+  - `OrsClient` implements both. `MapsNotConfigured` is used when there is no key (straight lines, 503 for lookups).
+  - `create_app(maps=…)` lets tests inject `FakeMaps`.
+  - → No test touches the network. `tests/conftest.py` blanks `ORS_API_KEY`, which beats `backend/.env`. One `live` test, skipped unless `RUN_LIVE=1`, makes 3 real calls.
+- **Snap radius 1000 m** (`radiuses`), against ORS's default 350 m. → Points inside the market or the airport area failed to snap with the default.
+- **Seed: places on the existing t1–t4, times and money unchanged.**
+  - The prompt's t3 (10:00–10:40) and t4 (12:15–12:35) do not match the real seed trips t3 / t4 (30 September 18:40 and 23:50).
+  - Changing their times or amounts would change the reference day (3 315 ₸) and every summary test, so only the places are added, by id. The payment methods match the prompt.
+  - Seed trips that already exist get their places once, and only if they have none (`set_places_if_missing`). → Production has t1–t4 without places; the deploy (stage 4) does this, after a backup.
+  - Two seed coordinates were moved to the OSM object, being more than 100 m off: Зелёный базар (105 m) and MEGA (132 m). The labels are short names for the trip tile («Есентай Молл», «MEGA Alma-Ata»).
+- **`httpx` is now a runtime dependency** (it was dev-only for the test client). The lock changed only in that.
+- **`.railway/railway.ts` matches production again.**
+  - It still said `AUTH_REQUIRED: "false"`, though production has been `true` since 2026-10-12, and it did not list `ORS_API_KEY`.
+  - It now says `"true"` and `ORS_API_KEY: preserve()`. → A `railway config apply` would otherwise have switched login off and could have removed the key. Not applied: the file only describes the service.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.

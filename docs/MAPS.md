@@ -81,7 +81,7 @@ Endpoints:
 The ORS FAQ gives the same directions numbers.
 - The daily window starts with the first request and lasts 24 h.
 - Over the daily limit the API returns `403`; over the per-minute limit, `429`.
-- Remaining quota is in the `x-ratelimit-remaining` / `x-ratelimit-reset` headers. **To do once the key is available:** read these headers on one real call per endpoint and record them here.
+- Remaining quota is in the `x-ratelimit-remaining` / `x-ratelimit-reset` headers. What they really contain: see «Stage 1» below.
 
 What the quotas mean for us:
 - **Routes:** a route is built once per trip and stored. 2 000 a day is far more than a demo needs, and a failed or over-quota call gives a `straight` route, never a failed trip.
@@ -140,9 +140,54 @@ No package, and why:
 
 ## ORS key
 
-`ORS_API_KEY` (checked 2026-10-12, names only, the value never printed):
-- **Local:** in `backend/.env`, which `.gitignore` ignores (`git check-ignore -v backend/.env` → `.gitignore:10:.env`). One reverse-geocode request from the developer machine returned `200`.
-- **Railway** (`api`, production): added as a staged change, not yet applied, so the running service does not have it yet.
+`ORS_API_KEY`: names checked only, the value is never printed.
+- **Local:** in `backend/.env`, which git ignores (`.gitignore:10:.env`). The tests blank the variable (`tests/conftest.py`), so they never use it; only the `live` test reads it from the file.
+- **Railway** (`api`, production): set and deployed on 2026-10-12 (DEPLOY_CHECK «Maps — ORS_API_KEY»). `.railway/railway.ts` keeps it with `preserve()`.
+- Without a key the API still works: routes become straight lines, `/geo/*` answers 503 `maps_unavailable`.
+
+## Stage 1: what ORS really returns (2026-10-12)
+
+Checked with the key, about 25 requests in all.
+
+**Quota headers.**
+- Every answer carries `X-Ratelimit-Limit`, `X-Ratelimit-Remaining` and `X-Ratelimit-Reset` (a unix time).
+- Geocoding: limit **100**, remaining going down by one per call. Directions: limit **200**.
+- The reset time does not match the documented windows: about 24 h ahead on geocoding, 2 s ahead on directions.
+- So the headers are not used. The documented quotas above stay the reference, and any `403` / `429` is simply «unavailable»: a straight line for routes, 503 for lookups.
+
+**Directions.**
+- Зелёный базар → Есентай Молл: **7.2 km, 12 min**, a 365-character polyline.
+- Points inside large areas (the market, the airport) need a snap radius: we send `radiuses: [1000, 1000]`, ORS's default is 350 m.
+
+**Russian labels (`lang=ru`).**
+- Russian when OSM has a Russian name: «Площадь Республики», «Зеленый базар», «Международный аэропорт Алматы», «улица Розыбакиева».
+- Otherwise the name OSM has: «Esentai Mall», «MEGA Alma-Ata», «Almaty International Airport» (the terminal node), «Rozybakiev Street» (one street segment).
+- ORS's own `label` always ends in «, AC, Казахстан». We build the label ourselves: the place name, or «street, house», or the street.
+
+**Reverse geocoding picks the address first.**
+- The nearest objects are often shops inside a mall («Dolce & Gabbana» at Esentai, «Бургер Кинг» at the market).
+- So the label is the nearest house address within 75 m («площадь Республики, 2»). If there is none, it is the nearest named place («Almaty International Airport»), then the street.
+
+**Seed points against `/geo/search`.**
+
+Coordinates more than 100 m from the OSM object were corrected; the labels are short names chosen for the trip tile.
+
+| Seed point | Prompt | `/geo/search` | Gap | Used |
+|---|---|---|---|---|
+| Зелёный базар | 43.2627, 76.9539 | «Зелёный базар» 43.26275, 76.95519 | 105 m | **43.26275, 76.95519** |
+| Есентай Молл | 43.2185, 76.9280 | «Esentai Mall» 43.21847, 76.92745 | 45 m | prompt |
+| Площадь Республики | 43.2380, 76.9455 | 43.23863, 76.94536 | 71 m | prompt |
+| Аэропорт Алматы | 43.3521, 77.0405 | area centre 43.35896, 77.02110 (1.7 km); reverse: the terminal «Almaty International Airport», 3 m | — | prompt (the terminal) |
+| MEGA Alma-Ata | 43.2016, 76.8920 | 43.20243, 76.89317 | 132 m | **43.20243, 76.89317** |
+
+The seed routes as built on the developer database:
+
+| Trip | Route | Distance | Time |
+|---|---|---|---|
+| t1 | Зелёный базар → Есентай Молл | 7 203 m | 738 s |
+| t2 | Есентай Молл → Площадь Республики | 5 211 m | 600 s |
+| t3 | Площадь Республики → Аэропорт Алматы | 25 641 m | 2 867 s |
+| t4 | MEGA Alma-Ata → Зелёный базар | 12 356 m | 1 071 s |
 
 ## Sources
 
