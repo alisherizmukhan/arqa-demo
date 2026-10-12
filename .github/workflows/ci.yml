@@ -41,6 +41,8 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+      - name: Railway config keeps login on (AUTH_REQUIRED "true")
+        run: ../tool/check_railway_config.sh
       - name: Install dependencies
         run: uv sync --locked
       - name: Format

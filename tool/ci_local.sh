@@ -14,6 +14,9 @@ export LC_ALL=C.UTF-8
 
 step() { printf '\n== %s\n' "$*"; }
 
+step "railway config keeps login on"
+tool/check_railway_config.sh
+
 if [ "${1:-}" != "flutter" ]; then
   step "backend: format, lint, types, tests"
   if [ -x backend/.venv/Scripts/python ]; then run=(.venv/Scripts/python -m)
