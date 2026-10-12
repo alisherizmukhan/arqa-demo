@@ -94,6 +94,18 @@ abstract final class DkIcons {
   /// Saved.
   static const IconData saved = LucideIcons.circleCheck400;
 
+  /// «Карта дня» (DESIGN.md §9).
+  static const IconData map = LucideIcons.map400;
+
+  /// A place in the address search results.
+  static const IconData place = LucideIcons.mapPin400;
+
+  /// Address search field.
+  static const IconData search = LucideIcons.search400;
+
+  /// «Построить заново».
+  static const IconData route = LucideIcons.route400;
+
   /// Empty state: Lucide `road` (matches the mockup and DESIGN.md's
   /// "(road)"; Lucide's `route` is a connected path). The glyph is in the
   /// package's fonts but has no Dart constant in this version.

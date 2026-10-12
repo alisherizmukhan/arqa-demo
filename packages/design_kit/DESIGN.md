@@ -76,6 +76,11 @@ Access via `context.dkColors`, `context.dkText`, etc. (extension on `BuildContex
 | splitNeutral | `#9AA3AF` | `#5B6370` | Cash segment of DkSplitBar |
 | disabledFill | `#E1E4E9` | `#2A2F37` | Disabled button background |
 | scrim | `#7A0F1419` (0F1419 @ 48%) | `#A3000000` (black @ 64%) | Behind DkDialog |
+| routeLine | `#2450D8` | `#7B9BFF` | Trip route on the map (= accent), §9 |
+| routeCasing | `#FFFFFF` | `#0B0D10` | Outline under the route line, §9 |
+| markerA | `#0F1419` | `#F2F4F7` | Start marker «A» (= textPrimary), §9 |
+| markerB | `#2450D8` | `#7B9BFF` | End marker «B» (= accent), §9 |
+| markerRing | `#FFFFFF` | `#FFFFFF` | Ring around the place markers, §9 |
 
 Contrast: textTertiary ≥ 4.5:1 on `surface` in both themes. Do not put textTertiary on `bg` for essential text.
 `border` (field outline) ≥ 3:1 on `surface` in both themes (WCAG 1.4.11).
@@ -538,6 +543,186 @@ Also added for §8.3–8.6:
 - Money looks the same in every language (`DkMoney.format`).
 - CI fails on a Cyrillic literal in `apps/mobile/lib` or `packages/design_kit/lib` outside the generated localizations. Copy and the review list: `docs/L10N.md`.
 
+## 9. Maps: trip places and routes
+
+The driver may set where a trip started (A) and ended (B) on a map; the server builds the road route once (docs/MAPS.md). Every new screen follows §10.
+
+### 9.0 Tokens
+
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| routeLine | `#2450D8` (= accent) | `#7B9BFF` (= accent) | The route line |
+| routeCasing | `#FFFFFF` | `#0B0D10` | Outline under the route line |
+| markerA | `#0F1419` (= textPrimary) | `#F2F4F7` (= textPrimary) | Marker «A»; its letter is `surface` |
+| markerB | `#2450D8` (= accent) | `#7B9BFF` (= accent) | Marker «B»; its letter is `onAccent` |
+| markerRing | `#FFFFFF` | `#FFFFFF` | 2 dp ring around both markers |
+
+**Tiles follow the theme.** The tile URLs and the attribution come from the build (`--dart-define` `TILE_URL_LIGHT`, `TILE_URL_DARK`, `TILE_ATTRIBUTION`), never literals in widgets. The demo uses OpenStreetMap tiles for both themes. In the dark theme they are drawn through flutter_map's `darkModeTileBuilder` (inverted, hue rotated), so the map is not a white block. A real dark style (`TILE_URL_DARK` ≠ `TILE_URL_LIGHT`) is shown as it is. The filter touches only the tiles: route, markers and attribution are drawn above them in theme colors.
+
+### 9.1 Components
+
+- **DkMapView** wraps flutter_map.
+  - Radius `lg`, clipped. The full-screen picker has no radius.
+  - The attribution is always visible: a chip at the bottom right, `caption` textSecondary on `surface` at 90 %, radius `sm`. It wraps rather than being cut.
+  - Rotation is off. The camera fits the route with padding 48 (closest zoom 16).
+  - On a small map the padding shrinks to a quarter of the shorter side.
+  - The bottom padding has extra room (up to 32) so the attribution never covers a marker.
+  - `surfaceMuted` shows behind the tiles. If tiles fail to load, the map is a grey area with the attribution, and the screen still works.
+- **DkRouteLayer:** a 5 dp line in `routeLine` over an 8 dp `routeCasing`.
+  - Dashed 6/6 when `route_status = straight`.
+  - On the day map, tapping a route opens its trip.
+- **DkPlaceMarker:** a 32 dp circle with a 2 dp `markerRing` and the letter «A» / «B» (13/800).
+  - A is `markerA`, B is `markerB`.
+  - Semantics «Начало поездки» / «Конец поездки». On the map, flutter_map's moving layer does not expose them; the place fields under the map carry the same names.
+  - The letter does not scale with the text size.
+- **DkPlaceField:** a row like DkListRow, **64 high**, padding 0 16, gap 12. From start to end:
+  - DkPlaceMarker (A/B) in the 40 slot;
+  - the label «Откуда» / «Куда» (`caption`, textTertiary) above the address (`bodyStrong`), or the placeholder «Выбрать на карте» (`body`, textTertiary);
+  - when the place is set, a clear button (DkIconButton 48, `x`, «Очистить»);
+  - otherwise a `chevron-right` 20 in textTertiary.
+  - Read-only in trip details: no chevron, no clear button.
+  - Each line is one line (§10: shrink to 85 %, then «…»).
+- **DkRouteStats:** three DkSummaryTiles in a DkCard (padding 16, gap 12).
+  - «Расстояние» «7,4 км»;
+  - «В пути» «22 мин» — the trip's own time (end − start), the same figure as in the trip row; not the routing engine's estimate;
+  - «За км» «324 ₸» — amount ÷ km, a whole number.
+- **DkTripTile** gets two optional parameters:
+  - `route`: a line «Зелёный базар → ТРЦ Есентай Молл» (`caption`, textTertiary, one line, «…») under the time, meta and amount lines, across their full width. Beside the amounts it kept only «Зелёный базар → ТРЦ …»;
+  - `onTap`: a trailing `chevron-right` 20 in textTertiary.
+  - A trip without places stays read-only.
+- **DkTextField** gets two additions:
+  - `showLabel: false`: the label is only the accessible name, and the placeholder says it (the search over the map);
+  - `onClear` + `clearLabel`: a clear button (48, `x`) at the end while there is text. It keeps its own width, unlike `trailing`, which takes half the row; the typed text gets the rest.
+- **Icons:** `map` («Карта дня»), `map-pin` (search results), `search`, `route` («Построить заново»).
+
+### 9.2 Add trip
+
+- After the time row comes a DkListGroup with two DkPlaceFields, «Откуда» (A) and «Куда» (B). Both are optional.
+  - Tapping one opens the place picker.
+  - With only one set, an error under the group: «Укажите и начало, и конец поездки».
+  - The server errors «Точка вне Алматы» and «Начало и конец совпадают» are shown the same way.
+- Offline, the same-id resend is unchanged: the places are part of the trip.
+
+### 9.3 Place picker
+
+A full-screen pushed route; the map fills the screen.
+
+**Top panel** (`surface`, safe area, padding 8 16 8 8):
+- a close DkIconButton («Закрыть»);
+- the search field: DkTextField with a `search` icon, no visible label, placeholder «Поиск адреса», and `onClear` («Очистить»).
+- Under the panel, the suggestions: a DkCard of up to 5 DkListRows (icon `map-pin`, the label one line). Debounce 400 ms, from 3 characters.
+
+**Center pin:** a DkPlaceMarker A or B, fixed at the center of the map.
+- The map is exactly the area between the two panels, so its center is the chosen point.
+- The panels do not overlap it.
+
+**Bottom panel** (`surface`, shadow `e3`, padding 16, safe area):
+- the label «Откуда» / «Куда» (`caption`, textTertiary);
+- the address (`bodyStrong`, one line), updated after the map stops (reverse geocode, debounce 500 ms):
+  - «Определяем адрес…» (textTertiary) while loading;
+  - «Адрес не найден» (textSecondary) followed by the coordinates «43.2380, 76.9455» as the label;
+- then a DkButton primary «Выбрать это место».
+
+The attribution sits at the bottom right of the map, above the panel.
+
+**Start view:** Almaty center 43.2389, 76.8897, zoom 12. If A is set, B starts at A. If the place was set before, the picker starts there at zoom 16.
+
+**Offline:** the map shows its grey background, and an info row in the bottom panel says «Нет связи — карта не загрузилась». «Выбрать это место» still works and saves the center without a label (the coordinates are shown).
+
+No GPS and no location permission in this iteration.
+
+### 9.4 Trip details
+
+A new pushed page with a back arrow and the title «Поездка».
+
+**Map:**
+- The top DkMapView takes 45 % of the screen height, full width, under the app bar, radius `lg` inside the 16 gutter.
+- It shows the route with the A/B markers, fitted to the route.
+
+**Below the map** (padding 16, gap 16):
+- the time range (`titleM`, with «+1» when it ends the next day);
+- «22 мин · Карта» (bodyS, textSecondary);
+- the amount (`moneyM`) and «комиссия 360 ₸» (caption, textTertiary) on one DkAmountRow;
+- DkRouteStats;
+- a DkListGroup with the two DkPlaceFields, read-only.
+
+**Status `straight`:**
+- the route is dashed;
+- under the map, a DkInfoRow «Маршрут построен по прямой — сервис карт был недоступен» and a DkButton text «Построить заново» (icon `route`), which calls `POST /trips/{id}/route`;
+- distance and «За км» come from the straight line.
+
+**Status `pending`:** the markers without a line, and «Расстояние» / «За км» show «—».
+
+**States:**
+- loading: a skeleton block of the map's height, then skeleton lines;
+- error: DkErrorState with «Повторить»;
+- tiles failing: a grey map with the attribution (§9.1).
+
+### 9.5 Day screen and day map
+
+**Trip rows:**
+- A row with places is tappable: chevron, and the `route` line «Зелёный базар → ТРЦ Есентай Молл». It opens the trip details.
+- Rows without places are unchanged.
+
+**«Карта дня»:**
+- A DkIconButton (`map`, «Карта дня») in the trips list header, before the sort button.
+- It is shown only when at least one trip of the day has places.
+
+**Day map:** a pushed page «Карта дня» with a full-height DkMapView.
+- Every route of the day, each with its A/B markers, fitted to all of them.
+- Tapping a route opens its trip details.
+- A legend panel at the bottom (`surface`, shadow `e3`, full width): «N маршрутов» (`titleM`) and the date (`caption`).
+  - For the admin it starts with the filter: «Все водители · 1 октября 2026» or «Водитель 2 · 1 октября 2026».
+- The admin sees the routes of the selected filter («Все водители» or one driver).
+
+### 9.6 Formatting
+
+- **Distance:**
+  - under 1 000 m in metres, «850 м»;
+  - from 1 000 m in kilometres with one decimal and a comma, «7,4 км»;
+  - a no-break space before the unit (`DkFormat.distance`).
+- **Per km:** amount × 1 000 ÷ metres, rounded to a whole tenge (`DkFormat.perKilometre`), then `DkMoney.format` («324 ₸», U+202F).
+- **Coordinates as a label:** «43.2380, 76.9455» — 4 decimals, a dot (a point, not a number to read).
+
+### 9.7 Copy (ru; kk goes to app_kk.arb)
+
+From the prompt:
+- «Откуда», «Куда», «Выбрать на карте», «Выбрать это место»;
+- «Определяем адрес…», «Адрес не найден», «Поиск адреса»;
+- «Расстояние», «В пути», «За км», «Маршрут», «Карта дня»;
+- «Маршрут построен по прямой — сервис карт был недоступен», «Построить заново»;
+- «Начало поездки», «Конец поездки»;
+- errors: «Укажите и начало, и конец поездки», «Точка вне Алматы», «Начало и конец совпадают».
+
+From §9.3 offline: «Нет связи — карта не загрузилась».
+
+Proposed (not in the prompt, waiting for approval):
+- «Очистить» — the clear button;
+- «Поездка» — the details title;
+- «{n} маршрут / маршрута / маршрутов» — the day-map legend;
+- units «м», «км».
+
+### 9.8 Kit implementation (stage 2)
+
+Components live in `packages/design_kit/lib/src/components/dk_map.dart`. Like the §8 components, they have **no texts of their own**.
+
+**Showcase:**
+- `packages/design_kit/example`, «Карты» tab, with a ru / kk switch;
+- `example/test/maps_screens_test.dart` renders every state in ru and kk, light and dark, and checks no overflow at 360 dp × 1.3 and the money format.
+
+| §9.1 item | Kit API |
+|---|---|
+| Tiles | `DkMapTiles(lightUrl, darkUrl, attribution, userAgentPackageName, provider)`. `darkens(brightness)`: the dark theme with no separate dark style. |
+| DkMapView | `DkMapView(tiles, fit \| center + zoom, layers, overlays, controller, onMapEvent, interactive, rounded, animateTiles, attributionInsets)`. |
+| DkRouteLayer | `DkRouteLayer(routes: [DkRoute(points, straight, id)], onTap)`. `onTap` gives back the tapped route's `id` (the day map). |
+| DkPlaceMarker | `DkPlaceMarker(kind: DkPlaceKind.start / end, semanticsLabel)`. On a map: `DkPlaceMarkers(places: [(point, kind, label)])`. |
+| DkPlaceField | `DkPlaceField(kind, label, markerLabel, value, placeholder, onTap, onClear, clearLabel)`; 64 high (`dkPlaceFieldHeight`). |
+| DkRouteStats | `DkRouteStats(stats: [(label, value)])`. |
+| DkTripTile | `route` and `onTap` (optional). |
+| DkTextField | `showLabel`, `onClear` / `clearLabel`. |
+| Formatting | `DkFormat.distance(metres, metresUnit, kilometresUnit)`, `DkFormat.perKilometre(amount, metres)`. |
+| Tests and previews | `DkSketchTileProvider(offline)`: tiles drawn on the device (a street grid with parks and water), no network, the same picture every time. `offline: true` means tiles never arrive. |
+
 ## 10. Layout stability
 
 Every control keeps its size; the text adapts inside it. A label that is longer than its control — a Kazakh text, a larger system font, a narrow phone — never makes the control taller or wider and never pushes the layout around. Audit of the old behaviour: `docs/UI_STABILITY_AUDIT.md`.
@@ -602,6 +787,8 @@ Every control keeps its size; the text adapts inside it. A label that is longer 
 | Limits | `dkMaxTextScale = 1.3`, `dkMinFitScale = 0.85`, `dkFabMaxWidthShare = 0.6`, `dkListRowTwoLineHeight = 64`, `dkTileTextHeight = 48` |
 
 The lines are ordinary one-line `Text` widgets (`maxLines: 1`, `softWrap: false`), scaled when painted, so finders, semantics and the money-gap checks see real text.
+
+Guards (fail the build): the kit size-invariance test (short vs 3× long label, ru/kk, ×1.0/1.15/1.3), the layout matrix (every control at its designed height, ×1.0/1.15/1.3), and the strict audit in CI (`AUDIT_STRICT=1 AUDIT_CHEAP=1`). See DECISIONS «UI stability — stage 4».
 
 ### 10.4 Deviations from the mockups
 

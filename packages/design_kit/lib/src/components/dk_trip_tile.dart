@@ -21,8 +21,10 @@ enum DkPaymentMethod {
   };
 }
 
-/// One trip row, DESIGN.md §4 (read-only, no tap). Strings come formatted:
-/// `08:10 – 08:32`, `22 мин · Карта`, `2 400 ₸`, `комиссия 360 ₸`.
+/// One trip row, DESIGN.md §4. Strings come formatted: `08:10 – 08:32`,
+/// `22 мин · Карта`, `2 400 ₸`, `комиссия 360 ₸`. A trip with places
+/// (DESIGN.md §9) adds the [route] line and opens its details on [onTap]
+/// (trailing chevron); a trip without places stays read-only.
 class DkTripTile extends StatelessWidget {
   /// Creates a trip row.
   const new({
@@ -35,8 +37,18 @@ class DkTripTile extends StatelessWidget {
     required this.nextDayLabel,
     this.highlighted = false,
     this.driver,
+    this.route,
+    this.onTap,
     super.key,
   });
+
+  /// `Зелёный базар → ТРЦ Есентай Молл` (`caption`, textTertiary, one line,
+  /// «…»): under the time, meta and amount lines, across their full width
+  /// (beside the amounts it would keep only its first place).
+  final String? route;
+
+  /// Opens the trip details; adds a chevron (20, textTertiary).
+  final VoidCallback? onTap;
 
   /// Admin, all drivers: the driver's name on its own third line (`caption`,
   /// textTertiary), DESIGN.md §8.6.
@@ -73,7 +85,7 @@ class DkTripTile extends StatelessWidget {
     final spacing = context.dkSpacing;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
-    return MergeSemantics(
+    final tile = MergeSemantics(
       child: AnimatedContainer(
         duration: reduceMotion ? Duration.zero : DkMotion.segment,
         color: highlighted ? colors.accentSoft : colors.surface,
@@ -96,66 +108,105 @@ class DkTripTile extends StatelessWidget {
               // the amounts are never cut; the meta and driver lines give way
               // first; if the amounts still cannot fit at 85 %, they move to
               // their own line under the text.
-              child: DkAmountRow(
-                gap: spacing.s12,
-                start: DkFitLines([
-                  DkLine.span(
-                    TextSpan(
-                      style: text.bodyStrong.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                      children: [
-                        TextSpan(text: timeRange),
-                        if (endsNextDay)
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.top,
-                            child: Padding(
-                              padding: EdgeInsetsDirectional.only(
-                                start: spacing.s2,
-                              ),
-                              child: Text(
-                                '+1',
-                                semanticsLabel: nextDayLabel,
-                                style: text.superscript.copyWith(
-                                  color: colors.accent,
+              child: _withRoute(
+                context,
+                route,
+                DkAmountRow(
+                  gap: spacing.s12,
+                  start: DkFitLines([
+                    DkLine.span(
+                      TextSpan(
+                        style: text.bodyStrong.copyWith(
+                          color: colors.textPrimary,
+                        ),
+                        children: [
+                          TextSpan(text: timeRange),
+                          if (endsNextDay)
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.top,
+                              child: Padding(
+                                padding: EdgeInsetsDirectional.only(
+                                  start: spacing.s2,
+                                ),
+                                child: Text(
+                                  '+1',
+                                  semanticsLabel: nextDayLabel,
+                                  style: text.superscript.copyWith(
+                                    color: colors.accent,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
+                      text: timeRange,
+                      ellipsis: false,
                     ),
-                    text: timeRange,
-                    ellipsis: false,
-                  ),
-                  DkLine(
-                    meta,
-                    style: text.bodyS.copyWith(color: colors.textSecondary),
-                  ),
-                  if (driver case final name?)
                     DkLine(
-                      name,
+                      meta,
+                      style: text.bodyS.copyWith(color: colors.textSecondary),
+                    ),
+                    if (driver case final name?)
+                      DkLine(
+                        name,
+                        style: text.caption.copyWith(
+                          color: colors.textTertiary,
+                        ),
+                      ),
+                  ]),
+                  end: DkFitLines(textAlign: TextAlign.end, [
+                    DkLine(
+                      amount,
+                      ellipsis: false,
+                      style: text.bodyStrong.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    DkLine(
+                      commission,
+                      ellipsis: false,
                       style: text.caption.copyWith(color: colors.textTertiary),
                     ),
-                ]),
-                end: DkFitLines(textAlign: TextAlign.end, [
-                  DkLine(
-                    amount,
-                    ellipsis: false,
-                    style: text.bodyStrong.copyWith(color: colors.textPrimary),
-                  ),
-                  DkLine(
-                    commission,
-                    ellipsis: false,
-                    style: text.caption.copyWith(color: colors.textTertiary),
-                  ),
-                ]),
+                  ]),
+                ),
               ),
             ),
+            if (onTap != null)
+              Icon(
+                DkIcons.next,
+                size: context.dkSizes.iconField,
+                color: colors.textTertiary,
+              ),
           ],
         ),
       ),
     );
+    final tap = onTap;
+    if (tap == null) return tile;
+    return Semantics(
+      button: true,
+      child: InkWell(onTap: tap, child: tile),
+    );
   }
+}
+
+/// [row], then the [route] line across its full width (DESIGN.md §9).
+Widget _withRoute(BuildContext context, String? route, Widget row) {
+  if (route == null) return row;
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    mainAxisSize: MainAxisSize.min,
+    spacing: context.dkSpacing.s2,
+    children: [
+      row,
+      DkFitText(
+        route,
+        style: context.dkText.caption.copyWith(
+          color: context.dkColors.textTertiary,
+        ),
+      ),
+    ],
+  );
 }
 
 /// Trip rows in one card (padding 0, clipped), dividers inset 68.

@@ -33,6 +33,11 @@ class DkColors extends ThemeExtension<DkColors> {
     required this.splitNeutral,
     required this.disabledFill,
     required this.scrim,
+    required this.routeLine,
+    required this.routeCasing,
+    required this.markerA,
+    required this.markerB,
+    required this.markerRing,
   });
 
   /// Light theme.
@@ -65,6 +70,11 @@ class DkColors extends ThemeExtension<DkColors> {
     splitNeutral: Color(0xFF9AA3AF),
     disabledFill: Color(0xFFE1E4E9),
     scrim: Color(0x7A0F1419),
+    routeLine: Color(0xFF2450D8),
+    routeCasing: Color(0xFFFFFFFF),
+    markerA: Color(0xFF0F1419),
+    markerB: Color(0xFF2450D8),
+    markerRing: Color(0xFFFFFFFF),
   );
 
   /// Dark theme.
@@ -97,6 +107,11 @@ class DkColors extends ThemeExtension<DkColors> {
     splitNeutral: Color(0xFF5B6370),
     disabledFill: Color(0xFF2A2F37),
     scrim: Color(0xA3000000),
+    routeLine: Color(0xFF7B9BFF),
+    routeCasing: Color(0xFF0B0D10),
+    markerA: Color(0xFFF2F4F7),
+    markerB: Color(0xFF7B9BFF),
+    markerRing: Color(0xFFFFFFFF),
   );
 
   /// Screen background, bottom bar.
@@ -183,6 +198,21 @@ class DkColors extends ThemeExtension<DkColors> {
   /// Behind DkDialog.
   final Color scrim;
 
+  /// Trip route on the map (= accent), DESIGN.md §9.
+  final Color routeLine;
+
+  /// Outline under [routeLine], so the route reads on any tile.
+  final Color routeCasing;
+
+  /// Start marker «A» (= textPrimary); its letter is [surface].
+  final Color markerA;
+
+  /// End marker «B» (= accent); its letter is [onAccent].
+  final Color markerB;
+
+  /// 2 dp ring around the place markers (white in both themes).
+  final Color markerRing;
+
   /// Every token by its DESIGN.md name, for tests and the showcase.
   Map<String, Color> get all => {
     'bg': bg,
@@ -213,6 +243,11 @@ class DkColors extends ThemeExtension<DkColors> {
     'splitNeutral': splitNeutral,
     'disabledFill': disabledFill,
     'scrim': scrim,
+    'routeLine': routeLine,
+    'routeCasing': routeCasing,
+    'markerA': markerA,
+    'markerB': markerB,
+    'markerRing': markerRing,
   };
 
   @override
@@ -245,6 +280,11 @@ class DkColors extends ThemeExtension<DkColors> {
     Color? splitNeutral,
     Color? disabledFill,
     Color? scrim,
+    Color? routeLine,
+    Color? routeCasing,
+    Color? markerA,
+    Color? markerB,
+    Color? markerRing,
   }) {
     return DkColors(
       bg: bg ?? this.bg,
@@ -275,6 +315,11 @@ class DkColors extends ThemeExtension<DkColors> {
       splitNeutral: splitNeutral ?? this.splitNeutral,
       disabledFill: disabledFill ?? this.disabledFill,
       scrim: scrim ?? this.scrim,
+      routeLine: routeLine ?? this.routeLine,
+      routeCasing: routeCasing ?? this.routeCasing,
+      markerA: markerA ?? this.markerA,
+      markerB: markerB ?? this.markerB,
+      markerRing: markerRing ?? this.markerRing,
     );
   }
 
@@ -311,6 +356,11 @@ class DkColors extends ThemeExtension<DkColors> {
       splitNeutral: l(splitNeutral, other.splitNeutral),
       disabledFill: l(disabledFill, other.disabledFill),
       scrim: l(scrim, other.scrim),
+      routeLine: l(routeLine, other.routeLine),
+      routeCasing: l(routeCasing, other.routeCasing),
+      markerA: l(markerA, other.markerA),
+      markerB: l(markerB, other.markerB),
+      markerRing: l(markerRing, other.markerRing),
     );
   }
 }

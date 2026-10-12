@@ -11,6 +11,8 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
   lucide_icons_flutter: ^3.1.22
 dev_dependencies:
   alchemist: ^0.14.0

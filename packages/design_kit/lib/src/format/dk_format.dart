@@ -29,5 +29,26 @@ abstract final class DkFormat {
     return (cash: cashPct, card: cardPct);
   }
 
+  /// A distance, DESIGN.md §9: under 1 000 m in metres (`850 м`), else in
+  /// kilometres with one decimal and a comma (`7,4 км`). The units come from
+  /// the app's localizations; a no-break space keeps number and unit together.
+  static String distance(
+    int metres, {
+    required String metresUnit,
+    required String kilometresUnit,
+  }) {
+    if (metres < 1000) return '$metres$_noBreak$metresUnit';
+    final tenths = (metres / 100).round();
+    return '${tenths ~/ 10},${tenths % 10}$_noBreak$kilometresUnit';
+  }
+
+  /// Tenge per kilometre, rounded to a whole tenge (`324`); null without a
+  /// distance.
+  static int? perKilometre(int amount, int metres) =>
+      metres <= 0 ? null : (amount * 1000 / metres).round();
+
+  /// U+00A0 between a number and its unit.
+  static const String _noBreak = '\u00A0';
+
   static String _two(int value) => value.toString().padLeft(2, '0');
 }

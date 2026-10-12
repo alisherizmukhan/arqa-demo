@@ -1,3 +1,4 @@
+import 'package:design_kit/src/components/dk_chrome.dart';
 import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/format/dk_money.dart';
@@ -25,9 +26,11 @@ class _FieldShell extends StatelessWidget {
     required this.child,
     this.helper,
     this.errorText,
+    this.showLabel = true,
   });
 
   final String label;
+  final bool showLabel;
   final _FieldState state;
   final Widget child;
   final String? helper;
@@ -53,12 +56,14 @@ class _FieldShell extends StatelessWidget {
     };
     final message = errorText;
 
-    return Column(
+    final shell = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        DkFitText(label, style: text.label.copyWith(color: labelColor)),
-        SizedBox(height: spacing.s8),
+        if (showLabel) ...[
+          DkFitText(label, style: text.label.copyWith(color: labelColor)),
+          SizedBox(height: spacing.s8),
+        ],
         Container(
           // Fixed (DESIGN.md §10): the box never grows with its content.
           height: sizes.fieldHeight,
@@ -88,6 +93,8 @@ class _FieldShell extends StatelessWidget {
         ],
       ],
     );
+    // Not drawn: still the field's accessible name.
+    return showLabel ? shell : Semantics(label: label, child: shell);
   }
 }
 
@@ -166,8 +173,14 @@ class DkTextField extends StatefulWidget {
     this.onSubmitted,
     this.obscureText = false,
     this.autofillHints,
+    this.showLabel = true,
+    this.onClear,
+    this.clearLabel,
     super.key,
-  });
+  }) : assert(
+         onClear == null || clearLabel != null,
+         'a clear button needs its accessible name',
+       );
 
   /// Money variant. Pair it with a [DkMoneyEditingController].
   const new money({
@@ -187,6 +200,9 @@ class DkTextField extends StatefulWidget {
   }) : prefixIcon = null,
        obscureText = false,
        autofillHints = null,
+       showLabel = true,
+       onClear = null,
+       clearLabel = null,
        suffix = DkMoney.currency,
        style = null,
        keyboardType = TextInputType.number,
@@ -194,6 +210,17 @@ class DkTextField extends StatefulWidget {
 
   /// Visible label; also the accessible name.
   final String label;
+
+  /// False: the label is only the accessible name, not drawn (the address
+  /// search over the map, DESIGN.md §9). Show it as [hint] then.
+  final bool showLabel;
+
+  /// Shows a clear button (48, `x`) at the end while there is text; it keeps
+  /// its own width, so the input still gets the rest of the row.
+  final VoidCallback? onClear;
+
+  /// Accessible name of the clear button («Очистить»).
+  final String? clearLabel;
 
   /// Text controller.
   final TextEditingController controller;
@@ -263,6 +290,8 @@ class _DkTextFieldState extends State<DkTextField> {
   void initState() {
     super.initState();
     _focusNode.addListener(_onFocusChange);
+    widget.controller.addListener(_onTextChange);
+    _hadText = widget.controller.text.isNotEmpty;
   }
 
   @override
@@ -272,16 +301,30 @@ class _DkTextFieldState extends State<DkTextField> {
       (oldWidget.focusNode ?? _ownFocusNode)?.removeListener(_onFocusChange);
       _focusNode.addListener(_onFocusChange);
     }
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onTextChange);
+      widget.controller.addListener(_onTextChange);
+    }
   }
 
   @override
   void dispose() {
     _focusNode.removeListener(_onFocusChange);
+    widget.controller.removeListener(_onTextChange);
     _ownFocusNode?.dispose();
     super.dispose();
   }
 
   void _onFocusChange() => setState(() {});
+
+  bool _hadText = false;
+
+  /// Rebuilds only when the clear button appears or goes.
+  void _onTextChange() {
+    if (widget.onClear == null) return;
+    final hasText = widget.controller.text.isNotEmpty;
+    if (hasText != _hadText) setState(() => _hadText = hasText);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -302,6 +345,7 @@ class _DkTextFieldState extends State<DkTextField> {
     return MergeSemantics(
       child: _FieldShell(
         label: widget.label,
+        showLabel: widget.showLabel,
         state: state,
         helper: widget.helper,
         errorText: widget.errorText,
@@ -342,6 +386,22 @@ class _DkTextFieldState extends State<DkTextField> {
                 ),
               ),
             ),
+            if (widget.onClear case final clear?
+                when widget.controller.text.isNotEmpty)
+              // Its own node and its own width (not half the row).
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: context.dkSpacing.s4,
+                ),
+                child: Semantics(
+                  container: true,
+                  child: DkIconButton(
+                    icon: DkIcons.close,
+                    label: widget.clearLabel!,
+                    onPressed: clear,
+                  ),
+                ),
+              ),
             if (widget.suffix case final suffix?)
               Text(
                 suffix,
