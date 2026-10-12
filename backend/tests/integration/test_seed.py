@@ -186,7 +186,7 @@ async def test_restart_unblocks_demo_accounts_and_restores_passwords(
     assert Argon2PasswordHasher().verify((await _hashes(sessionmaker))["user_1"], "password_1")
 
 
-SEEDED_WITH_PLACES = ["t1", "t2", "t3", "t4"]
+SEEDED_WITH_PLACES = ["t1", "t2", "t3", "t4", "u2-t1", "u2-t2"]
 
 
 async def _routes(
@@ -213,8 +213,9 @@ async def test_seed_trips_get_places_and_routes_on_first_start(
     routes = await _routes(sessionmaker)
     assert sorted(routes) == SEEDED_WITH_PLACES
     assert routes["t1"] == ("Зелёный базар", "ready")
+    assert routes["u2-t2"] == ("ТРЦ MEGA Alma-Ata", "ready")
     assert all(status == "ready" for _, status in routes.values())
-    assert maps.calls == ["route"] * 4
+    assert maps.calls == ["route"] * 6
 
     # A restart builds nothing again.
     again = FakeMaps()
@@ -262,8 +263,9 @@ async def test_seed_adds_places_to_seed_trips_stored_before_maps(
 
     routes = await _routes(sessionmaker)
     assert routes["t1"] == ("Зелёный базар", "ready")
-    assert routes["t2"] == ("Есентай Молл", "ready")
+    assert routes["t2"] == ("ТРЦ Есентай Молл", "ready")
     assert routes["t3"] == ("мой адрес", "straight")
-    assert routes["t4"] == ("MEGA Alma-Ata", "ready")
-    # t1, t2 (places added) and t4 (inserted) were routed; t3 was left alone.
-    assert maps.calls == ["route"] * 3
+    assert routes["t4"] == ("ТРЦ MEGA Alma-Ata", "ready")
+    # t1, t2 (places added), t4, u2-t1, u2-t2 (inserted) were routed; t3 was
+    # left alone.
+    assert maps.calls == ["route"] * 5

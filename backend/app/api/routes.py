@@ -153,7 +153,7 @@ async def create_trip(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
                     "payment": "card",
                     "commission": 330,
                     "pickup": {"lat": 43.26275, "lng": 76.95519, "label": "Зелёный базар"},
-                    "dropoff": {"lat": 43.2185, "lng": 76.928, "label": "Есентай Молл"},
+                    "dropoff": {"lat": 43.2185, "lng": 76.928, "label": "ТРЦ Есентай Молл"},
                 },
             },
             "invalid": {

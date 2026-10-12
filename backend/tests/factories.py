@@ -12,7 +12,7 @@ SEED_FILE = Path(__file__).resolve().parents[2] / "data" / "trips.json"
 # The default service area (Settings), and two places in it ~5.4 km apart.
 ALMATY = ServiceArea(south=43.05, north=43.45, west=76.70, east=77.20)
 BAZAAR = Place(point=GeoPoint(43.26275, 76.95519), label="Зелёный базар")
-ESENTAI = Place(point=GeoPoint(43.2185, 76.928), label="Есентай Молл")
+ESENTAI = Place(point=GeoPoint(43.2185, 76.928), label="ТРЦ Есентай Молл")
 
 
 def make_trip(**overrides: Any) -> Trip:
