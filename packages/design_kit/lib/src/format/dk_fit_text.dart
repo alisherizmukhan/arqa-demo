@@ -114,6 +114,11 @@ class _DkFitLinesState extends State<DkFitLines> {
     softWrap: false,
     textAlign: widget.textAlign,
     overflow: line.ellipsis ? TextOverflow.ellipsis : TextOverflow.visible,
+    // The line height comes from the style, never from the glyphs: «…» or
+    // `₸` from a fallback font must not make a cut line taller.
+    strutStyle: span.style == null
+        ? null
+        : StrutStyle.fromTextStyle(span.style!, forceStrutHeight: true),
   );
 
   Widget _lineText(DkLine line, TextStyle base) {
