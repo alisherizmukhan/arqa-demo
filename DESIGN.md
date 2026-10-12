@@ -603,6 +603,8 @@ Every control keeps its size; the text adapts inside it. A label that is longer 
 
 The lines are ordinary one-line `Text` widgets (`maxLines: 1`, `softWrap: false`), scaled when painted, so finders, semantics and the money-gap checks see real text.
 
+Guards (fail the build): the kit size-invariance test (short vs 3× long label, ru/kk, ×1.0/1.15/1.3), the layout matrix (every control at its designed height, ×1.0/1.15/1.3), and the strict audit in CI (`AUDIT_STRICT=1 AUDIT_CHEAP=1`). See DECISIONS «UI stability — stage 4».
+
 ### 10.4 Deviations from the mockups
 
 - **Summary and payment tiles are 6 dp taller** (text block 48 instead of 42 at ×1.0): the fixed height must hold label and amount at ×1.3 at 85 %.

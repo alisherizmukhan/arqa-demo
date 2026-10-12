@@ -316,6 +316,28 @@ The audit is in `docs/PROD_AUDIT.md` (findings F1–F8). Decisions approved afte
   - Fields used to measure a few dp off with a long label. In stage 1 the label wrapped onto a second line; after stage 2 the shrunken label's box got shorter (20 → 17 dp at 85 %).
   - Now the box keeps the natural height and the scaled text is centred in it. Only a fixed height smaller than the text shrinks it.
 - **A field's trailing button gets at most half the row; an inline button at most the content column.** → A long «Всё» used to overflow the field (RenderFlex), and an inline button in an unbounded row could grow past the screen.
+- The proposed Kazakh labels «Жаңа етіп сақтау», «Шығару», «Жүргізуші» are approved (still need a native review, `docs/L10N.md`).
+
+## UI stability — stage 4 (guard tests)
+
+Three guards fail the build when DESIGN.md §10 breaks:
+
+- **Kit size invariance** (`packages/design_kit/test/size_invariance_test.dart`). Every control is rendered with its short real label and with that label 3× longer, ru and kk, at ×1.0, ×1.15 and ×1.3.
+  - The size must not change: same height, and same width for full-width controls; an inline control stays within its cap.
+  - Every line must stay on one line, with no layout error.
+  - The decision pair is tested button by button: the pair stacking is allowed by design.
+- **The layout matrix** (`apps/mobile/test/screens/layout_matrix_test.dart`) now also runs at ×1.15. Every control on every screen must keep its designed body height (±0.5 dp) and its labels must be on one line.
+- **The audit in CI** (`AUDIT_STRICT=1 AUDIT_CHEAP=1`, about 30 s). It runs on the 360-wide phone only, the narrow case; the 390 case is covered by the matrix. It fails on:
+  - a control off its height, or a wrapped label;
+  - a cut amount;
+  - any cut label at ×1.0;
+  - a cut action button or tab at ×1.15;
+  - a layout error;
+  - a probe whose size depends on its label.
+
+  The full audit (`AUDIT_DIR` only) still writes the JSON reports and, with `AUDIT_SHOTS`, the screenshots.
+- **The line height comes from the text style (a forced strut), never from the glyphs.** → The size test found a withdrawal tile 1 dp taller in Kazakh at ×1.15: a cut line drew «…», and the fallback font made the line taller.
+- Checked by mutation: allowing labels to wrap (`maxLines: 2`) fails all three guards.
 
 ## Post-redesign UI fixes (user feedback)
 
