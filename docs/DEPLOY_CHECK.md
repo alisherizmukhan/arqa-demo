@@ -299,3 +299,12 @@ The v2.0.0 asset itself: `gh release download v2.0.0`, sha256 `2978330b…83fe4d
 | «Шығу» → confirm, «Русский» | login screen in Russian | ✅ `13_logged_out_ru` |
 
 Note from the run: at 360-ish widths the third chip «Водитель 2» is partly behind the edge of the scrolling row in Kazakh (by design; the UI stability pass covers it).
+
+### Cleanup of the user's own test withdrawal (2026-10-12, after «delete»)
+
+- The withdrawal kept above (`53c0dcf4-a06f-4dd2-b3bc-1e7ce3fc34a2`, user_1, 200 327 ₸, rejected, reason «g») was the user's own test from the v2.0.0 app.
+- Backup first: `C:\Users\alish\Documents\arqa-backups\prod-2026-10-12-before-g-withdrawal-cleanup.sql` (33 250 bytes). Restored into a throwaway PostgreSQL 18: revision `0004`, 133 trips, 1 withdrawal.
+- Re-checked right before deleting: the table held exactly that row.
+- One transaction (`BEGIN … COMMIT`, `ON_ERROR_STOP`), a `DO` block that deletes the row matching id, amount 200 327, status `rejected` and reason «g», and raises (so rolls back) unless exactly 1 row was deleted. Result: `NOTICE: deleted 1 withdrawal`, `COMMIT`.
+- Checked from a new connection: trips **133**, withdrawals **1 → 0**.
+- After: user_1 `GET /balance` → available **200 327** (card 258 450, commission 58 123, withdrawn 0), `GET /withdrawals` → `[]`.
