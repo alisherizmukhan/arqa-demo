@@ -339,6 +339,17 @@ Three guards fail the build when DESIGN.md §10 breaks:
 - **The line height comes from the text style (a forced strut), never from the glyphs.** → The size test found a withdrawal tile 1 dp taller in Kazakh at ×1.15: a cut line drew «…», and the fallback font made the line taller.
 - Checked by mutation: allowing labels to wrap (`maxLines: 2`) fails all three guards.
 
+## Maps — stage 0 (research, `docs/MAPS.md`)
+
+- **Map:** `flutter_map` 8.3.2 + `latlong2` 0.10.1. It is pure Dart and needs no key or native setup. Tile caching to disk and request cancellation are built in since 8.2, so no extra plugins.
+- **Demo tiles: OpenStreetMap standard for both themes**, with URLs and attribution from `--dart-define`.
+  - CARTO's free light/dark pair needs a key since 29 September 2026 (watermark without one). It is the ready swap.
+  - The app ships light-only, so the dark tile URL matters only for goldens, which use fake tiles.
+  - Production needs a paid or own tile provider (OSM tile policy).
+- **Routes and addresses: OpenRouteService, called only from the backend.** The Standard plan gives directions 2 000/day (40/min) and each geocode endpoint 1 000/day (100/min). A route is built once per trip; geocoding is cached for 24 h and rate-limited per user.
+- **Polyline: our own ~20-line encoder and decoder** (Google format, precision 5, tested on Google's reference string). The Dart packages are outdated or tied to Google Directions.
+- **Production candidates:** 2GIS (best Almaty data; paid, native SDK) or self-hosted OSRM + Nominatim on a Kazakhstan extract.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
