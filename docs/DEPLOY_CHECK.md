@@ -259,7 +259,7 @@ The first run's three `login … → /auth/me` lines failed in the **script**, n
 
 Also checked: `user_1` `GET /balance` = **200 327 ₸** (card 258 450 − commission 58 123, no withdrawals), as computed in stage 3 (PROD_AUDIT F6).
 
-### Test data left on prod (cleanup pending «delete»)
+### Test data the run left on prod (removed, see below)
 
 | Kind | id | Owner | Details |
 |---|---|---|---|
@@ -269,3 +269,33 @@ Also checked: `user_1` `GET /balance` = **200 327 ₸** (card 258 450 − commis
 
 - Backup before the cleanup: `C:\Users\alish\Documents\arqa-backups\prod-2026-10-12-before-stage6-cleanup.sql` (31 665 bytes), restored into a throwaway PostgreSQL 18: revision `0004`, 134 trips, 2 withdrawals.
 - These are the only rows the run added (prod: 134 trips, 2 withdrawals). user_2's balance is 1 280 ₸ until the paid withdrawal is removed; after the cleanup it returns to 2 280 ₸.
+
+### Cleanup of the stage 6 test data (2026-10-12, after «delete»)
+
+- Before deleting, prod had one more withdrawal than the run created: `53c0dcf4-a06f-4dd2-b3bc-1e7ce3fc34a2`, user_1, 200 327 ₸. It was created at 07:16 UTC (about 15 min after the v2.0.0 release) and rejected by `admin` at 07:17 with the reason «g». It is not test data of this run and was not in the «delete» list, so it **was kept**. Being rejected, it does not change any balance.
+- Backup first, taken again because of that new row: `C:\Users\alish\Documents\arqa-backups\prod-2026-10-12-before-stage6-cleanup-2.sql` (32 813 bytes). Restored into a throwaway PostgreSQL 18: revision `0004`, 134 trips, 3 withdrawals.
+- One transaction (`BEGIN … COMMIT`, `ON_ERROR_STOP`), a `DO` block that deletes the trip `stage6-check-1791787840` and the withdrawals `0e520a64-45fb-4501-ad90-e8940f98c602`, `f79636d1-c005-4362-9c4c-7d2845d0ae17`, and raises (so rolls back) unless exactly 1 trip + 2 withdrawals were deleted. Result: `NOTICE: deleted 1 trip and 2 withdrawals`, `COMMIT`.
+- Checked from a new connection: trips **134 → 133**, withdrawals **3 → 1** (the kept user_1 row); none of the three ids remains.
+- After: user_2 `GET /balance` → available **2 280** (card 3 000, commission 720, withdrawn 0), `GET /withdrawals` → `[]`. user_1 still **200 327**.
+
+### Release APK on an emulator against prod (2026-10-12)
+
+The v2.0.0 asset itself: `gh release download v2.0.0`, sha256 `2978330b…83fe4dc` (matches the build). Installed on the Android emulator (`Medium_Phone_API_37.0`, 1080×2400), driven with `adb` and `uiautomator`. No trips or withdrawals were created. The logins opened two sessions, both closed with «Выйти». Screenshots: `docs/design/release_check/`.
+
+| Step | Seen on the device | |
+|---|---|---|
+| Start | login screen, «Русский» selected | ✅ `01_login` |
+| First attempt: `adb input text` dropped characters of the masked password | «Неверный логин или пароль» under the password (real 401 from prod; 1 failed attempt, limit 10) | ✅ |
+| Sign in `user_1` / `password_1` | Day screen, today (12 October) empty | ✅ `02_day_today` |
+| ‹ ×11 → 1 October | net **3 315 ₸** (spoken «3 315 тенге»), revenue 3 900, commission −585, cash 1 500 / card 2 400, 2 trips | ✅ `03_user1_oct1_ru` |
+| Menu | «Водитель 1», «@user_1 · Водитель», «Вывод средств · Доступно 200 327 ₸», «Версия 0.2.0» | ✅ `04_menu_ru` |
+| «Қазақша» in the menu | applied at once: «Мәзір», «Қаражат шығару», «Қолжетімді: 200 327 ₸», «Нұсқа 0.2.0» | ✅ `05_menu_kk` |
+| «Қаражат шығару» (not sent) | balance 200 327 (card 258 450, commission −58 123, withdrawn 0); history: the kept 200 327 ₸ «Қабылданбады», reason «g» | ✅ `06_withdraw_kk` |
+| Back to the day | «Қолға 3 315 ₸», «2026 ж. 1 қазан» | ✅ `07_user1_oct1_kk` |
+| «Шығу» → confirm | dialog «Аккаунттан шығу керек пе?», then the login screen (in Kazakh, no «session ended» message) | ✅ `08`, `09` |
+| Sign in `admin` / `admin` | admin screen, three tabs, chips «Барлық жүргізушілер / Водитель 1 / Водитель 2» | ✅ `10_admin_today_kk` |
+| ‹ ×11 → 1 October, all drivers | **7 395 ₸**, revenue 8 700, commission −1 305, 4 trips, each row labelled «Водитель 1» / «Водитель 2» (`driver_id` from the new backend) | ✅ `11_admin_all_oct1_kk` |
+| Chip «Водитель 2» | **4 080 ₸**, revenue 4 800, commission −720, 2 trips | ✅ `12_admin_driver2_oct1_kk` |
+| «Шығу» → confirm, «Русский» | login screen in Russian | ✅ `13_logged_out_ru` |
+
+Note from the run: at 360-ish widths the third chip «Водитель 2» is partly behind the edge of the scrolling row in Kazakh (by design; the UI stability pass covers it).
