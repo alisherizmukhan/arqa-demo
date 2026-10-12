@@ -172,3 +172,100 @@ Deployed from `main` at `547c279` (CI green), `AUTH_REQUIRED=false`. Deployment 
 | `GET /health` | 200 |
 | `GET /summary?date=2026-10-01` without a token | 3 900 / 585 / 3 315, cash 1 500 / card 2 400 — exact |
 | `POST /trips` with a body that is not UTF-8 | 422 `{"error":{"code":"invalid_json",…}}` (was 400 `http_error`) |
+
+## Stage 6 — accounts go live (2026-10-12)
+
+### Backup
+
+- `C:\Users\alish\Documents\arqa-backups\prod-2026-10-12-before-stage6.sql` (29 552 bytes, outside the repository), taken with `pg_dump` inside the Postgres container as before.
+- Restored into a throwaway PostgreSQL 18: revision `0004`, 133 trips (Σ 401 300 ₸), 0 withdrawals, users `admin`, `user_1`, `user_2` (all active), 8 sessions.
+
+### Release build
+
+- `flutter build apk --release` from `main` at `f0731c6` (clean tree, CI green): `app-release.apk`, 56 506 188 bytes, sha256 `2978330bc473c09ee64dd0a7830998a89ff93e7b00c7538071b11db7483fe4dc`. Published as `driver-diary.apk` in GitHub release `v2.0.0`.
+- The on-device check of the APK against prod before the switch was skipped at the user's request. The same app code is covered by the widget, golden and layout tests (531) and its API contract by the checks below.
+
+### Deploy and switch
+
+| Time (UTC) | Step | Result |
+|---|---|---|
+| 06:48 | `railway up --service api --ci` from `main` (`f0731c6`, `driver_id` in `GET /trips`), `AUTH_REQUIRED=false` | deployment `117d8bad-fa36-4e2b-8e97-440bcc990728` SUCCESS, healthcheck passed |
+| 06:48 | before the switch: `/health`, `GET /trips` without a token (old mode), login of `user_1`, `user_2`, `admin` | 200; trips carry `driver_id`; all three logins 200 with the right roles |
+| 06:49:24 | `railway variables --service api --set AUTH_REQUIRED=true` (the variable change redeploys) | deployment `695eb82d-41fe-44d6-aee5-28c8f4bf8c52` SUCCESS |
+| 06:49:43 | `GET /summary` without a token | **401** `unauthorized` — the switch took 20 s |
+
+Rollback plan (not needed): `railway variables --service api --set AUTH_REQUIRED=false` restores anonymous access as `user_1` within ~20 s.
+
+### Verification against https://api-production-6e8b.up.railway.app
+
+Run by a script (`curl` with the DNS name pinned); tokens were kept in shell variables and never printed. Writes only as `user_2`. Every session opened by the run was logged out at the end.
+
+| Check | Result | |
+|---|---|---|
+| GET /health | 200 {"status":"ok","database":"ok"} | ✅ |
+| GET /trips?date=2026-10-01&tz=%2B05:00 without token | 401 {"error":{"code":"unauthorized","message":"a valid beare | ✅ |
+| GET /summary?date=2026-10-01&tz=%2B05:00 without token | 401 {"error":{"code":"unauthorized","message":"a valid beare | ✅ |
+| GET /balance without token | 401 {"error":{"code":"unauthorized","message":"a valid beare | ✅ |
+| GET /withdrawals without token | 401 {"error":{"code":"unauthorized","message":"a valid beare | ✅ |
+| GET /auth/me without token | 401 {"error":{"code":"unauthorized","message":"a valid beare | ✅ |
+| GET /admin/users without token | 401 {"error":{"code":"unauthorized","message":"a valid beare | ✅ |
+| GET /trips with an unknown token | 401 {"error":{"code":"unauthorized","message":"the session i | ✅ |
+| login user_1 → /auth/me | 200 user_1 driver Водитель 1 | ✅ |
+| login user_2 → /auth/me | 200 user_2 driver Водитель 2 | ✅ |
+| login admin → /auth/me | 200 admin admin Администратор | ✅ |
+| wrong password | 401 {"error":{"code":"invalid_credentials","message":"invalid login or | ✅ |
+| user_1 summary | 2 trips, 3900/585/3315, cash 1500 card 2400 | ✅ |
+| user_2 summary | 2 trips, 4800/720/4080, cash 1800 card 3000 | ✅ |
+| admin summary, all drivers | 4 trips, 8700/1305/7395, cash 3300 card 5400 | ✅ |
+| admin summary, driver_id=user_2 | 2 trips, 4800/720/4080, cash 1800 card 3000 | ✅ |
+| admin trips carry driver_id | t1:u1 t2:u1 u2-t1:u2 u2-t2:u2 | ✅ |
+| user_1 sees only own trips | t1 t2 | ✅ |
+| user_2 sees only own trips | u2-t1 u2-t2 | ✅ |
+| driver → GET /admin/users | 403 {"error":{"code":"forbidden","message":"admin | ✅ |
+| driver → another driver's trips | 403 {"error":{"code":"forbidden","message":"driver | ✅ |
+| admin → POST /trips | 403 {"error":{"code":"forbidden","message":"only d | ✅ |
+| new trip | 201 | ✅ |
+| same id, same payload | 200 | ✅ |
+| same id, other amount | 409 {"error":{"code":"trip_conflict","message":"trip 'stage6 | ✅ |
+| same id from user_1 | 409 existing_leaked=0 | ✅ |
+| user_2 balance before | 2280 | ✅ |
+| W1 1000 new | 201 pending | ✅ |
+| W1 again, same amount | 200 | ✅ |
+| W1 again, other amount | 409 {"error":{"code":"withdrawal_conflict","message":"withdrawal 0e520 | ✅ |
+| 5000 > available | 422 {"error":{"code":"insufficient_funds","message":"amount is more th | ✅ |
+| amount 0 | 422 | ✅ |
+| W2 500 new | 201 | ✅ |
+| balance after W1+W2 pending | 780 | ✅ |
+| admin → POST /withdrawals | 403 | ✅ |
+| driver → approve | 403 | ✅ |
+| approve W1 | 200 paid | ✅ |
+| approve W1 again | 200 paid | ✅ |
+| balance after approve (paid stays spent) | 780 | ✅ |
+| reject W2 with a Cyrillic reason | 200 rejected Проверка деплоя | ✅ |
+| reject W2 again | 200 | ✅ |
+| reject W1 (already paid) | 409 {"error":{"code":"withdrawal_already_decided","message":"withdrawal 0e520a64 | ✅ |
+| balance after reject (money back) | 1280 | ✅ |
+| user_1 sees none of user_2's withdrawals | 0 | ✅ |
+| admin sees user_2 balance | 1280 | ✅ |
+| block user_2 | 409 {"error":{"code":"demo_account_protected","message":"'user_2' is a | ✅ |
+| revoke user_2 sessions | 409 {"error":{"code":"demo_account_protected","message":"'user_2' is a | ✅ |
+| user_2 token still works | 200 | ✅ |
+| fresh session works | 200 | ✅ |
+| logout | 204 | ✅ |
+| same token after logout | 401 {"error":{"code":"unauthorized","message":"the session i | ✅ |
+| user_1's other session unaffected | 200 | ✅ |
+
+The first run's three `login … → /auth/me` lines failed in the **script**, not on the server: the pattern expected raw JSON but was compared with the parsed «200 user_1 driver». They were re-run with the right pattern (the rows above); every value was already correct.
+
+Also checked: `user_1` `GET /balance` = **200 327 ₸** (card 258 450 − commission 58 123, no withdrawals), as computed in stage 3 (PROD_AUDIT F6).
+
+### Test data left on prod (cleanup pending «delete»)
+
+| Kind | id | Owner | Details |
+|---|---|---|---|
+| trip | `stage6-check-1791787840` | user_2 | 2026-10-11 10:00–10:20 +05:00, 1 000 ₸, cash, commission 0 (no effect on the balance) |
+| withdrawal | `0e520a64-45fb-4501-ad90-e8940f98c602` | user_2 | 1 000 ₸, paid |
+| withdrawal | `f79636d1-c005-4362-9c4c-7d2845d0ae17` | user_2 | 500 ₸, rejected «Проверка деплоя» |
+
+- Backup before the cleanup: `C:\Users\alish\Documents\arqa-backups\prod-2026-10-12-before-stage6-cleanup.sql` (31 665 bytes), restored into a throwaway PostgreSQL 18: revision `0004`, 134 trips, 2 withdrawals.
+- These are the only rows the run added (prod: 134 trips, 2 withdrawals). user_2's balance is 1 280 ₸ until the paid withdrawal is removed; after the cleanup it returns to 2 280 ₸.

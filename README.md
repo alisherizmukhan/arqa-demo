@@ -2,16 +2,24 @@
 
 Мобильное приложение для водителя такси. Водитель записывает поездки: время, сумму, комиссию парка, способ оплаты. Приложение показывает итоги дня: сколько получено на руки, выручку, комиссию, число поездок, долю наличных и карты.
 
+С версии 2.0:
+- **вход по логину и паролю** и две роли: водитель и администратор;
+- **вывод денег:** водитель видит, сколько парк ему должен, и создаёт заявку на вывод;
+- **админка:** поездки всех водителей, заявки на вывод («Выплатить» / «Отклонить»), водители и их балансы;
+- **два языка:** русский и казахский, переключаются на экране входа и в меню.
+
 Состав репозитория:
 - `apps/mobile` — Flutter-приложение;
 - `packages/design_kit` — дизайн-кит;
 - `backend` — API на FastAPI с PostgreSQL, развёрнут на Railway.
 
-| День (светлая тема) | День (тёмная тема) | Новая поездка |
-|---|---|---|
-| <img src="docs/screenshots/day_light.png" width="200"> | <img src="docs/screenshots/day_dark.png" width="200"> | <img src="docs/screenshots/add_trip.png" width="200"> |
+| Вход | День | Вывод средств | Админка |
+|---|---|---|---|
+| <img src="docs/screenshots/login_ru.png" width="180"> | <img src="docs/screenshots/day_light.png" width="180"> | <img src="docs/screenshots/withdraw_ru.png" width="180"> | <img src="docs/screenshots/admin_trips_all_ru.png" width="180"> |
 
-**Скачать APK для Android:** [driver-diary.apk](https://github.com/alisherizmukhan/arqa-demo/releases/latest/download/driver-diary.apk) (все релизы — на странице [Releases](https://github.com/alisherizmukhan/arqa-demo/releases)). Приложение работает с развёрнутым API, ничего настраивать не нужно.
+**Скачать APK для Android:** [driver-diary.apk (v2.0.0)](https://github.com/alisherizmukhan/arqa-demo/releases/download/v2.0.0/driver-diary.apk) (все релизы — на странице [Releases](https://github.com/alisherizmukhan/arqa-demo/releases)). Приложение работает с развёрнутым API, ничего настраивать не нужно. Войдите демо-аккаунтом: `user_1` / `password_1` (водитель) или `admin` / `admin` (администратор), полный список — в разделе «Демо-аккаунты».
+
+> **Старые сборки больше не работают с сервером.** С версии 2.0 API требует вход, а APK v0.1.0 и код по тегу `v1.0` (сдача до этапа аккаунтов) входить не умеют: их запросы получают 401. Ставьте v2.0.0.
 
 ### Демо-видео
 
@@ -29,7 +37,7 @@ https://github.com/user-attachments/assets/44a51387-0f43-486c-87e7-9e07c062bf56
 
 ## Требования задания
 
-Эталонный день — **2026-10-01**: 2 поездки, выручка 3 900 ₸, комиссия 585 ₸, на руки 3 315 ₸, наличные 1 500 ₸, карта 2 400 ₸. Эти числа проверяются тестами бэкенда и клиента, а также на развёрнутом API.
+Эталонный день — **2026-10-01**: 2 поездки, выручка 3 900 ₸, комиссия 585 ₸, на руки 3 315 ₸, наличные 1 500 ₸, карта 2 400 ₸. Эти числа проверяются тестами бэкенда и клиента, а также на развёрнутом API. С аккаунтами это день `user_1`; у `user_2` в тот же день 4 800 / 720 / 4 080 ₸, у администратора по всем водителям — 8 700 / 1 305 / 7 395 ₸ (проверка развёрнутого API — в [`docs/DEPLOY_CHECK.md`](docs/DEPLOY_CHECK.md)).
 
 | Требование | Статус | Где реализовано | Какой тест доказывает |
 |---|---|---|---|
@@ -37,7 +45,10 @@ https://github.com/user-attachments/assets/44a51387-0f43-486c-87e7-9e07c062bf56
 | Клиент: итоги дня, список поездок, переключение дней | ✅ | `apps/mobile/lib/features/trips/presentation/screens/day_screen.dart`, `apps/mobile/lib/features/trips/domain/entities/daily_summary.dart`, `apps/mobile/lib/features/trips/presentation/providers/trips_providers.dart` | `apps/mobile/test/features/trips/domain/domain_test.dart` («reference case 2026-10-01»); `apps/mobile/test/features/trips/presentation/screens_test.dart` («renders the reference day»); `apps/mobile/test/features/trips/presentation/providers_test.dart` («each day is fetched once…») |
 | Создание поездки с валидацией (сумма > 0, конец позже начала) | ✅ | `apps/mobile/lib/features/trips/presentation/screens/add_trip_screen.dart`, `apps/mobile/lib/features/trips/domain/entities/trip_rules.dart`, `backend/app/domain/trip.py` | `apps/mobile/test/features/trips/presentation/trip_form_test.dart`; `backend/tests/unit/domain/test_trip.py::test_invalid_trip_is_rejected`; `backend/tests/integration/test_api_validation.py` |
 | Нет дублей при повторной отправке | ✅ | `backend/app/infrastructure/repository.py` (`INSERT … ON CONFLICT (id) DO NOTHING`), `backend/app/application/use_cases.py`; в клиенте `AddTripController` в `trips_providers.dart` и повторы в `add_trip_screen.dart` | `backend/tests/integration/test_idempotency.py` (повтор → 200, гонка параллельных POST → одна строка, другие данные → 409); `providers_test.dart` («retrying the same trip after a network error reuses its id»); `apps/mobile/test/features/trips/presentation/form_behaviour_test.dart` («resent with the same id») |
-| Тесты на итоги и на дубли | ✅ | `backend/tests/`, `apps/mobile/test/`, CI в `.github/workflows/ci.yml` | бэкенд: 194 теста; приложение: 220; дизайн-кит: 177. Все проходят в CI |
+| Аккаунты, роли, сессии | ✅ | `backend/app/application/auth.py`, `access.py`; в приложении `features/auth` | `backend/tests/integration/test_auth_api.py`, `test_scoping_api.py`; `apps/mobile/test/features/accounts/` |
+| Вывод денег без двойного списания | ✅ | `backend/app/application/withdrawals.py` (блокировка строки водителя), `features/withdrawals` в приложении | `backend/tests/integration/test_withdrawals_api.py` (параллельные заявки); повторы с тем же `id` — `accounts_behaviour_test.dart` |
+| Русский и казахский | ✅ | `apps/mobile/lib/l10n/app_ru.arb`, `app_kk.arb`, [`docs/L10N.md`](docs/L10N.md) | `test/core/l10n_format_test.dart`; матрица вёрстки на обоих языках; CI запрещает кириллицу в коде вне локализаций |
+| Тесты на итоги и на дубли | ✅ | `backend/tests/`, `apps/mobile/test/`, CI в `.github/workflows/ci.yml` | бэкенд: 372 теста; приложение: 531; дизайн-кит: 183 и витрина 150. Все проходят в CI |
 | README, деплой, скриншоты | ✅ | `README.md`, `backend/Dockerfile`, `.railway/railway.ts`, `docs/screenshots/` | `GET /health` на Railway отвечает 200; скриншоты рендерит `apps/mobile/test/screens/screenshots_test.dart` |
 
 ---
@@ -70,7 +81,7 @@ uv run python -m app             # http://127.0.0.1:8000/docs; при старт
 | `SEED_ADMIN_PASSWORD`, `SEED_USER1_PASSWORD`, `SEED_USER2_PASSWORD` | Пароли демо-аккаунтов (см. ниже) |
 | `CLIENT_IP_HEADER` | Заголовок, который ставит сам прокси перед API и перезаписывает присланное клиентом значение. На Railway это `x-real-ip`. По нему определяется IP клиента для лимита входов |
 | `TRUSTED_PROXY_HOPS` | Для прокси, которые дописывают клиента в `X-Forwarded-For`: сколько последних записей им принадлежит. Локально оба не заданы — берётся адрес соединения |
-| `AUTH_REQUIRED` | `true` (по умолчанию): нужен токен. `false`: запрос без токена работает от имени `user_1`, присланный токен всё равно проверяется. На проде сейчас `false`, пока приложение не умеет входить |
+| `AUTH_REQUIRED` | `true` (по умолчанию): нужен токен. `false`: запрос без токена работает от имени `user_1`, присланный токен всё равно проверяется (переходный режим, пока приложение не умело входить). На проде — `true` с 2026-10-12 |
 | `CORS_ORIGINS` | Разрешённые источники (по умолчанию `["*"]`) |
 
 #### Демо-аккаунты
@@ -107,7 +118,7 @@ $env:_ = "$env:APPDATA\npm\node_modules\@railway\cli\bin\railway.exe"; railway c
 
 ### Мобильное приложение
 
-Самый быстрый способ — установить [APK](https://github.com/alisherizmukhan/arqa-demo/releases/latest/download/driver-diary.apk) (см. ниже). Чтобы собрать из исходников:
+Самый быстрый способ — установить [APK](https://github.com/alisherizmukhan/arqa-demo/releases/download/v2.0.0/driver-diary.apk) (см. ниже). Чтобы собрать из исходников:
 
 ```bash
 flutter pub get          # из корня репозитория (pub workspace)
@@ -122,9 +133,9 @@ flutter run              # на первом найденном устройст
 
 **Установить готовый APK на телефон:**
 
-1. Скачайте [driver-diary.apk](https://github.com/alisherizmukhan/arqa-demo/releases/latest/download/driver-diary.apk) на телефон.
+1. Скачайте [driver-diary.apk](https://github.com/alisherizmukhan/arqa-demo/releases/download/v2.0.0/driver-diary.apk) на телефон.
 2. Откройте файл. Android попросит разрешить установку из этого источника (браузера или «Файлов») — разрешите.
-3. Нажмите «Установить», затем «Открыть». На экране появится «Дневник смен» с поездками за сегодня.
+3. Нажмите «Установить», затем «Открыть». Появится экран входа: введите `user_1` / `password_1`, и откроется день с поездками. Язык переключается кнопками «Русский» / «Қазақша» вверху.
 
 APK подписан отладочным ключом, поэтому Google Play Защита может показать предупреждение. Нажмите «Всё равно установить».
 
@@ -202,9 +213,11 @@ flutter analyze
 (cd packages/design_kit/example && flutter test)
 (cd apps/mobile && flutter test)
 
-# Контрактные тесты клиента против запущенного бэкенда
-(cd apps/mobile && LIVE_API_URL=http://127.0.0.1:8000 flutter test test/live)
+# Контрактные тесты клиента против запущенного бэкенда (с AUTH_REQUIRED=true — с логином)
+(cd apps/mobile && LIVE_API_URL=http://127.0.0.1:8000 LIVE_LOGIN=user_1 LIVE_PASSWORD=password_1 flutter test test/live)
 ```
+
+Перед пушем в `main` все шаги CI (включая проверки `grep`) запускаются одной командой: `tool/ci_local.sh`.
 
 ### Голдены: локально и в CI
 
@@ -234,46 +247,52 @@ tool/update_ci_goldens.sh packages/design_kit apps/mobile
 - API: https://api-production-6e8b.up.railway.app
 - Swagger UI: [`/docs`](https://api-production-6e8b.up.railway.app/docs)
 
+Без токена работают только `/health` и `/auth/login`, остальное отвечает 401.
+
 ```bash
 API=https://api-production-6e8b.up.railway.app
 
 curl $API/health
 # {"status":"ok","database":"ok"}
 
-curl "$API/summary?date=2026-10-01&tz=%2B05:00"
+TOKEN=$(curl -s -X POST $API/auth/login -H 'Content-Type: application/json' \
+  -d '{"login":"user_1","password":"password_1"}' | python -c "import json,sys;print(json.load(sys.stdin)['token'])")
+AUTH="Authorization: Bearer $TOKEN"
+
+curl -H "$AUTH" "$API/summary?date=2026-10-01&tz=%2B05:00"
 # {"date":"2026-10-01","tz":"+05:00","trips_count":2,"revenue":3900,"commission":585,"net":3315,"cash":1500,"card":2400}
 
-curl "$API/trips?date=2026-10-01&tz=%2B05:00"
-# {"date":"2026-10-01","tz":"+05:00","trips":[{"id":"t1",...},{"id":"t2",...}]}
+curl -H "$AUTH" "$API/trips?date=2026-10-01&tz=%2B05:00"
+# {"date":"2026-10-01","tz":"+05:00","trips":[{"id":"t1","driver_id":"…",...},{"id":"t2",...}]}
 ```
 
 В `tz` знак `+` кодируется как `%2B`. Без кодирования сервер тоже поймёт `+05:00`.
 
-Создание поездки. `id` — ключ идемпотентности, его генерирует клиент:
+Создание поездки (от имени водителя, с тем же `$AUTH`). `id` — ключ идемпотентности, его генерирует клиент. Это пишет в общий демо-API: для опытов лучше локальный бэкенд.
 
 ```bash
 TRIP='{"id":"readme-demo-1","start":"2026-01-15T10:00:00+05:00","end":"2026-01-15T10:25:00+05:00","amount":2500,"payment":"card","commission":375}'
 
 # Новая поездка -> 201
-curl -i -X POST $API/trips -H 'Content-Type: application/json' -d "$TRIP"
+curl -i -X POST $API/trips -H "$AUTH" -H 'Content-Type: application/json' -d "$TRIP"
 
 # Тот же запрос ещё раз -> 200, возвращается сохранённая поездка, дубля нет
-curl -i -X POST $API/trips -H 'Content-Type: application/json' -d "$TRIP"
+curl -i -X POST $API/trips -H "$AUTH" -H 'Content-Type: application/json' -d "$TRIP"
 
 # Тот же id, другая сумма -> 409
-curl -i -X POST $API/trips -H 'Content-Type: application/json' \
+curl -i -X POST $API/trips -H "$AUTH" -H 'Content-Type: application/json' \
   -d '{"id":"readme-demo-1","start":"2026-01-15T10:00:00+05:00","end":"2026-01-15T10:25:00+05:00","amount":3000,"payment":"card","commission":375}'
 # {"error":{"code":"trip_conflict","message":"trip 'readme-demo-1' already exists with a different payload","field":"id"}}
 
 # Невалидные данные -> 422
-curl -i -X POST $API/trips -H 'Content-Type: application/json' \
+curl -i -X POST $API/trips -H "$AUTH" -H 'Content-Type: application/json' \
   -d '{"id":"readme-demo-2","start":"2026-01-15T11:00:00+05:00","end":"2026-01-15T11:20:00+05:00","amount":0,"payment":"cash","commission":0}'
 # {"error":{"code":"invalid_amount","message":"amount must be a positive integer","field":"amount"}}
 ```
 
 Если `readme-demo-1` уже кто-то создал, первый запрос вернёт 200, а не 201. Для проверки 201 возьмите новый `id`.
 
-Все ошибки имеют один формат: `{"error": {"code", "message", "field"}}`. Клиент показывает свой русский текст по `code`, а не `message` сервера.
+Все ошибки имеют один формат: `{"error": {"code", "message", "field"}}`. Клиент показывает свой текст на выбранном языке по `code`, а не `message` сервера.
 
 ---
 
@@ -311,9 +330,23 @@ curl -s -X POST $API/auth/logout -H "Authorization: Bearer $TOKEN" -o /dev/null 
 
 Токен не истекает: сессия заканчивается при выходе или когда администратор её завершает. В базе хранится только sha256 от токена.
 
+В приложении: без сохранённого входа открывается экран входа. Водитель попадает на экран дня, администратор — в админку. Сессия заканчивается только выходом или когда администратор её сбрасывает; при любом ответе 401 приложение возвращается ко входу с сообщением «Сессия завершена. Войдите снова.». Токен хранится в защищённом хранилище (Keychain / Keystore) и не пишется в логи.
+
+## Язык
+
+- Русский и казахский. Переключатель «Русский» / «Қазақша» — на экране входа (справа вверху) и в меню («Язык»). Язык меняется сразу, без перезапуска, и запоминается.
+- Пока язык не выбран, берётся язык телефона, если это русский или казахский, иначе русский.
+- Даты — в формате выбранного языка: «1 октября 2026» / «2026 ж. 1 қазан»; формы множественного числа по правилам языка. Деньги одинаковые: `3 315 ₸`.
+- Казахские тексты — машинный перевод, все они перечислены в [`docs/L10N.md`](docs/L10N.md) с пометкой «нужна проверка носителем».
+- Имена водителей и причины отказа — данные с сервера, они не переводятся.
+
 ## Вывод денег
 
-Доступно к выводу = сумма оплат картой − комиссия по всем поездкам − выводы в статусе «в обработке» или «выплачено». Наличные остаются у водителя, поэтому комиссия за них тоже списывается с безнала. Сумма может быть нулевой или отрицательной.
+**Доступно к выводу = Σ оплат картой − Σ комиссий по всем поездкам − Σ выводов «в обработке» и «выплачено».**
+
+Деньги за поездки по карте получает парк, наличные остаются у водителя. Комиссия парка начисляется со всех поездок, поэтому комиссия за наличные поездки тоже списывается с безнала. Сумма может быть нулевой или отрицательной — тогда выводить нечего. Отклонённая заявка деньги возвращает.
+
+В приложении: «Меню» → «Вывод средств». Экран показывает баланс по формуле выше, поле суммы (кнопка «Всё» подставляет всю доступную сумму) и историю заявок со статусами «В обработке», «Выплачено», «Отклонено» (с причиной). Заявка получает `id` в момент нажатия «Вывести». При обрыве связи она повторяется с тем же `id` (через 2, 4, 8 и 30 с и по кнопке «Повторить»), поэтому деньги не уйдут дважды. Если изменить сумму, следующая отправка получит новый `id`.
 
 ```bash
 curl -s "$API/balance" -H "Authorization: Bearer $TOKEN"
@@ -335,6 +368,14 @@ curl -s -X POST $API/withdrawals -H "Authorization: Bearer $TOKEN" \
 
 Администратор: `POST /admin/withdrawals/{id}/approve` (выплачено) и `POST /admin/withdrawals/{id}/reject` с `{"reason": "…"}` (отклонено, деньги снова доступны). Повтор того же решения возвращает текущее состояние, другое решение — 409 `withdrawal_already_decided`.
 
+## Админка
+
+Администратор после входа попадает в «Админку» с тремя вкладками:
+
+- **Поездки** — тот же экран дня, но для всех водителей сразу или для одного (фильтр-чипы). В режиме «Все водители» под каждой поездкой подписан водитель. Поездки администратор не создаёт.
+- **Выводы** — заявки «В обработке» или все. У заявки в обработке кнопки «Выплатить» и «Отклонить». Отклонить можно только с причиной: её увидит водитель.
+- **Водители** — водители и их балансы. По нажатию: «Заблокировать» / «Разблокировать» и «Сбросить все сессии» (водитель выйдет на всех устройствах). Демо-аккаунты защищены от блокировки и сброса.
+
 Двойное списание исключено. Заявка создаётся в одной транзакции под блокировкой строки водителя: два одновременных запроса выполняются по очереди. Тест проверяет 12 одновременных заявок по 500 ₸ при балансе 1 815 ₸: проходят ровно 3.
 
 ## Что сделано
@@ -342,7 +383,9 @@ curl -s -X POST $API/withdrawals -H "Authorization: Bearer $TOKEN" \
 - **Архитектура бэкенда.** Слои `domain` → `application` → `api` / `infrastructure`.
   - Доменные сущности сами проверяют правила, поэтому невалидная поездка не может существовать.
   - Каждое правило продублировано в базе как `CHECK`.
-- **Архитектура приложения.** Структура по фичам (`features/trips/{domain,data,presentation}`) и Riverpod. Ошибки возвращаются как `Result<T>` с запечатанным `Failure`.
+- **Архитектура приложения.** Структура по фичам (`features/{trips,auth,withdrawals,admin,menu}/{domain,data,presentation}`) и Riverpod. Ошибки возвращаются как `Result<T>` с запечатанным `Failure`. Кеш данных привязан к сессии: после выхода и входа другим аккаунтом чужие данные не показываются.
+- **Аккаунты.** Непрозрачные токены (в базе только sha256), argon2id для паролей, лимит неудачных входов по паре «логин + IP клиента», роли проверяются в слое приложения бэкенда.
+- **Локализация.** gen-l10n, ICU-плюралы, даты через `intl`. В дизайн-ките нет ни одного своего текста — все подписи передаются параметрами.
 - **Дизайн-кит.** Цвета, типографика, отступы и компоненты живут только в `packages/design_kit`.
 - **Идемпотентность на уровне базы.**
   - `INSERT … ON CONFLICT (id) DO NOTHING`, затем сохранённая поездка читается и сравнивается с запросом.
@@ -362,15 +405,15 @@ curl -s -X POST $API/withdrawals -H "Authorization: Bearer $TOKEN" \
   - Выбор даты и времени — колесо в стиле iOS на обеих платформах.
   - Сортировка поездок: по времени (по умолчанию — сначала ранние) или по сумме.
   - После сохранения список прокручивается к новой поездке и подсвечивает её.
-- **Голдены и скриншоты.** Голдены кита и экрана дня есть в двух темах. Скриншоты всех состояний рендерятся тестами.
+- **Голдены и скриншоты.** Голдены кита, экрана дня, входа, меню, вывода и админки — в двух темах, новые экраны на двух языках. Скриншоты всех состояний рендерятся тестами; генератор падает, если два разных состояния дают одинаковую картинку (так нашлись сценарии, которые не дошли до своего состояния).
 - **Доступность.**
   - Цели нажатия не меньше 48 dp, у всех элементов есть подписи для скринридера.
   - Контраст по WCAG AA в обеих темах.
-  - Матрица вёрстки: 360 и 390 dp, масштаб текста 1.0 и 1.3. Тест падает при любом переполнении или обрезанном тексте.
+  - Матрица вёрстки: 360 и 390 dp, масштаб текста 1.0 и 1.3, русский и казахский. Тест падает при любом переполнении или обрезанном тексте.
 - **CI** (`.github/workflows/ci.yml`) — три задачи:
   - бэкенд: ruff, mypy, pytest с настоящим Postgres, покрытие ≥ 95 %;
   - дизайн-кит: analyze, формат, тесты;
-  - приложение: актуальность кодогенерации, запрет «сырых» цветов и стилей, analyze, формат, тесты.
+  - приложение: актуальность кодогенерации, запрет «сырых» цветов и стилей, запрет кириллицы вне локализаций, analyze, формат, тесты, скриншоты всех состояний.
 
 ---
 
@@ -390,10 +433,11 @@ curl -s -X POST $API/withdrawals -H "Authorization: Bearer $TOKEN" \
 
 - **«Сегодня» не обновляется после полуночи.** Если приложение открыто через полночь, вчерашний день остаётся «Сегодня» до перерисовки экрана или перезапуска.
 - **Дата поездки — это выбранный день.** В форме нет поля даты. Чтобы добавить поездку за другой день, нужно сначала переключить день на главном экране.
-- **Нет аккаунтов.** API открыт, список поездок один на всех. Аккаунты, роли и вывод денег — следующий этап.
 - **Поездку нельзя изменить или удалить.**
 - **Имена водителей и причины отказа в выводе — данные с сервера, они не переводятся.** Интерфейс переключается между русским и казахским, а эти строки показываются так, как сохранены.
-- **Неотправленная поездка живёт, пока открыта форма.** Офлайн-хранилища нет.
+- **Неотправленная поездка или заявка на вывод живёт, пока открыт экран.** Офлайн-хранилища нет.
+- **Баланс водителя в админке — отдельный запрос на каждого водителя.** Для парка из нескольких водителей это нормально; для большого парка понадобится сводный эндпоинт.
+- **Демо-режим.** На проде включены демо-данные: демо-аккаунты нельзя заблокировать, а их пароли общие. Для настоящего парка — свои пароли через переменные окружения и `SEED_ON_STARTUP=false`.
 - **Кеш дня может отставать до 5 минут,** если поездки добавлены с другого устройства. Свайп вниз обновляет день.
 
 ---
@@ -408,8 +452,24 @@ curl -s -X POST $API/withdrawals -H "Authorization: Bearer $TOKEN" \
 
 Рендерятся тестами приложения (390×844 @2x, настоящие шрифты).
 
+**Русский**
+
+| Вход | День | Меню | Вывод средств | Админка: поездки | Админка: выводы |
+|---|---|---|---|---|---|
+| <img src="docs/screenshots/login_ru.png" width="140"> | <img src="docs/screenshots/day_header_ru.png" width="140"> | <img src="docs/screenshots/menu_driver_ru.png" width="140"> | <img src="docs/screenshots/withdraw_ru.png" width="140"> | <img src="docs/screenshots/admin_trips_all_ru.png" width="140"> | <img src="docs/screenshots/admin_withdrawals_ru.png" width="140"> |
+
+**Қазақша**
+
+| Кіру | Күн | Мәзір | Қаражат шығару | Әкімші: сапарлар | Әкімші: шығарулар |
+|---|---|---|---|---|---|
+| <img src="docs/screenshots/login_kk.png" width="140"> | <img src="docs/screenshots/day_header_kk.png" width="140"> | <img src="docs/screenshots/menu_driver_kk.png" width="140"> | <img src="docs/screenshots/withdraw_kk.png" width="140"> | <img src="docs/screenshots/admin_trips_all_kk.png" width="140"> | <img src="docs/screenshots/admin_withdrawals_kk.png" width="140"> |
+
+**Поездки**
+
 | День | День, тёмная тема | Новая поездка | Нет связи | Конфликт 409 |
 |---|---|---|---|---|
-| <img src="docs/screenshots/day_light.png" width="160"> | <img src="docs/screenshots/day_dark.png" width="160"> | <img src="docs/screenshots/add_trip.png" width="160"> | <img src="docs/screenshots/add_trip_offline.png" width="160"> | <img src="docs/screenshots/add_trip_409.png" width="160"> |
+| <img src="docs/screenshots/day_light.png" width="140"> | <img src="docs/screenshots/day_dark.png" width="140"> | <img src="docs/screenshots/add_trip.png" width="140"> | <img src="docs/screenshots/add_trip_offline.png" width="140"> | <img src="docs/screenshots/add_trip_409.png" width="140"> |
+
+Все состояния новых экранов на обоих языках, светлые и тёмные, — в [`docs/design/accounts_app/`](docs/design/accounts_app).
 
 Сравнение с макетами — в `docs/design/audit/` и [`docs/DESIGN_AUDIT.md`](docs/DESIGN_AUDIT.md).
