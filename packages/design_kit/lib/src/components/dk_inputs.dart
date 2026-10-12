@@ -1,3 +1,4 @@
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/format/dk_money.dart';
 import 'package:design_kit/src/format/dk_money_input.dart';
@@ -56,10 +57,11 @@ class _FieldShell extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: text.label.copyWith(color: labelColor)),
+        DkFitText(label, style: text.label.copyWith(color: labelColor)),
         SizedBox(height: spacing.s8),
         Container(
-          constraints: BoxConstraints(minHeight: sizes.fieldHeight),
+          // Fixed (DESIGN.md §10): the box never grows with its content.
+          height: sizes.fieldHeight,
           // 16 minus the border: 15 at 1 px, 14 at 2 px, so text never jumps.
           padding: EdgeInsets.symmetric(horizontal: spacing.s16 - borderWidth),
           alignment: AlignmentDirectional.centerStart,
@@ -455,26 +457,23 @@ class DkTimeField extends StatelessWidget {
                 ),
                 SizedBox(width: spacing.s10),
               ],
-              Expanded(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: spacing.s8,
-                  runSpacing: spacing.s4,
-                  children: [
-                    Text(
-                      shown ?? placeholder,
-                      style: context.dkText.fieldTime.copyWith(
-                        color: shown == null
-                            ? colors.textTertiary
-                            : enabled
-                            ? colors.textPrimary
-                            : colors.textSecondary,
-                      ),
-                    ),
-                    ?trailing,
-                  ],
+              // One line (DESIGN.md §10): the time is never cut, the badge
+              // gives way (shrinks, then «…»).
+              DkFitText(
+                shown ?? placeholder,
+                ellipsis: false,
+                style: context.dkText.fieldTime.copyWith(
+                  color: shown == null
+                      ? colors.textTertiary
+                      : enabled
+                      ? colors.textPrimary
+                      : colors.textSecondary,
                 ),
               ),
+              if (trailing case final badge?) ...[
+                SizedBox(width: spacing.s8),
+                Flexible(child: badge),
+              ],
             ],
           ),
         ),
@@ -483,7 +482,8 @@ class DkTimeField extends StatelessWidget {
   }
 }
 
-/// Small accent label, e.g. «+1 день». DESIGN.md §4: min 24 high, radius sm.
+/// Small accent label, e.g. «+1 день». DESIGN.md §4 and §10: 24 high, radius
+/// sm; the text is one line (shrinks to 85 %, then «…»).
 class DkBadge extends StatelessWidget {
   /// Creates a badge.
   const new(this.text, {super.key});
@@ -495,15 +495,15 @@ class DkBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.dkColors;
     return Container(
-      constraints: BoxConstraints(minHeight: context.dkSpacing.s24),
+      height: context.dkSpacing.s24,
       padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s8),
-      // No `alignment`: it would make the badge fill the line it sits on
-      // (and push itself below the time). The 24 line height centres it.
+      // No `alignment`: it would make the badge fill the space it is
+      // offered. The 24 line height centres the text.
       decoration: BoxDecoration(
         color: colors.accentSoft,
         borderRadius: BorderRadius.circular(context.dkRadii.sm),
       ),
-      child: Text(
+      child: DkFitText(
         text,
         style: context.dkText.badge.copyWith(color: colors.accent),
       ),
@@ -562,7 +562,8 @@ class DkSegmentedControl<T> extends StatelessWidget {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     final track = Container(
-      constraints: BoxConstraints(minHeight: sizes.segmentedHeight),
+      // Fixed (DESIGN.md §10); segments share the width equally.
+      height: sizes.segmentedHeight,
       padding: EdgeInsets.all(spacing.s4),
       decoration: BoxDecoration(
         color: colors.segmentTrack,
@@ -620,7 +621,7 @@ class DkSegmentedControl<T> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
+        DkFitText(
           caption,
           style: context.dkText.label.copyWith(color: colors.textSecondary),
         ),
@@ -668,26 +669,27 @@ class _SegmentButton<T> extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(context.dkRadii.segment),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight:
-                context.dkSizes.segmentedHeight - context.dkSpacing.s4 * 2,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (segment.icon case final icon?) ...[
-                Icon(icon, size: context.dkSizes.iconField, color: color),
-                SizedBox(width: context.dkSpacing.s8),
-              ],
-              Flexible(
-                child: Text(
-                  segment.label,
-                  textAlign: TextAlign.center,
-                  style: style.copyWith(color: color),
+        child: SizedBox(
+          height: context.dkSizes.segmentedHeight - context.dkSpacing.s4 * 2,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (segment.icon case final icon?) ...[
+                  Icon(icon, size: context.dkSizes.iconField, color: color),
+                  SizedBox(width: context.dkSpacing.s8),
+                ],
+                Flexible(
+                  child: DkFitText(
+                    segment.label,
+                    textAlign: TextAlign.center,
+                    tooltip: false,
+                    style: style.copyWith(color: color),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -2,6 +2,8 @@ import 'package:design_kit/src/components/dk_button.dart';
 import 'package:design_kit/src/components/dk_card.dart';
 import 'package:design_kit/src/components/dk_chrome.dart';
 import 'package:design_kit/src/components/dk_inputs.dart';
+import 'package:design_kit/src/components/dk_layout.dart';
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/format/dk_money.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
@@ -168,10 +170,15 @@ class DkListAttachment extends StatelessWidget {
   }
 }
 
-/// A row of a [DkListGroup], DESIGN.md §8.0: min 56, padding 0 16, gap 12;
-/// icon tile 40 · title (`bodyStrong`) over optional subtitle (`caption`,
-/// textTertiary) · trailing (a chevron when [onTap] and no [trailing]).
-/// [destructive]: title and icon in `error`.
+/// Height of a [DkListRow] with a subtitle (DESIGN.md §10, addition A).
+const double dkListRowTwoLineHeight = 64;
+
+/// A row of a [DkListGroup], DESIGN.md §8.0 and §10: 56 high (64 with a
+/// subtitle), padding 0 16, gap 12; icon tile 40 · title (`bodyStrong`) over
+/// optional subtitle (`caption`, textTertiary), each one line (shrinks to
+/// 85 %, then «…») · trailing (a chevron when [onTap] and no [trailing]),
+/// which keeps its size: the text gives way first. [destructive]: title and
+/// icon in `error`.
 class DkListRow extends StatelessWidget {
   /// Creates the row.
   const new({
@@ -218,8 +225,8 @@ class DkListRow extends StatelessWidget {
                 color: colors.textTertiary,
               )
             : null);
-    final content = ConstrainedBox(
-      constraints: BoxConstraints(minHeight: sizes.buttonHeight),
+    final content = SizedBox(
+      height: subtitle == null ? sizes.buttonHeight : dkListRowTwoLineHeight,
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: spacing.s16,
@@ -241,20 +248,16 @@ class DkListRow extends StatelessWidget {
                 ),
               ),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  DkGroupedText(
-                    title,
-                    style: text.bodyStrong.copyWith(color: tone),
-                  ),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: DkFitLines([
+                  DkLine(title, style: text.bodyStrong.copyWith(color: tone)),
                   if (subtitle case final value?)
-                    DkGroupedText(
+                    DkLine(
                       value,
                       style: text.caption.copyWith(color: colors.textTertiary),
                     ),
-                ],
+                ]),
               ),
             ),
             ?end,
@@ -296,19 +299,16 @@ class DkProfileCard extends StatelessWidget {
           children: [
             const DkIconTile(icon: DkIcons.user),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DkGroupedText(
-                    name,
-                    style: text.titleM.copyWith(color: colors.textPrimary),
-                  ),
-                  DkGroupedText(
-                    caption,
-                    style: text.caption.copyWith(color: colors.textTertiary),
-                  ),
-                ],
-              ),
+              child: DkFitLines([
+                DkLine(
+                  name,
+                  style: text.titleM.copyWith(color: colors.textPrimary),
+                ),
+                DkLine(
+                  caption,
+                  style: text.caption.copyWith(color: colors.textTertiary),
+                ),
+              ]),
             ),
           ],
         ),
@@ -329,8 +329,9 @@ enum DkStatusKind {
   rejected,
 }
 
-/// Status chip, DESIGN.md §8.0: height 24, radius sm, padding h 8, gap 4,
-/// icon 14 + [label] in `badge` style. Always icon + text.
+/// Status chip, DESIGN.md §8.0 and §10: height 24 (fixed), radius sm,
+/// padding h 8, gap 4, icon 14 + [label] in `badge` style, one line (shrinks
+/// to 85 %, then «…»). Always icon + text.
 class DkStatusChip extends StatelessWidget {
   /// Creates the chip.
   const new({required this.kind, required this.label, super.key});
@@ -358,7 +359,7 @@ class DkStatusChip extends StatelessWidget {
       ),
     };
     return Container(
-      constraints: const BoxConstraints(minHeight: 24),
+      height: context.dkSpacing.s24,
       padding: EdgeInsets.symmetric(horizontal: context.dkSpacing.s8),
       decoration: BoxDecoration(
         color: background,
@@ -369,11 +370,13 @@ class DkStatusChip extends StatelessWidget {
         spacing: context.dkSpacing.s4,
         children: [
           Icon(icon, size: 14, color: foreground),
-          Text(
-            label,
-            style: context.dkText.badge.copyWith(
-              color: foreground,
-              height: 1.2,
+          Flexible(
+            child: DkFitText(
+              label,
+              style: context.dkText.badge.copyWith(
+                color: foreground,
+                height: 1.2,
+              ),
             ),
           ),
         ],
@@ -440,8 +443,11 @@ class DkFilterChips<T> extends StatelessWidget {
                         height: 40,
                         alignment: Alignment.center,
                         padding: EdgeInsets.symmetric(horizontal: spacing.s16),
+                        // One line, never wrapped: the row scrolls instead.
                         child: Text(
                           option.label,
+                          maxLines: 1,
+                          softWrap: false,
                           style: context.dkText.label.copyWith(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -504,7 +510,7 @@ class DkBalanceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: spacing.s4,
               children: [
-                Text(
+                DkFitText(
                   label,
                   style: text.label.copyWith(color: colors.textSecondary),
                 ),
@@ -609,28 +615,26 @@ class DkWithdrawalTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // The chip shares the amount's line, so the subtitle
-                      // below gets the full width.
+                      // below gets the full width. The amount keeps its size
+                      // (rule 7); the chip gives way (shrinks, then «…»).
                       Row(
                         spacing: spacing.s8,
                         children: [
+                          DkMoneyText(
+                            amount,
+                            style: (prominent ? text.moneyM : text.bodyStrong)
+                                .copyWith(color: colors.textPrimary),
+                          ),
                           Expanded(
                             child: Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: DkMoneyText(
-                                amount,
-                                style:
-                                    (prominent ? text.moneyM : text.bodyStrong)
-                                        .copyWith(color: colors.textPrimary),
-                              ),
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: status,
                             ),
                           ),
-                          status,
                         ],
                       ),
-                      DkGroupedText(
+                      DkFitText(
                         subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: text.caption.copyWith(
                           color: colors.textTertiary,
                         ),
@@ -773,24 +777,21 @@ class DkActionSheet extends StatelessWidget {
                 ),
                 child: Semantics(
                   header: true,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      DkGroupedText(
-                        title,
-                        style: context.dkText.titleM.copyWith(
-                          color: colors.textPrimary,
+                  child: DkFitLines([
+                    DkLine(
+                      title,
+                      style: context.dkText.titleM.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                    ),
+                    if (subtitle case final value?)
+                      DkLine(
+                        value,
+                        style: context.dkText.caption.copyWith(
+                          color: colors.textTertiary,
                         ),
                       ),
-                      if (subtitle case final value?)
-                        DkGroupedText(
-                          value,
-                          style: context.dkText.caption.copyWith(
-                            color: colors.textTertiary,
-                          ),
-                        ),
-                    ],
-                  ),
+                  ]),
                 ),
               ),
               for (final action in actions)
@@ -812,8 +813,10 @@ class DkActionSheet extends StatelessWidget {
   }
 }
 
-/// Two buttons side by side under an admin's pending withdrawal (§8.6):
-/// secondary «Отклонить», primary «Выплатить», each 48 high.
+/// Two buttons under an admin's pending withdrawal (§8.6 and §10, addition
+/// B): secondary «Отклонить», primary «Выплатить», each 48 high, side by
+/// side — or one above the other at full width when a label would not fit
+/// at 85 % in half the row. Their labels are never cut.
 class DkDecisionButtons extends StatelessWidget {
   /// Creates the pair.
   const new({
@@ -841,27 +844,23 @@ class DkDecisionButtons extends StatelessWidget {
   final bool approving;
 
   @override
-  Widget build(BuildContext context) => Row(
-    spacing: context.dkSpacing.s8,
-    children: [
-      Expanded(
-        child: DkButton(
-          label: rejectLabel,
-          variant: DkButtonVariant.secondary,
-          compact: true,
-          expand: true,
-          onPressed: approving ? null : onReject,
-        ),
-      ),
-      Expanded(
-        child: DkButton(
-          label: approveLabel,
-          compact: true,
-          expand: true,
-          isLoading: approving,
-          onPressed: approving ? null : onApprove,
-        ),
-      ),
-    ],
+  Widget build(BuildContext context) => DkAdaptivePair(
+    gap: context.dkSpacing.s8,
+    first: DkButton(
+      label: rejectLabel,
+      variant: DkButtonVariant.secondary,
+      compact: true,
+      expand: true,
+      ellipsis: false,
+      onPressed: approving ? null : onReject,
+    ),
+    second: DkButton(
+      label: approveLabel,
+      compact: true,
+      expand: true,
+      ellipsis: false,
+      isLoading: approving,
+      onPressed: approving ? null : onApprove,
+    ),
   );
 }

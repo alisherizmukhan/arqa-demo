@@ -43,7 +43,7 @@
   "summaryRevenue": "Түсім",
   "summaryCommission": "Комиссия",
   "summaryTrips": "Сапар саны",
-  "cash": "Қолма-қол",
+  "cash": "Нақты",
   "card": "Карта",
   "tripsCount": "{count, plural, one{{count} сапар} other{{count} сапар}}",
   "durationMinutes": "{minutes} мин",

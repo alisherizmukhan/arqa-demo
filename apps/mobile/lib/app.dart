@@ -31,10 +31,14 @@ class App extends ConsumerWidget {
       locale: ref.watch(appLocaleProvider),
       supportedLocales: appLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      // Amounts are spoken in the active language («3 315 тенге»).
-      builder: (context, child) => DkMoneySemantics(
-        label: context.l10n.moneySpoken,
-        child: child ?? const SizedBox.shrink(),
+      // The system text scale is followed up to ×1.3 (DESIGN.md §10, rule 1;
+      // DECISIONS.md); amounts are spoken in the active language.
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: dkMaxTextScale,
+        child: DkMoneySemantics(
+          label: context.l10n.moneySpoken,
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
       home: home,
     );

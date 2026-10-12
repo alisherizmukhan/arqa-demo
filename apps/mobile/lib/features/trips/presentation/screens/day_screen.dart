@@ -121,9 +121,11 @@ class _DayScreenState extends ConsumerState<DayScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (day != today)
-                            DkTodayButton(
-                              label: l10n.today,
-                              onPressed: selection.today,
+                            Flexible(
+                              child: DkTodayButton(
+                                label: l10n.today,
+                                onPressed: selection.today,
+                              ),
                             ),
                           // §8.2: the only change to this screen.
                           DkIconButton(

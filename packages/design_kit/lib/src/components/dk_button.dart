@@ -1,5 +1,9 @@
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:flutter/material.dart';
+
+/// The FAB is at most this share of the screen width (DESIGN.md §10).
+const double dkFabMaxWidthShare = 0.6;
 
 /// Visual weight of a [DkButton].
 enum DkButtonVariant {
@@ -13,7 +17,11 @@ enum DkButtonVariant {
   text,
 }
 
-/// Button, DESIGN.md §4. Min height 56 (text: 48); grows with text scale.
+/// Button, DESIGN.md §4 and §10. Height fixed: 56 (text and compact: 48),
+/// whatever the label or the text scale. The label is one line: it shrinks
+/// to 85 %, then ends in «…» (the full text stays the accessible name and
+/// shows on long press). With [ellipsis] false it is never cut (decision
+/// buttons, see `DkAdaptivePair`).
 ///
 /// `onPressed == null` → disabled (`disabledFill` / `textDisabled`).
 /// [isLoading] → spinner + [label] (pass e.g. «Сохраняем…»), not tappable.
@@ -27,6 +35,7 @@ class DkButton extends StatelessWidget {
     this.icon,
     this.expand = false,
     this.compact = false,
+    this.ellipsis = true,
     super.key,
   });
 
@@ -51,6 +60,10 @@ class DkButton extends StatelessWidget {
   /// 48 high instead of 56 (two buttons under a list row, DESIGN.md §8.6).
   final bool compact;
 
+  /// False: the label shrinks to 85 % but is never cut; the button then
+  /// reports that width as its minimum, so a pair can stack instead.
+  final bool ellipsis;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
@@ -70,14 +83,9 @@ class DkButton extends StatelessWidget {
     final radius = BorderRadius.circular(isText ? radii.md : radii.lg);
     final leading = isLoading || icon != null;
     final labelStyle = context.dkText.bodyStrong;
-    final minHeight = isText || compact
+    final height = isText || compact
         ? sizes.textButtonHeight
         : sizes.buttonHeight;
-    // The spec's height is one label line plus equal insets (56 = 24 + 2·16;
-    // text: 48 = 24 + 2·12). Keeping those insets means a label that grows
-    // (text scale, a narrow dialog) never touches the button's edges.
-    final verticalInset =
-        (minHeight - labelStyle.fontSize! * labelStyle.height!) / 2;
 
     final content = Row(
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
@@ -97,9 +105,10 @@ class DkButton extends StatelessWidget {
           SizedBox(width: spacing.s8),
         ],
         Flexible(
-          child: Text(
+          child: DkFitText(
             label,
             textAlign: TextAlign.center,
+            ellipsis: ellipsis,
             style: labelStyle.copyWith(color: foreground),
           ),
         ),
@@ -119,7 +128,8 @@ class DkButton extends StatelessWidget {
           onTap: disabled || isLoading ? null : onPressed,
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: minHeight,
+              minHeight: height,
+              maxHeight: height,
               minWidth: expand ? double.infinity : sizes.tapTargetMin,
             ),
             child: Padding(
@@ -127,12 +137,9 @@ class DkButton extends StatelessWidget {
                 // 20 on the icon side, 24 otherwise (DESIGN.md §4).
                 start: leading ? spacing.s20 : spacing.s24,
                 end: spacing.s24,
-                top: verticalInset,
-                bottom: verticalInset,
               ),
-              // Both factors: without heightFactor a Center fills all the
-              // height it is offered (e.g. a Scaffold bottom bar).
-              child: Center(widthFactor: 1, heightFactor: 1, child: content),
+              // widthFactor: an inline button is as wide as its label.
+              child: Center(widthFactor: 1, child: content),
             ),
           ),
         ),
@@ -141,9 +148,10 @@ class DkButton extends StatelessWidget {
   }
 }
 
-/// Floating action button «+ Поездка», DESIGN.md §4: pill, min 56, `e2Fab`
-/// shadow (none in dark). Place it with `Scaffold.floatingActionButton`
-/// (right 16, bottom safe area + 16).
+/// Floating action button «+ Поездка», DESIGN.md §4 and §10: pill, 56 high,
+/// at most 60 % of the screen width (the label fits inside: shrinks to 85 %,
+/// then «…»), `e2Fab` shadow (none in dark). Place it with
+/// `Scaffold.floatingActionButton` (right 16, bottom safe area + 16).
 class DkFab extends StatelessWidget {
   /// Creates the FAB.
   const new({
@@ -185,6 +193,8 @@ class DkFab extends StatelessWidget {
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: context.dkSizes.buttonHeight,
+                maxHeight: context.dkSizes.buttonHeight,
+                maxWidth: MediaQuery.sizeOf(context).width * dkFabMaxWidthShare,
               ),
               child: Padding(
                 padding: EdgeInsetsDirectional.only(
@@ -200,10 +210,12 @@ class DkFab extends StatelessWidget {
                       color: colors.onAccent,
                     ),
                     SizedBox(width: spacing.s8),
-                    Text(
-                      label,
-                      style: context.dkText.bodyStrong.copyWith(
-                        color: colors.onAccent,
+                    Flexible(
+                      child: DkFitText(
+                        label,
+                        style: context.dkText.bodyStrong.copyWith(
+                          color: colors.onAccent,
+                        ),
                       ),
                     ),
                   ],

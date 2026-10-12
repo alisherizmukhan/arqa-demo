@@ -1,3 +1,4 @@
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:design_kit/src/tokens/dk_icons.dart';
 import 'package:flutter/material.dart';
@@ -58,7 +59,8 @@ class DkDaySwitcher extends StatelessWidget {
         boxShadow: context.dkElevation.e1,
       ),
       child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: sizes.daySwitcherHeight),
+        // Fixed (DESIGN.md §10): title and subtitle scale together to fit.
+        constraints: BoxConstraints.tightFor(height: sizes.daySwitcherHeight),
         child: Padding(
           padding: EdgeInsets.all(spacing.s4),
           child: Row(
@@ -80,37 +82,40 @@ class DkDaySwitcher extends StatelessWidget {
                       constraints: BoxConstraints(
                         minHeight: sizes.tapTargetMin,
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: spacing.s4,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  title,
-                                  textAlign: TextAlign.center,
-                                  style: text.titleM.copyWith(
-                                    color: colors.textPrimary,
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: spacing.s4),
+                        // The chevron sits on the title line (DESIGN.md §4);
+                        // both lines scale together to fit the 56 (§10).
+                        child: Center(
+                          child: DkFitLines(
+                            textAlign: TextAlign.center,
+                            tooltip: false,
+                            [
+                              DkLine(
+                                title,
+                                style: text.titleM.copyWith(
+                                  color: colors.textPrimary,
+                                ),
+                                trailing: Padding(
+                                  padding: EdgeInsetsDirectional.only(
+                                    start: spacing.s4,
+                                  ),
+                                  child: Icon(
+                                    DkIcons.chevronDown,
+                                    size: sizes.iconInline,
+                                    color: colors.textTertiary,
                                   ),
                                 ),
                               ),
-                              Icon(
-                                DkIcons.chevronDown,
-                                size: sizes.iconInline,
-                                color: colors.textTertiary,
+                              DkLine(
+                                subtitle,
+                                style: text.caption.copyWith(
+                                  color: colors.textTertiary,
+                                ),
                               ),
                             ],
                           ),
-                          Text(
-                            subtitle,
-                            textAlign: TextAlign.center,
-                            style: text.caption.copyWith(
-                              color: colors.textTertiary,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

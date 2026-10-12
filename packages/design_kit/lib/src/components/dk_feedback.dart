@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:design_kit/src/components/dk_button.dart';
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:design_kit/src/tokens/dk_dimensions.dart';
@@ -200,17 +201,21 @@ class DkSnackbarView extends StatelessWidget {
             ),
           ),
           if (label != null && onAction != null)
-            TextButton(
-              onPressed: onAction,
-              style: TextButton.styleFrom(
-                foregroundColor: colors.inverseAccent,
-                minimumSize: Size(sizes.tapTargetMin, sizes.textButtonHeight),
-                // Action: 15/700 (DESIGN.md §4) = bodyStrong at bodyMd's size.
-                textStyle: text.bodyStrong.copyWith(
-                  fontSize: text.bodyMd.fontSize,
+            Flexible(
+              child: TextButton(
+                onPressed: onAction,
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.inverseAccent,
+                  minimumSize: Size(sizes.tapTargetMin, sizes.textButtonHeight),
+                  fixedSize: Size.fromHeight(sizes.textButtonHeight),
+                  // Action: 15/700 (DESIGN.md §4) = bodyStrong at bodyMd's
+                  // size; one line (DESIGN.md §10).
+                  textStyle: text.bodyStrong.copyWith(
+                    fontSize: text.bodyMd.fontSize,
+                  ),
                 ),
+                child: DkFitText(label, tooltip: false),
               ),
-              child: Text(label),
             ),
         ],
       ),

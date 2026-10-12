@@ -1,5 +1,6 @@
 import 'package:design_kit/src/components/dk_card.dart';
-import 'package:design_kit/src/format/dk_grouped_text.dart';
+import 'package:design_kit/src/components/dk_layout.dart';
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:design_kit/src/tokens/dk_dimensions.dart';
 import 'package:design_kit/src/tokens/dk_icons.dart';
@@ -91,91 +92,63 @@ class DkTripTile extends StatelessWidget {
               background: highlighted ? colors.surface : null,
             ),
             Expanded(
-              // Both columns keep their natural width (at most half each):
-              // the amount sits at the right padding, and with huge amounts
-              // or a large text scale «комиссия …» wraps instead of
-              // overflowing. No LayoutBuilder, so intrinsic layouts work.
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                spacing: spacing.s12,
-                children: [
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              // DESIGN.md §10, rule 7: every line is one line. The time and
+              // the amounts are never cut; the meta and driver lines give way
+              // first; if the amounts still cannot fit at 85 %, they move to
+              // their own line under the text.
+              child: DkAmountRow(
+                gap: spacing.s12,
+                start: DkFitLines([
+                  DkLine.span(
+                    TextSpan(
+                      style: text.bodyStrong.copyWith(
+                        color: colors.textPrimary,
+                      ),
                       children: [
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(text: timeRange),
-                              if (endsNextDay)
-                                WidgetSpan(
-                                  alignment: PlaceholderAlignment.top,
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.only(
-                                      start: spacing.s2,
-                                    ),
-                                    child: Text(
-                                      '+1',
-                                      semanticsLabel: nextDayLabel,
-                                      style: text.superscript.copyWith(
-                                        color: colors.accent,
-                                      ),
-                                    ),
-                                  ),
+                        TextSpan(text: timeRange),
+                        if (endsNextDay)
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.top,
+                            child: Padding(
+                              padding: EdgeInsetsDirectional.only(
+                                start: spacing.s2,
+                              ),
+                              child: Text(
+                                '+1',
+                                semanticsLabel: nextDayLabel,
+                                style: text.superscript.copyWith(
+                                  color: colors.accent,
                                 ),
-                            ],
-                          ),
-                          style: text.bodyStrong.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        // One line: «30 мин · Наличные» shrinks to fit
-                        // rather than wrapping the payment onto a new line.
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(
-                            meta,
-                            maxLines: 1,
-                            style: text.bodyS.copyWith(
-                              color: colors.textSecondary,
-                            ),
-                          ),
-                        ),
-                        if (driver case final name?)
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: text.caption.copyWith(
-                              color: colors.textTertiary,
+                              ),
                             ),
                           ),
                       ],
                     ),
+                    text: timeRange,
+                    ellipsis: false,
                   ),
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        DkGroupedText(
-                          amount,
-                          textAlign: TextAlign.end,
-                          style: text.bodyStrong.copyWith(
-                            color: colors.textPrimary,
-                          ),
-                        ),
-                        DkGroupedText(
-                          commission,
-                          textAlign: TextAlign.end,
-                          style: text.caption.copyWith(
-                            color: colors.textTertiary,
-                          ),
-                        ),
-                      ],
+                  DkLine(
+                    meta,
+                    style: text.bodyS.copyWith(color: colors.textSecondary),
+                  ),
+                  if (driver case final name?)
+                    DkLine(
+                      name,
+                      style: text.caption.copyWith(color: colors.textTertiary),
                     ),
+                ]),
+                end: DkFitLines(textAlign: TextAlign.end, [
+                  DkLine(
+                    amount,
+                    ellipsis: false,
+                    style: text.bodyStrong.copyWith(color: colors.textPrimary),
                   ),
-                ],
+                  DkLine(
+                    commission,
+                    ellipsis: false,
+                    style: text.caption.copyWith(color: colors.textTertiary),
+                  ),
+                ]),
               ),
             ),
           ],

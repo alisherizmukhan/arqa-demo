@@ -1,3 +1,4 @@
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/format/dk_format.dart';
 import 'package:design_kit/src/format/dk_grouped_text.dart';
 import 'package:design_kit/src/format/dk_money.dart';
@@ -50,8 +51,14 @@ class DkCard extends StatelessWidget {
   }
 }
 
-/// A labelled figure, DESIGN.md §4. Without [icon]: label over value. With
-/// [icon]: the payment tile (icon tile 40 + «Наличные · 38%» over value).
+/// Height of the text block of a [DkSummaryTile] (DESIGN.md §10, addition
+/// A): label and value, each one line, fit inside it at text ×1.3 at 85 %.
+const double dkTileTextHeight = 48;
+
+/// A labelled figure, DESIGN.md §4 and §10. Without [icon]: label over
+/// value. With [icon]: the payment tile (icon tile 40 + «Наличные · 38%»
+/// over value). Fixed height ([dkTileTextHeight]); the label is one line
+/// (shrinks, then «…»), the value — an amount — is never cut.
 class DkSummaryTile extends StatelessWidget {
   /// Creates a tile. [value] may contain U+202F (rendered as a wide gap).
   const new({
@@ -79,27 +86,22 @@ class DkSummaryTile extends StatelessWidget {
     final colors = context.dkColors;
     final text = context.dkText;
     final caption = hint == null ? label : '$label · $hint';
-    final column = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      spacing: context.dkSpacing.s2,
-      children: [
-        // One line: «Наличные · 17%» shrinks to fit rather than wrapping
-        // the share onto a second line in a narrow tile.
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: AlignmentDirectional.centerStart,
-          child: Text(
+    final column = SizedBox(
+      height: dkTileTextHeight,
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: DkFitLines(gap: context.dkSpacing.s2, [
+          DkLine(
             caption,
-            maxLines: 1,
             style: text.captionStrong.copyWith(color: colors.textTertiary),
           ),
-        ),
-        DkGroupedText(
-          value,
-          style: text.moneyM.copyWith(color: colors.textPrimary),
-        ),
-      ],
+          DkLine(
+            value,
+            ellipsis: false,
+            style: text.moneyM.copyWith(color: colors.textPrimary),
+          ),
+        ]),
+      ),
     );
     final iconData = icon;
     if (iconData == null) return MergeSemantics(child: column);

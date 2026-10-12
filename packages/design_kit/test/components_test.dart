@@ -79,7 +79,7 @@ void main() {
       expect(tester.getSize(find.byType(Placeholder)).height, greaterThan(0));
     });
 
-    testWidgets('a wrapped label keeps the 16 dp insets; the button grows', (
+    testWidgets('a long label stays one line; the button keeps 56 (§10)', (
       tester,
     ) async {
       await tester.runAsync(loadKitFonts);
@@ -101,12 +101,13 @@ void main() {
         ),
       );
 
+      expect(tester.takeException(), isNull);
       final label = tester.getRect(find.text('Сохранить как новую поездку'));
       final button = tester.getRect(find.byType(DkButton));
-      expect(label.height, 48, reason: 'two 24 px lines');
-      expect(label.top - button.top, 16);
-      expect(button.bottom - label.bottom, 16);
-      expect(button.height, 80);
+      expect(label.height, lessThanOrEqualTo(24), reason: 'one line');
+      expect(button.height, 56);
+      expect(label.left, greaterThanOrEqualTo(button.left));
+      expect(label.right, lessThanOrEqualTo(button.right));
     });
 
     testWidgets('loading shows a spinner and ignores taps', (tester) async {
@@ -137,7 +138,7 @@ void main() {
       );
       expect(material.color, DkColors.light.disabledFill);
       final label = tester.widget<Text>(find.text('Сохранить'));
-      expect(label.style!.color, DkColors.light.textDisabled);
+      expect(label.textSpan!.style!.color, DkColors.light.textDisabled);
     });
   });
 
@@ -421,10 +422,8 @@ void main() {
 
     // The end field on a 360 dp screen: (360 − 2·16 − 12) / 2 = 158.
     for (final scale in [1.0, 1.3]) {
-      testWidgets('+1 day badge: no clock icon, time never wraps, badge on '
-          'the time line at scale 1.0 (158 dp, text scale $scale)', (
-        tester,
-      ) async {
+      testWidgets('+1 day badge: no clock icon, time and badge on one line '
+          '(158 dp, text scale $scale)', (tester) async {
         await tester.runAsync(loadKitFonts);
         await tester.pumpWidget(
           MediaQuery(
@@ -451,14 +450,12 @@ void main() {
         final time = tester.getRect(find.text('00:20'));
         final badge = tester.getRect(find.text('+1 день'));
         final lineHeight =
-            tester.widget<Text>(find.text('00:20')).style!.fontSize! *
+            tester.widget<Text>(find.text('00:20')).textSpan!.style!.fontSize! *
             scale *
             1.6;
         expect(time.height, lessThan(lineHeight), reason: 'one line of time');
-        if (scale == 1.0) {
-          expect(badge.center.dy, closeTo(time.center.dy, 2));
-          expect(badge.left, greaterThan(time.right));
-        }
+        expect(badge.center.dy, closeTo(time.center.dy, 2));
+        expect(badge.left, greaterThan(time.right));
         // The badge hugs its text (never stretched to the line width).
         expect(
           tester.getSize(find.byType(DkBadge)).width,

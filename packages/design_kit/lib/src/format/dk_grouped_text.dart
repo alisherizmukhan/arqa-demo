@@ -1,3 +1,4 @@
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/format/dk_money.dart';
 import 'package:flutter/material.dart';
 
@@ -116,16 +117,23 @@ class DkMoneyText extends StatelessWidget {
     final number = '${DkMoney.formatNumber(value)}${DkMoney.separator}';
     final base = DefaultTextStyle.of(context).style.merge(style);
     final suffix = suffixStyle == null ? base : base.merge(suffixStyle);
-    return Text.rich(
-      TextSpan(
-        style: base,
-        children: [
-          ...dkGroupedSpans(number, base),
-          TextSpan(text: DkMoney.currency, style: suffix),
-        ],
+    // One line, never cut (DESIGN.md §10, rule 7): shrinks to 85 % at most.
+    final line = DkFitLines([
+      DkLine.span(
+        TextSpan(
+          style: base,
+          children: [
+            ...dkGroupedSpans(number, base),
+            TextSpan(text: DkMoney.currency, style: suffix),
+          ],
+        ),
+        text: DkMoney.format(value),
+        ellipsis: false,
       ),
-      semanticsLabel: DkMoneySemantics.labelOf(context, value),
-    );
+    ], tooltip: false);
+    final spoken = DkMoneySemantics.labelOf(context, value);
+    if (spoken == null) return line;
+    return Semantics(label: spoken, excludeSemantics: true, child: line);
   }
 }
 

@@ -139,7 +139,7 @@ class AppLocalizationsKk extends AppLocalizations {
   String get summaryTrips => 'Сапар саны';
 
   @override
-  String get cash => 'Қолма-қол';
+  String get cash => 'Нақты';
 
   @override
   String get card => 'Карта';

@@ -1,3 +1,5 @@
+import 'package:design_kit/src/components/dk_layout.dart';
+import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
 import 'package:design_kit/src/tokens/dk_icons.dart';
 import 'package:flutter/material.dart';
@@ -36,31 +38,32 @@ class DkWordmark extends StatelessWidget {
             ),
           ),
           SizedBox(width: context.dkSpacing.s10),
+          // The title shrinks first, then the actions give way, and only
+          // then is the title cut (DESIGN.md §10); the row never grows.
           Expanded(
-            child: Semantics(
-              header: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
+            child: DkPriorityRow(
+              gap: context.dkSpacing.s8,
+              start: Semantics(
+                header: true,
+                child: DkFitLines([
+                  DkLine(
                     title,
                     style: context.dkText.wordmark.copyWith(
                       color: colors.textPrimary,
                     ),
                   ),
                   if (caption case final value?)
-                    Text(
+                    DkLine(
                       value,
                       style: context.dkText.caption.copyWith(
                         color: colors.textTertiary,
                       ),
                     ),
-                ],
+                ]),
               ),
+              end: trailing ?? const SizedBox.shrink(),
             ),
           ),
-          ?trailing,
         ],
       ),
     );
@@ -113,10 +116,13 @@ class DkTodayButton extends StatelessWidget {
                       size: sizes.iconInline,
                       color: colors.accent,
                     ),
-                    Text(
-                      label,
-                      style: context.dkText.captionStrong.copyWith(
-                        color: colors.accent,
+                    Flexible(
+                      child: DkFitText(
+                        label,
+                        tooltip: false,
+                        style: context.dkText.captionStrong.copyWith(
+                          color: colors.accent,
+                        ),
                       ),
                     ),
                   ],
@@ -188,25 +194,21 @@ class DkModalAppBar extends StatelessWidget {
             Expanded(
               child: Semantics(
                 header: true,
-                child: Column(
-                  children: [
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: context.dkText.titleM.copyWith(
-                        color: colors.textPrimary,
+                child: DkFitLines(textAlign: TextAlign.center, [
+                  DkLine(
+                    title,
+                    style: context.dkText.titleM.copyWith(
+                      color: colors.textPrimary,
+                    ),
+                  ),
+                  if (subtitle case final value?)
+                    DkLine(
+                      value,
+                      style: context.dkText.caption.copyWith(
+                        color: colors.textTertiary,
                       ),
                     ),
-                    if (subtitle case final value?)
-                      Text(
-                        value,
-                        textAlign: TextAlign.center,
-                        style: context.dkText.caption.copyWith(
-                          color: colors.textTertiary,
-                        ),
-                      ),
-                  ],
-                ),
+                ]),
               ),
             ),
             SizedBox(width: sizes.tapTargetMin),

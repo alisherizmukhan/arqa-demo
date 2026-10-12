@@ -108,10 +108,13 @@ void main() {
   });
 
   // At 360 dp the label gets 216 dp (dialog 312 − 2·24 padding − 2·24 button
-  // padding) and needs ~240: two centred lines, the button grows.
+  // padding) and needs ~240. DESIGN.md §10 (replaces the earlier two-line
+  // rule): one line, the button keeps 56; at text ×1.0 the label shrinks to
+  // fit (≥ 85 %), above that it may end in «…» with the full text kept for
+  // screen readers.
   for (final scale in [1.0, 1.3]) {
-    testWidgets('409 dialog at 360, text $scale: the long label wraps centred, '
-        'the button grows, no ellipsis', (tester) async {
+    testWidgets('409 dialog at 360, text $scale: the long label is one line, '
+        'the button keeps 56', (tester) async {
       await run(
         tester,
         '12_add_trip_conflict_409',
@@ -122,16 +125,25 @@ void main() {
       const text = 'Сохранить как новую поездку';
       final label = find.text(text);
       final paragraph = tester.renderObject<RenderParagraph>(label);
-      expect(lines(tester, text), 2);
-      expect(paragraph.textAlign, TextAlign.center);
-      expect(paragraph.maxLines, isNull, reason: 'no ellipsis');
-      expect(paragraph.didExceedMaxLines, isFalse);
+      expect(paragraph.maxLines, 1);
+      if (scale == 1.0) expect(paragraph.didExceedMaxLines, isFalse);
       final button = find.ancestor(of: label, matching: find.byType(DkButton));
+      expect(tester.getSize(button).height, 56);
       final labelBox = tester.getRect(label);
       final buttonBox = tester.getRect(button);
-      expect(buttonBox.top, lessThan(labelBox.top));
-      expect(buttonBox.bottom, greaterThan(labelBox.bottom));
-      if (scale == 1.0) expect(lines(tester, 'Оставить сохранённую'), 1);
+      expect(labelBox.left, greaterThanOrEqualTo(buttonBox.left));
+      expect(labelBox.right, lessThanOrEqualTo(buttonBox.right));
+      expect(
+        tester
+            .getSize(
+              find.ancestor(
+                of: find.text('Оставить сохранённую'),
+                matching: find.byType(DkButton),
+              ),
+            )
+            .height,
+        56,
+      );
       await disposeApp(tester);
     });
   }

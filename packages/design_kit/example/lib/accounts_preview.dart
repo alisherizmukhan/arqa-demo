@@ -467,7 +467,9 @@ class _DayHeader extends StatelessWidget {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DkTodayButton(label: 'Сегодня', onPressed: () {}),
+                Flexible(
+                  child: DkTodayButton(label: 'Сегодня', onPressed: () {}),
+                ),
                 DkIconButton(
                   icon: DkIcons.menu,
                   label: 'Меню',

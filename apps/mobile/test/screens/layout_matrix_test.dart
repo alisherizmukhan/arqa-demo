@@ -16,6 +16,8 @@ void main() {
   const sizes = [Size(390, 844), Size(360, 780)];
   const scales = [1.0, 1.3];
 
+  final stressIds = {for (final s in stressScenarios) s.id};
+
   for (final locale in ['ru', 'kk']) {
     for (final scenario in [
       ...scenarios,
@@ -39,17 +41,20 @@ void main() {
             ));
             await scenario.run(tester);
             expect(tester.takeException(), isNull);
-            // No clipped text: nothing truncated, nothing past the screen edge.
+            // No text past the screen edge; cut text only where §10 allows.
             var checked = 0;
             for (final text
                 in tester.allRenderObjects.whereType<RenderParagraph>()) {
               if (!text.attached || !text.hasSize) continue;
               checked++;
-              expect(
-                text.didExceedMaxLines,
-                isFalse,
-                reason: text.text.toPlainText(),
-              );
+              // DESIGN.md §10: at text ×1.0 nothing is cut (except next to
+              // the stress amounts, where the text gives way by rule 7);
+              // above it labels may end in «…»; an amount is never cut.
+              final plain = text.text.toPlainText();
+              if (plain.contains('₸') ||
+                  (scale == 1.0 && !stressIds.contains(scenario.id))) {
+                expect(text.didExceedMaxLines, isFalse, reason: plain);
+              }
               // A horizontal scroll row (filter chips, §8.0) runs past the
               // edge by design; its texts are still checked for truncation.
               if (_inHorizontalScroll(tester, text)) continue;
