@@ -41,7 +41,7 @@ abstract final class Places {
 
 /// The compact credits (DESIGN.md §9.1); the full ones open from the chip.
 const _osm = '© OpenStreetMap';
-const _ors = 'openrouteservice';
+const _ors = '© openrouteservice.org by HeiGIT';
 
 DkMapTiles _tiles({bool offline = false}) => DkMapTiles(
   lightUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -263,7 +263,12 @@ final List<MapsPreview> mapsPreviews = [
         _DayMap(copy: c, trips: [_u2t1(c), _u2t2(c)], caption: c.driver2),
   ),
   (
-    id: 'm21_kit',
+    id: 'm21_day_map_selected',
+    title: 'Карта дня — выбран маршрут 2',
+    build: (c) => _DayMap(copy: c, trips: [_t1(c), _t2(c)], selected: 1),
+  ),
+  (
+    id: 'm22_kit',
     title: 'Кит — маркеры, поля мест, линии, статистика',
     build: (c) => _Kit(copy: c),
   ),
@@ -895,11 +900,22 @@ class _DetailsError extends StatelessWidget {
 // ------------------------------------------------------------------- Day map
 
 class _DayMap extends StatelessWidget {
-  const new({required this.copy, required this.trips, this.caption});
+  const new({
+    required this.copy,
+    required this.trips,
+    this.caption,
+    this.selected,
+  });
 
   final MapsCopy copy;
+
+  /// In time order: numbered 1, 2, … as on the map.
   final List<_Trip> trips;
   final String? caption;
+
+  /// The selected trip's index (its route over the others, the map fitted
+  /// to it).
+  final int? selected;
 
   @override
   Widget build(BuildContext context) {
@@ -911,6 +927,7 @@ class _DayMap extends StatelessWidget {
       for (final (i, t) in trips.indexed)
         DkRoute(points: decodePolyline(t.route!.polyline), id: i),
     ];
+    final shown = selected == null ? routes : [routes[selected!]];
     return _Screen(
       top: DkModalAppBar(
         title: c.dayMap,
@@ -925,23 +942,12 @@ class _DayMap extends StatelessWidget {
             child: DkMapView(
               tiles: _tiles(),
               extraAttribution: _ors,
-              fit: [for (final r in routes) ...r.points],
+              fit: [for (final r in shown) ...r.points],
               rounded: false,
               animateTiles: false,
               layers: [
-                DkRouteLayer(routes: routes, onTap: (_) {}),
-                DkPlaceMarkers(
-                  places: [
-                    for (final t in trips) ...[
-                      (
-                        point: t.a!,
-                        kind: DkPlaceKind.start,
-                        label: c.startOfTrip,
-                      ),
-                      (point: t.b!, kind: DkPlaceKind.end, label: c.endOfTrip),
-                    ],
-                  ],
-                ),
+                DkRouteLayer(routes: routes, selected: selected, onTap: (_) {}),
+                DkPlaceMarkers(markers: _markers(c)),
               ],
             ),
           ),
@@ -952,8 +958,9 @@ class _DayMap extends StatelessWidget {
             ),
             child: SafeArea(
               top: false,
-              // The legend is the day's trips: a screen reader gets each
-              // one here, and each row opens it (DESIGN.md §9.5).
+              // The legend is the day's trips, numbered as on the map
+              // (DESIGN.md §9.5): a row selects its route, its button opens
+              // the trip.
               child: Padding(
                 padding: EdgeInsets.only(top: spacing.s16, bottom: spacing.s8),
                 child: Column(
@@ -978,13 +985,26 @@ class _DayMap extends StatelessWidget {
                       ]),
                     ),
                     SizedBox(height: spacing.s8),
-                    for (final t in trips)
+                    for (final (i, t) in trips.indexed)
                       DkListRow(
+                        leading: DkPlaceMarker(
+                          kind: DkPlaceKind.start,
+                          number: i + 1,
+                          semanticsLabel: '',
+                        ),
+                        semanticsLabel: c.routeOf(i + 1, trips.length),
                         title:
                             '${DkFormat.timeRange(t.start, t.end)} · '
                             '${DkMoney.format(t.amount)}',
                         subtitle: '${t.from} → ${t.to}',
+                        selected: i == selected,
                         onTap: () {},
+                        trailingIsAction: true,
+                        trailing: DkIconButton(
+                          icon: DkIcons.next,
+                          label: c.openTrip,
+                          onPressed: () {},
+                        ),
                       ),
                   ],
                 ),
@@ -994,6 +1014,32 @@ class _DayMap extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Numbered starts; an end dot unless the next trip starts within 50 m
+  /// (one marker there: the next trip's number).
+  List<({LatLng point, DkPlaceMarker marker})> _markers(MapsCopy c) {
+    const distance = Distance();
+    final dots = <({LatLng point, DkPlaceMarker marker})>[];
+    final numbers = <({LatLng point, DkPlaceMarker marker})>[];
+    for (final (i, t) in trips.indexed) {
+      numbers.add((
+        point: t.a!,
+        marker: DkPlaceMarker(
+          kind: DkPlaceKind.start,
+          number: i + 1,
+          semanticsLabel: c.startOfTrip,
+        ),
+      ));
+      final next = i + 1 < trips.length ? trips[i + 1].a : null;
+      if (next == null || distance.as(LengthUnit.Meter, t.b!, next) > 50) {
+        dots.add((
+          point: t.b!,
+          marker: DkPlaceMarker.dot(semanticsLabel: c.endOfTrip),
+        ));
+      }
+    }
+    return [...dots, ...numbers];
   }
 }
 

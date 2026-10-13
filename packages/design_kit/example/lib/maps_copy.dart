@@ -17,6 +17,8 @@ class MapsCopy {
     required this.searchAddress,
     required this.distance,
     required this.perMinute,
+    required this.routeOf,
+    required this.openTrip,
     required this.perKm,
     required this.dayMap,
     required this.straightInfo,
@@ -103,6 +105,12 @@ class MapsCopy {
 
   /// «За минуту» (proposed, approved).
   final String perMinute;
+
+  /// «Маршрут 1 из 2» (proposed: spoken first on a day-map row).
+  final String Function(int index, int total) routeOf;
+
+  /// «Открыть поездку» (proposed: the day-map row's button).
+  final String openTrip;
 
   /// «За км».
   final String perKm;
@@ -297,6 +305,8 @@ final MapsCopy ruCopy = MapsCopy(
   searchAddress: 'Поиск адреса',
   distance: 'Расстояние',
   perMinute: 'За минуту',
+  routeOf: (i, n) => 'Маршрут $i из $n',
+  openTrip: 'Открыть поездку',
   perKm: 'За км',
   dayMap: 'Карта дня',
   straightInfo: 'Маршрут построен по прямой — сервис карт был недоступен',
@@ -368,6 +378,8 @@ final MapsCopy kkCopy = MapsCopy(
   searchAddress: 'Мекенжай іздеу',
   distance: 'Қашықтық',
   perMinute: 'Минутына',
+  routeOf: (i, n) => 'Бағыт $i / $n',
+  openTrip: 'Сапарды ашу',
   perKm: '1 км үшін',
   dayMap: 'Күн картасы',
   straightInfo:

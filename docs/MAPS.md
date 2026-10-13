@@ -64,7 +64,7 @@ OSM tile usage policy (operations.osmfoundation.org/policies/tiles):
 
 What the map shows, always, on one line (11 px, bottom right):
 - «© OpenStreetMap»;
-- plus « · openrouteservice» while a route that ORS built is drawn (not for a straight-line fallback, not in the picker).
+- plus « · © openrouteservice.org by HeiGIT» while a route that ORS built is drawn (not for a straight-line fallback, not in the picker). This is ORS's requested wording (decided after stage 3); the chip scales a long credit down rather than wrapping, so it stays one line at 360 dp and text ×1.3 (tested).
 
 Tapping it opens «Данные карты» with the full credits and links, as selectable text (the app has no link opener):
 - «Map data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright»;
@@ -77,8 +77,7 @@ Why this meets the terms:
   - On a browsable map, the credit goes in a corner of the map and must be legible: 11 px textSecondary on a 90 % surface chip, contrast ≥ 4.5:1 in both themes.
   - There must be a way to reach the licence information when the credit itself does not carry it, e.g. a link. Here that is the tap-to-open credits with the ODbL link.
 - **ORS** asks for «© openrouteservice.org by HeiGIT | Map data © OpenStreetMap contributors» (openrouteservice.org terms; the HeiGIT account page uses «© openrouteservice by HeiGIT | Data from OpenStreetMap»). Its results are licensed CC-BY 4.0 (openrouteservice.org) or CC-BY-SA 4.0 (HeiGIT). Both licences accept credit «in any reasonable manner based on the medium», including through a link.
-  - The map carries the short «openrouteservice»; the exact requested wording is one tap away.
-  - **Residual risk:** the short form is not ORS's literal string. If HeiGIT insists on the literal wording on the map itself, the chip text becomes «© OpenStreetMap · © openrouteservice.org by HeiGIT». It still fits one line at 360 dp: the chip scales a long credit down instead of wrapping.
+  - The map carries ORS's requested wording «© openrouteservice.org by HeiGIT»; the OSM part of their string («Map data © OpenStreetMap contributors») is covered by the «© OpenStreetMap» credit next to it and the full line in the credits sheet.
 - **Addresses** from ORS geocoding (labels typed into trips) are not separately credited on every screen; the credits sheet covers them.
 
 ## Routing and geocoding: OpenRouteService (backend only)

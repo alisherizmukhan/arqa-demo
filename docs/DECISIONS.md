@@ -450,6 +450,19 @@ The app:
 - **The layout matrix skips text inside a map** (markers move and are clipped by design) **and lets a place line («A → B») end in «…»** (place names come from the map service and can be any length).
 - **`--dart-define=THEME=dark|system`** for checking the dark theme on a device. The app stays light by default.
 
+## Maps — after the stage 3 review (day map numbering)
+
+- **The day map numbers its trips** (time order).
+  - The start marker shows the number; the end is a 14 dp dot.
+  - An end within 50 m of the next trip's start is one marker, the next trip's number. The day's routes usually chain, and with A/B on each one trip's B hid under the next trip's A.
+  - The list rows show the same numbers. Trip details keep A/B (a single trip reads best as A → B).
+- **Selecting a route:** a tap on a route or a row.
+  - The selected route stays `routeLine`, drawn over the others, which turn `routeMuted` (new token: light `#9AA3AF`, dark `#5B6370`, the cash colour of the split bar).
+  - The map fits to the selected route; a second tap clears the selection.
+  - → The fit change rebuilds the map (the size/points key from stage 3), which is also what refits it.
+- **A row tap now selects; a trailing button «Открыть поездку» opens the trip.** → One gesture cannot both select and navigate. The button is its own semantics node (`DkListRow(trailingIsAction: true)`); the row reads «Маршрут 1 из 2, …» and its selected state.
+- **The ORS credit on the map is ORS's requested wording** «© openrouteservice.org by HeiGIT» (decided after stage 3). It stays one line at 360 dp and text ×1.3.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
