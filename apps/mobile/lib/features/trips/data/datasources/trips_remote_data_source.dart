@@ -33,4 +33,46 @@ class TripsRemoteDataSource {
     );
     return TripDto.fromJson(bodyOf(response));
   }
+
+  /// One trip with its places and route (`GET /trips/{id}`).
+  Future<TripDto> fetchTrip(String id, {required String tz}) async {
+    final response = await _dio.get<Map<String, Object?>>(
+      '/trips/${Uri.encodeComponent(id)}',
+      queryParameters: {'tz': tz},
+    );
+    return TripDto.fromJson(bodyOf(response));
+  }
+
+  /// Builds the trip's route again (`POST /trips/{id}/route`).
+  Future<TripDto> rebuildRoute(String id, {required String tz}) async {
+    final response = await _dio.post<Map<String, Object?>>(
+      '/trips/${Uri.encodeComponent(id)}/route',
+      queryParameters: {'tz': tz},
+      options: Options(extra: RetryInterceptor.disabled),
+    );
+    return TripDto.fromJson(bodyOf(response));
+  }
+
+  /// The address of a point (`GET /geo/reverse`).
+  Future<GeoLabelDto> reverse({
+    required double lat,
+    required double lng,
+  }) async {
+    final response = await _dio.get<Map<String, Object?>>(
+      '/geo/reverse',
+      queryParameters: {'lat': lat, 'lng': lng},
+      options: Options(extra: RetryInterceptor.disabled),
+    );
+    return GeoLabelDto.fromJson(bodyOf(response));
+  }
+
+  /// Places matching [query] (`GET /geo/search`).
+  Future<GeoSearchDto> search(String query) async {
+    final response = await _dio.get<Map<String, Object?>>(
+      '/geo/search',
+      queryParameters: {'q': query},
+      options: Options(extra: RetryInterceptor.disabled),
+    );
+    return GeoSearchDto.fromJson(bodyOf(response));
+  }
 }

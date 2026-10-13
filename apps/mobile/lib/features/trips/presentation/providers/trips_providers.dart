@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:design_kit/design_kit.dart';
+import 'package:driver_diary/core/config/app_config.dart';
 import 'package:driver_diary/core/error/result.dart';
 import 'package:driver_diary/core/providers.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
@@ -22,6 +23,39 @@ part 'trips_providers.g.dart';
 @Riverpod(keepAlive: true)
 TripsRepository tripsRepository(Ref ref) =>
     TripsRepositoryImpl(TripsRemoteDataSource(ref.watch(dioProvider)));
+
+@Riverpod(keepAlive: true)
+GeoRepository geoRepository(Ref ref) =>
+    GeoRepositoryImpl(TripsRemoteDataSource(ref.watch(dioProvider)));
+
+/// The map tiles from the build config (DESIGN.md §9: never literals in
+/// widgets). Tests replace it with tiles drawn on the device.
+@Riverpod(keepAlive: true)
+DkMapTiles mapTiles(Ref ref) {
+  final config = ref.watch(appConfigProvider);
+  return DkMapTiles(
+    lightUrl: config.tileUrlLight,
+    darkUrl: config.tileUrlDark,
+    attribution: config.tileAttribution,
+    userAgentPackageName: AppConfig.userAgentPackageName,
+  );
+}
+
+/// One trip with its places and route (Trip details). Reloads after a
+/// route rebuild; only for the session that loaded it.
+@riverpod
+Future<Trip> tripDetails(Ref ref, String id) async {
+  ref.watch(currentUserIdProvider);
+  final result = await ref
+      .watch(tripsRepositoryProvider)
+      .tripById(id, ref.watch(driverZoneProvider));
+  switch (result) {
+    case Ok(:final value):
+      return value;
+    case Err(:final failure):
+      throw failure;
+  }
+}
 
 @Riverpod(keepAlive: true)
 DriverZone driverZone(Ref ref) => ref.watch(appConfigProvider).driverZone;

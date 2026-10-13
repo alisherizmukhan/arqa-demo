@@ -8,6 +8,8 @@ import 'package:driver_diary/features/trips/domain/entities/daily_summary.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
 import 'package:driver_diary/features/trips/presentation/screens/add_trip_screen.dart';
+import 'package:driver_diary/features/trips/presentation/screens/day_map_screen.dart';
+import 'package:driver_diary/features/trips/presentation/screens/trip_details_screen.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/day_skeleton.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/day_switcher_bar.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/summary_card.dart';
@@ -180,6 +182,8 @@ class _DayScreenState extends ConsumerState<DayScreen> {
                             onSort: () => chooseTripOrder(context, ref),
                             highlightedId: ref.watch(highlightedTripProvider),
                             highlightKey: _newTripKey,
+                            onOpen: (trip) => openTripDetails(context, trip),
+                            onDayMap: () => openDayMap(context, day: day),
                           ),
                         ],
                       ),

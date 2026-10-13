@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/app.dart';
+import 'package:driver_diary/core/config/app_config.dart';
+import 'package:driver_diary/core/error/failure.dart';
 import 'package:driver_diary/core/error/result.dart';
 import 'package:driver_diary/core/l10n/l10n.dart';
 import 'package:driver_diary/core/l10n/locale_providers.dart';
@@ -13,6 +15,7 @@ import 'package:driver_diary/features/admin/presentation/admin_providers.dart';
 import 'package:driver_diary/features/auth/domain/entities/app_user.dart';
 import 'package:driver_diary/features/auth/domain/repositories/auth_repository.dart';
 import 'package:driver_diary/features/auth/presentation/providers/session_providers.dart';
+import 'package:driver_diary/features/trips/domain/entities/place.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/repositories/trips_repository.dart';
 import 'package:driver_diary/features/trips/presentation/models/trip_form.dart';
@@ -70,7 +73,65 @@ class FakeTripsRepository implements TripsRepository {
     trips.add(trip);
     return Ok(trip);
   }
+
+  /// Replaces the answer of [tripById].
+  Future<Result<Trip>> Function(String id)? onTripById;
+
+  /// Replaces the answer of [rebuildRoute]; rebuilds ask the ids here.
+  Future<Result<Trip>> Function(String id)? onRebuild;
+  final rebuilt = <String>[];
+
+  @override
+  Future<Result<Trip>> tripById(String id, DriverZone zone) async {
+    if (onTripById case final load?) return await load(id);
+    final found = trips.where((t) => t.id == id).firstOrNull;
+    return found == null
+        ? const Err(ServerFailure(statusCode: 404, message: 'not found'))
+        : Ok(found);
+  }
+
+  @override
+  Future<Result<Trip>> rebuildRoute(String id, DriverZone zone) async {
+    rebuilt.add(id);
+    if (onRebuild case final rebuild?) return await rebuild(id);
+    return await tripById(id, zone);
+  }
 }
+
+/// Address lookups without a network: one fixed address for any point,
+/// [places] for search; [onReverse] / [onSearch] replace the answers.
+class FakeGeoRepository implements GeoRepository {
+  final reverses = <GeoPoint>[];
+  final searches = <String>[];
+  Future<Result<String?>> Function(GeoPoint point)? onReverse;
+  Future<Result<List<GeoPlace>>> Function(String query)? onSearch;
+  List<GeoPlace> places = const [];
+
+  @override
+  Future<Result<String?>> reverse(GeoPoint point) async {
+    reverses.add(point);
+    if (onReverse case final answer?) return await answer(point);
+    return const Ok('площадь Республики, 2');
+  }
+
+  @override
+  Future<Result<List<GeoPlace>>> search(String query) async {
+    searches.add(query);
+    if (onSearch case final answer?) return await answer(query);
+    return Ok([
+      for (final p in places)
+        if (p.label.toLowerCase().contains(query.toLowerCase())) p,
+    ]);
+  }
+}
+
+/// Map tiles drawn on the device: no network in tests.
+final DkMapTiles testMapTiles = DkMapTiles(
+  lightUrl: AppConfig.defaultTileUrl,
+  attribution: AppConfig.defaultTileAttribution,
+  userAgentPackageName: AppConfig.userAgentPackageName,
+  provider: DkSketchTileProvider(),
+);
 
 /// A future that never completes (a request still in flight).
 Future<T> pending<T>() => Completer<T>().future;
@@ -133,6 +194,8 @@ Future<void> pumpDiary(
   MemoryLocaleStore? locales,
   FakeWithdrawalsRepository? withdrawals,
   FakeAdminRepository? admin,
+  FakeGeoRepository? geo,
+  DkMapTiles? tiles,
 }) async {
   await tester.pumpWidget(
     RepaintBoundary(
@@ -140,6 +203,8 @@ Future<void> pumpDiary(
       child: ProviderScope(
         overrides: [
           tripsRepositoryProvider.overrideWithValue(repository),
+          geoRepositoryProvider.overrideWithValue(geo ?? FakeGeoRepository()),
+          mapTilesProvider.overrideWithValue(tiles ?? testMapTiles),
           driverZoneProvider.overrideWithValue(kz),
           clockProvider.overrideWithValue(() => now ?? scenarioNow),
           authRepositoryProvider.overrideWithValue(

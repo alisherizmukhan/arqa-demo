@@ -277,6 +277,8 @@ void main() {
 
     testWidgets('system back asks too; «Закрыть» discards', (tester) async {
       await openForm(tester);
+      await tester.ensureVisible(find.text('Наличные'));
+      await tester.pump();
       await tester.tap(find.text('Наличные'));
       await tester.pump();
 

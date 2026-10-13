@@ -54,6 +54,21 @@ Future<void> _form(
   await tester.pump();
 }
 
+/// Scrolls the add-trip form until [target] is built and fully visible.
+Future<void> revealInForm(WidgetTester tester, Finder target) async {
+  await tester.scrollUntilVisible(
+    target,
+    120,
+    scrollable: find
+        .descendant(
+          of: find.byType(AddTripScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.pump();
+}
+
 /// Lets a save attempt run and its dialog/snackbar settle in.
 Future<void> _tapSave(WidgetTester tester) async {
   await tester.tap(find.text(tr.save));
@@ -106,6 +121,8 @@ final scenarios = <Scenario>[
       await pickTime(tester, tr.end, 0, 20);
       await tester.enterText(find.byType(TextField).at(0), '3000');
       await tester.enterText(find.byType(TextField).at(1), '450');
+      // Below the places group on a small screen: scroll to it first.
+      await revealInForm(tester, find.text(tr.cash));
       await tester.tap(find.text(tr.cash));
       await tester.pump();
       await tester.tap(find.text(tr.save));
@@ -173,6 +190,9 @@ final scenarios = <Scenario>[
           payment: PaymentMethod.cash,
         ),
       );
+      // The form is taller than the screen since it has places: show its
+      // end, so no control is half under the bottom bar.
+      await revealInForm(tester, find.text(tr.payment));
     },
   ),
   (

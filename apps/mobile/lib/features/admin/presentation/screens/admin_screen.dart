@@ -9,6 +9,8 @@ import 'package:driver_diary/features/admin/domain/admin.dart';
 import 'package:driver_diary/features/admin/presentation/admin_providers.dart';
 import 'package:driver_diary/features/menu/presentation/screens/menu_screen.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
+import 'package:driver_diary/features/trips/presentation/screens/day_map_screen.dart';
+import 'package:driver_diary/features/trips/presentation/screens/trip_details_screen.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/day_skeleton.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/day_switcher_bar.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/summary_card.dart';
@@ -188,6 +190,15 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               driverNames: _driver == null
                   ? ref.watch(driverNamesProvider)
                   : null,
+              onOpen: (trip) => openTripDetails(context, trip),
+              onDayMap: () => openDayMap(
+                context,
+                day: day,
+                driverId: _driver,
+                filter: _driver == null
+                    ? l10n.allDrivers
+                    : ref.read(driverNamesProvider)[_driver],
+              ),
             ),
           ],
         ),

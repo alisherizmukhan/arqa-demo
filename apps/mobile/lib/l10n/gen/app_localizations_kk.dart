@@ -545,4 +545,92 @@ class AppLocalizationsKk extends AppLocalizations {
   @override
   String get errDemoProtected =>
       'Демо-аккаунт қорғалған: оны бұғаттауға немесе сессияларын тоқтатуға болмайды.';
+
+  @override
+  String get placeFrom => 'Қайдан';
+
+  @override
+  String get placeTo => 'Қайда';
+
+  @override
+  String get pickOnMap => 'Картадан таңдау';
+
+  @override
+  String get pickThisPlace => 'Осы жерді таңдау';
+
+  @override
+  String get resolvingAddress => 'Мекенжайды анықтаймыз…';
+
+  @override
+  String get addressNotFound => 'Мекенжай табылмады';
+
+  @override
+  String get searchAddress => 'Мекенжай іздеу';
+
+  @override
+  String get routeDistance => 'Қашықтық';
+
+  @override
+  String get routePerKm => '1 км үшін';
+
+  @override
+  String get routePerMinute => 'Минутына';
+
+  @override
+  String get routeTitle => 'Бағыт';
+
+  @override
+  String get dayMap => 'Күн картасы';
+
+  @override
+  String get routeStraightInfo =>
+      'Бағыт түзу сызықпен салынды — карта қызметі қолжетімсіз болды';
+
+  @override
+  String get routeRebuild => 'Қайта салу';
+
+  @override
+  String get markerStart => 'Сапардың басы';
+
+  @override
+  String get markerEnd => 'Сапардың соңы';
+
+  @override
+  String get mapOffline => 'Байланыс жоқ — карта жүктелмеді';
+
+  @override
+  String get clearPlace => 'Тазалау';
+
+  @override
+  String get tripDetailsTitle => 'Сапар';
+
+  @override
+  String get mapCredits => 'Карта деректері';
+
+  @override
+  String get unitMetres => 'м';
+
+  @override
+  String get unitKilometres => 'км';
+
+  @override
+  String routesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count бағыт',
+      one: '$count бағыт',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String routePlaces(String from, String to) {
+    return '$from → $to';
+  }
+
+  @override
+  String dayMapTrip(String time, String amount) {
+    return '$time · $amount';
+  }
 }

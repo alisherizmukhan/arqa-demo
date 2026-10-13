@@ -51,6 +51,179 @@ final class TripsRepositoryProvider
 
 String _$tripsRepositoryHash() => r'03f9e91a7f457b30fd5d0525da5dfdcc89c1a72f';
 
+@ProviderFor(geoRepository)
+final geoRepositoryProvider = GeoRepositoryProvider._();
+
+final class GeoRepositoryProvider
+    extends $FunctionalProvider<GeoRepository, GeoRepository, GeoRepository>
+    with $Provider<GeoRepository> {
+  GeoRepositoryProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'geoRepositoryProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$geoRepositoryHash();
+
+  @$internal
+  @override
+  $ProviderElement<GeoRepository> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  GeoRepository create(Ref ref) {
+    return geoRepository(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(GeoRepository value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<GeoRepository>(value),
+    );
+  }
+}
+
+String _$geoRepositoryHash() => r'eb70ff7994e97eaff6724726d6dc889f775df789';
+
+/// The map tiles from the build config (DESIGN.md §9: never literals in
+/// widgets). Tests replace it with tiles drawn on the device.
+
+@ProviderFor(mapTiles)
+final mapTilesProvider = MapTilesProvider._();
+
+/// The map tiles from the build config (DESIGN.md §9: never literals in
+/// widgets). Tests replace it with tiles drawn on the device.
+
+final class MapTilesProvider
+    extends $FunctionalProvider<DkMapTiles, DkMapTiles, DkMapTiles>
+    with $Provider<DkMapTiles> {
+  /// The map tiles from the build config (DESIGN.md §9: never literals in
+  /// widgets). Tests replace it with tiles drawn on the device.
+  MapTilesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mapTilesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mapTilesHash();
+
+  @$internal
+  @override
+  $ProviderElement<DkMapTiles> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  DkMapTiles create(Ref ref) {
+    return mapTiles(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DkMapTiles value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DkMapTiles>(value),
+    );
+  }
+}
+
+String _$mapTilesHash() => r'6a50800fa232eb463a686124caad5f80a9bdc7f4';
+
+/// One trip with its places and route (Trip details). Reloads after a
+/// route rebuild; only for the session that loaded it.
+
+@ProviderFor(tripDetails)
+final tripDetailsProvider = TripDetailsFamily._();
+
+/// One trip with its places and route (Trip details). Reloads after a
+/// route rebuild; only for the session that loaded it.
+
+final class TripDetailsProvider
+    extends $FunctionalProvider<AsyncValue<Trip>, Trip, FutureOr<Trip>>
+    with $FutureModifier<Trip>, $FutureProvider<Trip> {
+  /// One trip with its places and route (Trip details). Reloads after a
+  /// route rebuild; only for the session that loaded it.
+  TripDetailsProvider._({
+    required TripDetailsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'tripDetailsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$tripDetailsHash();
+
+  @override
+  String toString() {
+    return r'tripDetailsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Trip> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Trip> create(Ref ref) {
+    final argument = this.argument as String;
+    return tripDetails(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is TripDetailsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$tripDetailsHash() => r'10457ee884d750d49ac6cd0a94deb136c50c29ce';
+
+/// One trip with its places and route (Trip details). Reloads after a
+/// route rebuild; only for the session that loaded it.
+
+final class TripDetailsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<Trip>, String> {
+  TripDetailsFamily._()
+    : super(
+        retry: null,
+        name: r'tripDetailsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// One trip with its places and route (Trip details). Reloads after a
+  /// route rebuild; only for the session that loaded it.
+
+  TripDetailsProvider call(String id) =>
+      TripDetailsProvider._(argument: id, from: this);
+
+  @override
+  String toString() => r'tripDetailsProvider';
+}
+
 @ProviderFor(driverZone)
 final driverZoneProvider = DriverZoneProvider._();
 

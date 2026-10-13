@@ -52,6 +52,9 @@ GoldenTestGroup goldenRow({
               withdrawals?.call() ?? FakeWithdrawalsRepository(),
             ),
             adminRepositoryProvider.overrideWithValue(FakeAdminRepository()),
+            // Tiles drawn on the device: no network in goldens.
+            mapTilesProvider.overrideWithValue(testMapTiles),
+            geoRepositoryProvider.overrideWithValue(FakeGeoRepository()),
           ],
           retry: (_, _) => null,
           child: App(home: home(), themeMode: mode),

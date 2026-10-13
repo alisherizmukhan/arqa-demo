@@ -547,4 +547,94 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get errDemoProtected =>
       'Демо-аккаунт защищён: его нельзя заблокировать или сбросить его сессии.';
+
+  @override
+  String get placeFrom => 'Откуда';
+
+  @override
+  String get placeTo => 'Куда';
+
+  @override
+  String get pickOnMap => 'Выбрать на карте';
+
+  @override
+  String get pickThisPlace => 'Выбрать это место';
+
+  @override
+  String get resolvingAddress => 'Определяем адрес…';
+
+  @override
+  String get addressNotFound => 'Адрес не найден';
+
+  @override
+  String get searchAddress => 'Поиск адреса';
+
+  @override
+  String get routeDistance => 'Расстояние';
+
+  @override
+  String get routePerKm => 'За км';
+
+  @override
+  String get routePerMinute => 'За минуту';
+
+  @override
+  String get routeTitle => 'Маршрут';
+
+  @override
+  String get dayMap => 'Карта дня';
+
+  @override
+  String get routeStraightInfo =>
+      'Маршрут построен по прямой — сервис карт был недоступен';
+
+  @override
+  String get routeRebuild => 'Построить заново';
+
+  @override
+  String get markerStart => 'Начало поездки';
+
+  @override
+  String get markerEnd => 'Конец поездки';
+
+  @override
+  String get mapOffline => 'Нет связи — карта не загрузилась';
+
+  @override
+  String get clearPlace => 'Очистить';
+
+  @override
+  String get tripDetailsTitle => 'Поездка';
+
+  @override
+  String get mapCredits => 'Данные карты';
+
+  @override
+  String get unitMetres => 'м';
+
+  @override
+  String get unitKilometres => 'км';
+
+  @override
+  String routesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count маршрута',
+      many: '$count маршрутов',
+      few: '$count маршрута',
+      one: '$count маршрут',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String routePlaces(String from, String to) {
+    return '$from → $to';
+  }
+
+  @override
+  String dayMapTrip(String time, String amount) {
+    return '$time · $amount';
+  }
 }

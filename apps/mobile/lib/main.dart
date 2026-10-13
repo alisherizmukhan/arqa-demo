@@ -16,7 +16,16 @@ Future<void> main() async {
       // No automatic provider retries: dio already retries transient network
       // errors, and the UI offers an explicit "Повторить".
       retry: (retryCount, error) => null,
-      child: const App(),
+      child: App(themeMode: _themeMode),
     ),
   );
 }
+
+/// `--dart-define=THEME=dark` (or `system`) for checking the dark theme on
+/// a device; the app is light otherwise (DECISIONS «Post-redesign UI
+/// fixes»).
+ThemeMode get _themeMode => switch (const String.fromEnvironment('THEME')) {
+  'dark' => ThemeMode.dark,
+  'system' => ThemeMode.system,
+  _ => ThemeMode.light,
+};

@@ -1,7 +1,8 @@
+import 'package:driver_diary/features/trips/domain/entities/place.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 
 /// Fields of a trip that a rule can point at.
-enum TripField { start, end, amount, commission, payment }
+enum TripField { start, end, amount, commission, payment, places }
 
 /// Validation rules, mirroring the server so most mistakes never leave the
 /// phone. Codes are the server's error codes, so client-side and server-side
@@ -13,7 +14,8 @@ enum TripRuleViolation {
   invalidAmount('invalid_amount', TripField.amount),
   amountTooLarge('amount_too_large', TripField.amount),
   invalidCommission('invalid_commission', TripField.commission),
-  commissionExceedsAmount('commission_exceeds_amount', TripField.commission);
+  commissionExceedsAmount('commission_exceeds_amount', TripField.commission),
+  incompleteRoute('incomplete_route', TripField.places);
 
   new(this.code, this.field);
 
@@ -33,7 +35,15 @@ abstract final class TripLimits {
 List<TripRuleViolation> validateTrip(Trip trip) => [
   ...validateTimes(trip.start, trip.end),
   ...validateMoney(trip.amount, trip.commission),
+  ...validatePlaces(trip.pickup, trip.dropoff),
 ];
+
+/// Both places or neither (DESIGN.md §9.2). The Almaty box and the 50 m
+/// rule are the server's (its bounds are config).
+List<TripRuleViolation> validatePlaces(Place? pickup, Place? dropoff) =>
+    (pickup == null) == (dropoff == null)
+    ? const []
+    : const [TripRuleViolation.incompleteRoute];
 
 /// Time rules alone, so a form can check them before money is entered.
 List<TripRuleViolation> validateTimes(DateTime start, DateTime end) {

@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/account_scenarios.dart';
 import '../helpers/app_harness.dart';
+import '../helpers/map_scenarios.dart';
 import '../helpers/scenarios.dart';
 
 /// Renders every mockup state at 390×844 @2x (780×1688, like the PNGs in
@@ -101,6 +102,43 @@ void main() {
           });
           debugDisableShadows = true;
           _save('$dir/accounts/$name.png', png!);
+          await disposeApp(tester);
+        });
+      }
+    }
+  }
+  // DESIGN.md §9 screens, ru and kk; dark for the states listed.
+  for (final locale in ['ru', 'kk']) {
+    for (final scenario in mapScenarios) {
+      for (final brightness in [
+        Brightness.light,
+        if (darkMapScenarioIds.contains(scenario.id)) Brightness.dark,
+      ]) {
+        final name =
+            '${scenario.id}_$locale'
+            '${brightness == Brightness.dark ? '_dark' : ''}';
+        testWidgets('maps/$name', skip: dir == null, (tester) async {
+          scenarioLocale = locale;
+          addTearDown(() => scenarioLocale = 'ru');
+          useDevice(tester, (
+            size: const Size(390, 844),
+            textScale: 1,
+            brightness: brightness,
+            pixelRatio: 2,
+          ));
+          debugDisableShadows = false;
+          await scenario.run(tester);
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(shotKey),
+          );
+          final png = await tester.runAsync(() async {
+            final image = await boundary.toImage(pixelRatio: 2);
+            final data = await image.toByteData(format: ui.ImageByteFormat.png);
+            image.dispose();
+            return data!.buffer.asUint8List();
+          });
+          debugDisableShadows = true;
+          _save('$dir/maps/$name.png', png!);
           await disposeApp(tester);
         });
       }

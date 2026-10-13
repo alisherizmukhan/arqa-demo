@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/account_scenarios.dart';
 import '../helpers/app_harness.dart';
 import '../helpers/control_metrics.dart';
+import '../helpers/map_scenarios.dart';
 import '../helpers/scenarios.dart';
 
 /// Every mockup state at the mockup size (390×844) and a small phone
@@ -26,6 +28,7 @@ void main() {
       ...stressScenarios,
       ...behaviourScenarios,
       ...accountScenarios,
+      ...mapScenarios,
     ]) {
       for (final size in sizes) {
         for (final scale in scales) {
@@ -53,8 +56,16 @@ void main() {
               // the stress amounts, where the text gives way by rule 7);
               // above it labels may end in «…»; an amount is never cut.
               final plain = text.text.toPlainText();
+              // Inside a map: markers and labels move with it and are
+              // clipped at its edge by design.
+              if (_inMap(tester, text)) continue;
+              // A trip's places come from the map service, any length: the
+              // line ends in «…» by design (DESIGN.md §9.1).
+              final placeLine = plain.contains(' → ');
               if (plain.contains('₸') ||
-                  (scale == 1.0 && !stressIds.contains(scenario.id))) {
+                  (scale == 1.0 &&
+                      !stressIds.contains(scenario.id) &&
+                      !placeLine)) {
                 expect(text.didExceedMaxLines, isFalse, reason: plain);
               }
               // A horizontal scroll row (filter chips, §8.0) runs past the
@@ -99,6 +110,17 @@ void main() {
       }
     }
   }
+}
+
+bool _inMap(WidgetTester tester, RenderObject object) {
+  final maps = {
+    for (final element in find.byType(FlutterMap).evaluate())
+      element.renderObject,
+  };
+  for (var node = object.parent; node != null; node = node.parent) {
+    if (maps.contains(node)) return true;
+  }
+  return false;
 }
 
 bool _inHorizontalScroll(WidgetTester tester, RenderObject object) {

@@ -1,6 +1,7 @@
 import 'package:design_kit/design_kit.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
+import 'package:driver_diary/features/trips/domain/entities/place.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip_rules.dart';
 import 'package:driver_diary/features/trips/presentation/error_messages.dart';
@@ -23,9 +24,15 @@ final class TripFormInput {
     this.amountText = '',
     this.commissionText = '',
     this.payment = PaymentMethod.card,
+    this.pickup,
+    this.dropoff,
   });
 
   final CalendarDay day;
+
+  /// «Откуда» / «Куда» (DESIGN.md §9.2): optional, both or neither.
+  final Place? pickup;
+  final Place? dropoff;
   final ClockTime? start;
   final ClockTime? end;
   final String amountText;
@@ -131,6 +138,8 @@ TripFormResult validateTripForm(
     }
   }
 
+  report(validatePlaces(input.pickup, input.dropoff));
+
   if (errors.isNotEmpty || times == null) return TripFormInvalid(errors);
   return TripFormValid(
     Trip(
@@ -140,6 +149,8 @@ TripFormResult validateTripForm(
       amount: amount!,
       payment: input.payment,
       commission: commission!,
+      pickup: input.pickup,
+      dropoff: input.dropoff,
     ),
   );
 }

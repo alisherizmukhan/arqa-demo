@@ -1057,6 +1057,156 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Демо-аккаунт защищён: его нельзя заблокировать или сбросить его сессии.'**
   String get errDemoProtected;
+
+  /// No description provided for @placeFrom.
+  ///
+  /// In ru, this message translates to:
+  /// **'Откуда'**
+  String get placeFrom;
+
+  /// No description provided for @placeTo.
+  ///
+  /// In ru, this message translates to:
+  /// **'Куда'**
+  String get placeTo;
+
+  /// No description provided for @pickOnMap.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выбрать на карте'**
+  String get pickOnMap;
+
+  /// No description provided for @pickThisPlace.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выбрать это место'**
+  String get pickThisPlace;
+
+  /// No description provided for @resolvingAddress.
+  ///
+  /// In ru, this message translates to:
+  /// **'Определяем адрес…'**
+  String get resolvingAddress;
+
+  /// No description provided for @addressNotFound.
+  ///
+  /// In ru, this message translates to:
+  /// **'Адрес не найден'**
+  String get addressNotFound;
+
+  /// No description provided for @searchAddress.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск адреса'**
+  String get searchAddress;
+
+  /// No description provided for @routeDistance.
+  ///
+  /// In ru, this message translates to:
+  /// **'Расстояние'**
+  String get routeDistance;
+
+  /// No description provided for @routePerKm.
+  ///
+  /// In ru, this message translates to:
+  /// **'За км'**
+  String get routePerKm;
+
+  /// No description provided for @routePerMinute.
+  ///
+  /// In ru, this message translates to:
+  /// **'За минуту'**
+  String get routePerMinute;
+
+  /// No description provided for @routeTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Маршрут'**
+  String get routeTitle;
+
+  /// No description provided for @dayMap.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карта дня'**
+  String get dayMap;
+
+  /// No description provided for @routeStraightInfo.
+  ///
+  /// In ru, this message translates to:
+  /// **'Маршрут построен по прямой — сервис карт был недоступен'**
+  String get routeStraightInfo;
+
+  /// No description provided for @routeRebuild.
+  ///
+  /// In ru, this message translates to:
+  /// **'Построить заново'**
+  String get routeRebuild;
+
+  /// No description provided for @markerStart.
+  ///
+  /// In ru, this message translates to:
+  /// **'Начало поездки'**
+  String get markerStart;
+
+  /// No description provided for @markerEnd.
+  ///
+  /// In ru, this message translates to:
+  /// **'Конец поездки'**
+  String get markerEnd;
+
+  /// No description provided for @mapOffline.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет связи — карта не загрузилась'**
+  String get mapOffline;
+
+  /// No description provided for @clearPlace.
+  ///
+  /// In ru, this message translates to:
+  /// **'Очистить'**
+  String get clearPlace;
+
+  /// No description provided for @tripDetailsTitle.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поездка'**
+  String get tripDetailsTitle;
+
+  /// No description provided for @mapCredits.
+  ///
+  /// In ru, this message translates to:
+  /// **'Данные карты'**
+  String get mapCredits;
+
+  /// No description provided for @unitMetres.
+  ///
+  /// In ru, this message translates to:
+  /// **'м'**
+  String get unitMetres;
+
+  /// No description provided for @unitKilometres.
+  ///
+  /// In ru, this message translates to:
+  /// **'км'**
+  String get unitKilometres;
+
+  /// No description provided for @routesCount.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} маршрут} few{{count} маршрута} many{{count} маршрутов} other{{count} маршрута}}'**
+  String routesCount(int count);
+
+  /// No description provided for @routePlaces.
+  ///
+  /// In ru, this message translates to:
+  /// **'{from} → {to}'**
+  String routePlaces(String from, String to);
+
+  /// No description provided for @dayMapTrip.
+  ///
+  /// In ru, this message translates to:
+  /// **'{time} · {amount}'**
+  String dayMapTrip(String time, String amount);
 }
 
 class _AppLocalizationsDelegate

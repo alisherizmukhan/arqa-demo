@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/app_harness.dart';
+import '../helpers/map_scenarios.dart';
 import '../helpers/scenarios.dart';
 
 /// Every mockup state, light and dark: tap targets ≥ 48 dp, every tappable
 /// thing labelled, text contrast (Flutter's accessibility guidelines).
 void main() {
-  for (final scenario in [...scenarios, ...behaviourScenarios]) {
+  for (final scenario in [
+    ...scenarios,
+    ...behaviourScenarios,
+    ...mapScenarios,
+  ]) {
     for (final brightness in Brightness.values) {
       testWidgets('${scenario.id} (${brightness.name}) meets the a11y '
           'guidelines', (tester) async {

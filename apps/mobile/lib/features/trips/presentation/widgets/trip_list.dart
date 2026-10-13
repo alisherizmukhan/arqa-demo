@@ -4,6 +4,7 @@ import 'package:driver_diary/core/time/driver_zone.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/presentation/models/trip_order.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
+import 'package:driver_diary/features/trips/presentation/widgets/trip_map.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,8 +19,17 @@ class TripList extends StatelessWidget {
     this.highlightedId,
     this.highlightKey,
     this.driverNames,
+    this.onOpen,
+    this.onDayMap,
     super.key,
   });
+
+  /// Opens a trip with places (its details, DESIGN.md §9.5). Trips without
+  /// places stay read-only.
+  final ValueChanged<Trip>? onOpen;
+
+  /// Opens the day map; the button shows when a trip of the day has places.
+  final VoidCallback? onDayMap;
 
   /// Admin, all drivers: the driver's name under each row, by driver id.
   final Map<String, String>? driverNames;
@@ -53,11 +63,22 @@ class TripList extends StatelessWidget {
         DkListHeader(
           title: l10n.tripsTitle,
           trailing: l10n.tripsHeader(trips.length, total),
-          action: DkIconButton(
-            icon: DkIcons.sort,
-            label: l10n.sortButton(order.label(l10n).toLowerCase()),
-            active: order != TripOrder.timeAscending,
-            onPressed: onSort,
+          action: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (onDayMap case final open? when trips.any((t) => t.hasPlaces))
+                DkIconButton(
+                  icon: DkIcons.map,
+                  label: l10n.dayMap,
+                  onPressed: open,
+                ),
+              DkIconButton(
+                icon: DkIcons.sort,
+                label: l10n.sortButton(order.label(l10n).toLowerCase()),
+                active: order != TripOrder.timeAscending,
+                onPressed: onSort,
+              ),
+            ],
           ),
         ),
         DkTripList(
@@ -82,6 +103,11 @@ class TripList extends StatelessWidget {
                 method: trip.payment.toKit(),
                 nextDayLabel: l10n.nextDayLabel,
                 highlighted: trip.id == highlightedId,
+                route: routeLine(trip, l10n),
+                onTap: switch (onOpen) {
+                  final open? when trip.hasPlaces => () => open(trip),
+                  _ => null,
+                },
               ),
           ],
         ),

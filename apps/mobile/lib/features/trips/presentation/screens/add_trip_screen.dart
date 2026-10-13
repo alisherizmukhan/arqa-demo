@@ -8,11 +8,13 @@ import 'package:driver_diary/core/l10n/l10n.dart';
 import 'package:driver_diary/core/network/resend_schedule.dart';
 import 'package:driver_diary/core/providers.dart';
 import 'package:driver_diary/core/time/calendar_day.dart';
+import 'package:driver_diary/features/trips/domain/entities/place.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip_rules.dart';
 import 'package:driver_diary/features/trips/presentation/error_messages.dart';
 import 'package:driver_diary/features/trips/presentation/models/trip_form.dart';
 import 'package:driver_diary/features/trips/presentation/providers/trips_providers.dart';
+import 'package:driver_diary/features/trips/presentation/screens/place_picker_screen.dart';
 import 'package:driver_diary/features/trips/presentation/widgets/trip_list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,6 +44,8 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
   late ClockTime? _end = widget.initialInput?.end;
   late PaymentMethod _payment =
       widget.initialInput?.payment ?? PaymentMethod.card;
+  late Place? _pickup = widget.initialInput?.pickup;
+  late Place? _dropoff = widget.initialInput?.dropoff;
   late final DkMoneyEditingController _amount = _moneyController(
     widget.initialInput?.amountText,
   );
@@ -109,6 +113,8 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     amountText: _amount.text,
     commissionText: _commission.text,
     payment: _payment,
+    pickup: _pickup,
+    dropoff: _dropoff,
   );
 
   TripFormResult _validate() => validateTripForm(
@@ -151,7 +157,9 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
         _end != null ||
         _amount.text.isNotEmpty ||
         _commission.text.isNotEmpty ||
-        _payment != (initial?.payment ?? PaymentMethod.card);
+        _payment != (initial?.payment ?? PaymentMethod.card) ||
+        _pickup != initial?.pickup ||
+        _dropoff != initial?.dropoff;
   }
 
   Future<void> _save() async {
@@ -231,8 +239,44 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
     }
   }
 
+  /// The form field a server error points at; `pickup`, `dropoff` and
+  /// their parts are the places group.
   static TripField? _formField(String? name) =>
-      TripField.values.where((f) => f.name == name).firstOrNull;
+      name != null && (name.startsWith('pickup') || name.startsWith('dropoff'))
+      ? TripField.places
+      : TripField.values.where((f) => f.name == name).firstOrNull;
+
+  /// Opens the picker for A ([DkPlaceKind.start]) or B; B starts at A.
+  Future<void> _pickPlace(DkPlaceKind kind) async {
+    final start = kind == DkPlaceKind.start;
+    final place = await pickPlace(
+      context,
+      kind: kind,
+      current: start ? _pickup : _dropoff,
+      near: start ? null : _pickup,
+    );
+    if (place == null || !mounted) return;
+    setState(() {
+      if (start) {
+        _pickup = place;
+      } else {
+        _dropoff = place;
+      }
+      _touched.add(TripField.places);
+    });
+    _edited(TripField.places);
+  }
+
+  void _clearPlace(DkPlaceKind kind) {
+    setState(() {
+      if (kind == DkPlaceKind.start) {
+        _pickup = null;
+      } else {
+        _dropoff = null;
+      }
+    });
+    _edited(TripField.places);
+  }
 
   /// Error snackbar 12 above the bottom bar (§4 DkSnackbar).
   void _showError(String message, {required bool retry}) =>
@@ -361,6 +405,15 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
                             message: _timeMessage(l10n, input, errors, visible),
                           ),
                           SizedBox(height: spacing.s20),
+                          _Places(
+                            pickup: _pickup,
+                            dropoff: _dropoff,
+                            enabled: !saving,
+                            error: visible[TripField.places],
+                            onPick: _pickPlace,
+                            onClear: _clearPlace,
+                          ),
+                          SizedBox(height: spacing.s20),
                           DkTextField.money(
                             label: l10n.amount,
                             controller: _amount,
@@ -483,6 +536,62 @@ class _AddTripScreenState extends ConsumerState<AddTripScreen> {
               l10n.dayMonth(input.day.toDateTime()),
             )
           : l10n.durationHelper(l10n.duration(duration)),
+    );
+  }
+}
+
+/// «Откуда» / «Куда» in one group, and an error under it (DESIGN.md §9.2).
+class _Places extends StatelessWidget {
+  const new({
+    required this.pickup,
+    required this.dropoff,
+    required this.enabled,
+    required this.onPick,
+    required this.onClear,
+    this.error,
+  });
+
+  final Place? pickup;
+  final Place? dropoff;
+  final bool enabled;
+  final String? error;
+  final ValueChanged<DkPlaceKind> onPick;
+  final ValueChanged<DkPlaceKind> onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final spacing = context.dkSpacing;
+    DkPlaceField field(DkPlaceKind kind, Place? place) {
+      final start = kind == DkPlaceKind.start;
+      return DkPlaceField(
+        kind: kind,
+        label: start ? l10n.placeFrom : l10n.placeTo,
+        markerLabel: start ? l10n.markerStart : l10n.markerEnd,
+        value: place?.displayLabel,
+        placeholder: l10n.pickOnMap,
+        onTap: enabled ? () => onPick(kind) : null,
+        onClear: enabled ? () => onClear(kind) : null,
+        clearLabel: l10n.clearPlace,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: spacing.s6,
+      children: [
+        DkListGroup(
+          children: [
+            field(DkPlaceKind.start, pickup),
+            field(DkPlaceKind.end, dropoff),
+          ],
+        ),
+        if (error case final message?)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: spacing.s4),
+            child: DkFieldMessage(text: message, isError: true),
+          ),
+      ],
     );
   }
 }

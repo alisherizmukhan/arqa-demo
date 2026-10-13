@@ -4,6 +4,7 @@ import 'package:driver_diary/core/time/calendar_day.dart';
 import 'package:driver_diary/core/time/driver_zone.dart';
 import 'package:driver_diary/features/trips/data/datasources/trips_remote_data_source.dart';
 import 'package:driver_diary/features/trips/data/dto/trip_dtos.dart';
+import 'package:driver_diary/features/trips/domain/entities/place.dart';
 import 'package:driver_diary/features/trips/domain/entities/trip.dart';
 import 'package:driver_diary/features/trips/domain/repositories/trips_repository.dart';
 
@@ -31,5 +32,34 @@ final class TripsRepositoryImpl implements TripsRepository {
     () async =>
         (await _remote.createTrip(CreateTripRequestDto.fromDomain(trip, zone)))
             .toDomain(),
+  );
+
+  @override
+  Future<Result<Trip>> tripById(String id, DriverZone zone) => guardRequest(
+    () async => (await _remote.fetchTrip(id, tz: zone.isoOffset)).toDomain(),
+  );
+
+  @override
+  Future<Result<Trip>> rebuildRoute(String id, DriverZone zone) => guardRequest(
+    () async => (await _remote.rebuildRoute(id, tz: zone.isoOffset)).toDomain(),
+  );
+}
+
+final class GeoRepositoryImpl implements GeoRepository {
+  const new(this._remote);
+
+  final TripsRemoteDataSource _remote;
+
+  @override
+  Future<Result<String?>> reverse(GeoPoint point) => guardRequest(
+    () async => (await _remote.reverse(lat: point.lat, lng: point.lng)).label,
+  );
+
+  @override
+  Future<Result<List<GeoPlace>>> search(String query) => guardRequest(
+    () async => [
+      for (final result in (await _remote.search(query)).results)
+        result.toDomain(),
+    ],
   );
 }
