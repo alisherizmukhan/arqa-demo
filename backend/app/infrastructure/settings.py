@@ -67,7 +67,15 @@ class Settings(BaseSettings):
     # and address lookups answer 503. The key never leaves the backend.
     ors_api_key: SecretStr | None = None
     ors_base_url: str = "https://api.openrouteservice.org"
+    # A request that waits on ORS (creating a trip, a manual rebuild): the
+    # driver is waiting, so short.
     ors_timeout_seconds: float = Field(default=5.0, gt=0)
+    # Background route building (seed routes, retries of straight lines): nobody
+    # waits, so ORS gets longer. At most ROUTE_RETRIES_PER_MINUTE such calls a
+    # minute (ORS free quota: 40 directions a minute, shared with users).
+    ors_background_timeout_seconds: float = Field(default=30.0, gt=0)
+    route_retries_enabled: bool = True
+    route_retries_per_minute: int = Field(default=4, gt=0, le=20)
     # The service area: places outside it are rejected (Almaty).
     area_south: float = 43.05
     area_north: float = 43.45

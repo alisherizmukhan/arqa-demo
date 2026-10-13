@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from app.application.errors import TripConflictError
@@ -35,20 +36,21 @@ class CreateTripResult:
     route: TripRoute
 
 
-async def create_trip(
+async def create_trip(  # noqa: PLR0913 - keyword-only collaborators
     repo: TripRepository,
     trip: Trip,
     driver_id: UUID,
     *,
     router: Router,
     area: ServiceArea,
+    now: datetime,
 ) -> CreateTripResult:
     """Idempotent create keyed by the client-generated trip id, for `driver_id`
     (`repo` is that driver's scope).
 
     A new trip with places gets its route right away (one routing call; a
-    straight line if the engine fails, never an error). The places must be
-    inside `area`.
+    straight line if the engine fails, never an error; the background retries
+    take it from there). The places must be inside `area`.
 
     - new id                                   -> created
     - same id, same driver, same payload       -> the stored trip, not created
@@ -60,7 +62,7 @@ async def create_trip(
     if await repo.insert_if_absent(trip):
         owned = OwnedTrip(trip=trip, driver_id=driver_id, route=TripRoute.none())
         if trip.has_places:
-            owned = await route_and_save(repo, router, owned)
+            owned = await route_and_save(repo, router, owned, now)
         return CreateTripResult(trip=trip, created=True, route=owned.route)
 
     existing = await repo.get(trip.id)

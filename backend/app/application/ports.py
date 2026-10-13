@@ -18,6 +18,14 @@ class OwnedTrip:
     route: TripRoute = NO_ROUTE
 
 
+@dataclass(frozen=True, slots=True)
+class DueRoute:
+    """A trip whose route the background retries should try now."""
+
+    owned: OwnedTrip
+    attempts: int  # background attempts made so far
+
+
 class TripRepository(Protocol):
     """Trips of one driver, or of all drivers (admin scope)."""
 
@@ -39,10 +47,22 @@ class TripRepository(Protocol):
         """
         ...
 
-    async def save_route(self, trip_id: str, route: TripRoute) -> None: ...
+    async def save_route(
+        self,
+        trip_id: str,
+        route: TripRoute,
+        *,
+        attempts: int = 0,
+        retry_at: datetime | None = None,
+    ) -> None:
+        """Store the route with its retry state: background attempts made and
+        when to try again (None: never, the route is built or retries are
+        spent)."""
+        ...
 
-    async def list_pending_routes(self, limit: int) -> list[OwnedTrip]:
-        """Trips (any driver) whose route has not been built yet, oldest first."""
+    async def list_due_routes(self, now: datetime, limit: int) -> list[DueRoute]:
+        """Trips (any driver) whose route is pending, or a straight line with
+        a retry due by `now`; pending first, then by due time."""
         ...
 
     async def set_places_if_missing(self, trip_id: str, pickup: Place, dropoff: Place) -> bool:

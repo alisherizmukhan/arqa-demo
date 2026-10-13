@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +11,8 @@ SEED_FILE = Path(__file__).resolve().parents[2] / "data" / "trips.json"
 
 # The default service area (Settings), and two places in it ~5.4 km apart.
 ALMATY = ServiceArea(south=43.05, north=43.45, west=76.70, east=77.20)
+# A fixed "now" for code that schedules (route retries).
+NOW = datetime(2026, 10, 14, 9, 0, tzinfo=UTC)
 BAZAAR = Place(point=GeoPoint(43.26275, 76.95519), label="Зелёный базар")
 ESENTAI = Place(point=GeoPoint(43.2185, 76.928), label="ТРЦ Есентай Молл")
 

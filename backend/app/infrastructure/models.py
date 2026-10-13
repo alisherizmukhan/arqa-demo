@@ -100,6 +100,9 @@ class TripRow(Base):
     route_distance_m: Mapped[int | None] = mapped_column(Integer)
     route_duration_s: Mapped[int | None] = mapped_column(Integer)
     route_status: Mapped[str] = mapped_column(Text, server_default=text("'none'"))
+    # Background retries of a route the engine could not build (docs/MAPS.md).
+    route_attempts: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+    route_retry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         CheckConstraint("amount > 0", name="amount_positive"),
@@ -119,9 +122,9 @@ class TripRow(Base):
         Index("ix_trips_start_at", "start_at"),
         Index("ix_trips_driver_id_start_at", "driver_id", "start_at"),
         Index(
-            "ix_trips_route_pending",
-            "created_at",
-            postgresql_where=text("route_status = 'pending'"),
+            "ix_trips_route_due",
+            "route_retry_at",
+            postgresql_where=text("route_status IN ('pending', 'straight')"),
         ),
     )
 

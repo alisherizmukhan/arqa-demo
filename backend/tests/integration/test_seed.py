@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import pytest
@@ -30,13 +31,29 @@ async def test_seed_trips_is_idempotent(
 async def _start(
     database_url: str, admin_password: str = "admin", maps: FakeMaps | None = None
 ) -> None:
+    """Start the app (seeding), let the background route round finish, stop."""
     settings = Settings(
-        database_url=database_url, seed_on_startup=True, seed_admin_password=admin_password
+        database_url=database_url,
+        seed_on_startup=True,
+        seed_admin_password=admin_password,
+        route_retries_enabled=True,
+        route_retries_per_minute=20,
     )
     fake = maps or FakeMaps()
     app = create_app(settings, maps=Maps(fake, fake))
     async with LifespanManager(app, startup_timeout=STARTUP_TIMEOUT):
-        pass
+        await _no_pending_routes(app.state.sessionmaker)
+
+
+async def _no_pending_routes(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
+    """Wait (bounded) until the background round has taken every pending route."""
+    pending = select(func.count()).select_from(TripRow).where(TripRow.route_status == "pending")
+    for _ in range(200):
+        async with sessionmaker() as session:
+            if not await session.scalar(pending):
+                return
+        await asyncio.sleep(0.05)
+    pytest.fail("pending routes were not built in the background within 10 s")
 
 
 async def _clear(sessionmaker: async_sessionmaker[AsyncSession]) -> None:

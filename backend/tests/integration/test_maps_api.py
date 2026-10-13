@@ -1,6 +1,7 @@
 """Trips with places, routes and address lookups through the HTTP API, on a
 real database; the map service is FakeMaps (no network)."""
 
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -9,8 +10,11 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.application.routing import retry_due_routes
 from app.domain import polyline
 from app.domain.geo import GeoPoint, haversine_m
+from app.infrastructure.models import TripRow
+from app.infrastructure.repository import SqlTripRepository
 from app.infrastructure.settings import Settings
 from app.main import Maps, create_app
 from tests.conftest import STARTUP_TIMEOUT
@@ -289,3 +293,40 @@ async def test_lookups_are_rate_limited_per_user(database_url: str, app: FastAPI
     assert third.status_code == 429
     assert third.json()["error"]["code"] == "rate_limited"
     assert 1 <= int(third.headers["Retry-After"]) <= 60
+
+
+async def test_a_straight_line_is_retried_in_the_background_once_due(
+    client: AsyncClient,
+    fake_maps: FakeMaps,
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> None:
+    fake_maps.fail = True
+    payload = with_places()
+    before = datetime.now(UTC)
+    created = await client.post("/trips", json=payload)
+    assert created.json()["route"]["status"] == "straight"
+
+    async with sessionmaker() as session:
+        row = await session.get(TripRow, payload["id"])
+        assert row is not None
+        assert row.route_attempts == 0
+        assert row.route_retry_at is not None
+        assert before + timedelta(minutes=1) <= row.route_retry_at
+        assert row.route_retry_at <= datetime.now(UTC) + timedelta(minutes=1)
+        due_at = row.route_retry_at
+
+    fake_maps.fail = False
+    async with sessionmaker() as session:
+        early = await retry_due_routes(
+            SqlTripRepository(session), fake_maps, lambda: due_at - timedelta(seconds=1), 4
+        )
+    async with sessionmaker() as session:
+        on_time = await retry_due_routes(SqlTripRepository(session), fake_maps, lambda: due_at, 4)
+
+    assert (early.built, on_time.built) == (0, 1)
+    one = await client.get(f"/trips/{payload['id']}")
+    assert one.json()["route"]["status"] == "ready"
+    async with sessionmaker() as session:
+        row = await session.get(TripRow, payload["id"])
+        assert row is not None
+        assert (row.route_attempts, row.route_retry_at) == (1, None)

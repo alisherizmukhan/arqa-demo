@@ -9,6 +9,7 @@ from app.api.deps import (
     CurrentUserDep,
     DayWindowDep,
     GeoDep,
+    NowDep,
     ReadScopeDep,
     RouterDep,
     SessionDep,
@@ -130,6 +131,7 @@ async def create_trip(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     actor: CurrentUserDep,
     router: RouterDep,
     settings: SettingsDep,
+    now: NowDep,
     trip_in: TripIn = Body(  # noqa: B008 - FastAPI's way to declare body examples
         openapi_examples={
             "new trip": {
@@ -153,7 +155,7 @@ async def create_trip(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
                     "payment": "card",
                     "commission": 330,
                     "pickup": {"lat": 43.26275, "lng": 76.95519, "label": "Зелёный базар"},
-                    "dropoff": {"lat": 43.2185, "lng": 76.928, "label": "ТРЦ Есентай Молл"},
+                    "dropoff": {"lat": 43.2189, "lng": 76.9279, "label": "ТРЦ Есентай Молл"},
                 },
             },
             "invalid": {
@@ -179,11 +181,18 @@ async def create_trip(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     Optional `pickup` / `dropoff` (both or neither, inside Almaty, more than
     50 m apart) are part of the compared payload. With them the server builds
     the road route once (`route.status` ready); if the map service fails the
-    trip is still created, with a straight line (`straight`)."""
+    trip is still created, with a straight line (`straight`), and the server
+    tries the road route again in the background (`GET /trips/{id}` shows it
+    once built)."""
     driver_id = access.require_driver(actor)
     repo = SqlTripRepository(session, driver_id)
     result = await use_cases.create_trip(
-        repo, trip_in.to_domain(), driver_id, router=router, area=settings.service_area
+        repo,
+        trip_in.to_domain(),
+        driver_id,
+        router=router,
+        area=settings.service_area,
+        now=now,
     )
     response.status_code = status.HTTP_201_CREATED if result.created else status.HTTP_200_OK
     # Echo timestamps in the offset the client used for this request.
@@ -246,11 +255,12 @@ async def rebuild_route(  # noqa: PLR0913, PLR0917 - FastAPI dependencies
     actor: CurrentUserDep,
     router: RouterDep,
     geo: GeoDep,
+    now: NowDep,
     tz: TzQuery = "+05:00",
 ) -> TripOut:
     """Build the trip's route again, e.g. after a `straight` fallback. The
     owner or an admin. If the map service is still unavailable the answer is
     200 with a straight line again."""
     geo.limiter.check(actor.id)
-    owned = await routing.rebuild_route(SqlTripRepository(session), router, actor, trip_id)
+    owned = await routing.rebuild_route(SqlTripRepository(session), router, actor, trip_id, now)
     return TripOut.from_domain(owned.trip, _tz(tz), owned.driver_id, owned.route)

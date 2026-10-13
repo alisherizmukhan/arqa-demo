@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from app.application.errors import MapsUnavailableError
-from app.application.ports import ActiveSession, GeoResult, OwnedTrip
+from app.application.ports import ActiveSession, DueRoute, GeoResult, OwnedTrip
 from app.domain import polyline
 from app.domain.geo import GeoPoint, Place, ServiceArea, haversine_m
 from app.domain.route import RouteStatus, TripRoute
@@ -29,6 +29,8 @@ class InMemoryTripRepository:
         store: dict[str, OwnedTrip] | None = None,
     ) -> None:
         self._store: dict[str, OwnedTrip] = store if store is not None else {}
+        # Per trip: (background attempts, next retry), as save_route stored them.
+        self.retries: dict[str, tuple[int, datetime | None]] = {}
         self.driver_id = driver_id
         for trip in trips or []:
             self._store[trip.id] = OwnedTrip(trip=trip, driver_id=driver_id)
@@ -59,13 +61,36 @@ class InMemoryTripRepository:
         self._store[trip.id] = OwnedTrip(trip=trip, driver_id=self.driver_id, route=route)
         return True
 
-    async def save_route(self, trip_id: str, route: TripRoute) -> None:
+    async def save_route(
+        self,
+        trip_id: str,
+        route: TripRoute,
+        *,
+        attempts: int = 0,
+        retry_at: datetime | None = None,
+    ) -> None:
         owned = self._store[trip_id]
         self._store[trip_id] = replace(owned, route=route)
+        self.retries[trip_id] = (attempts, retry_at)
 
-    async def list_pending_routes(self, limit: int) -> list[OwnedTrip]:
-        pending = [o for o in self._store.values() if o.route.status is RouteStatus.PENDING]
-        return pending[:limit]
+    async def list_due_routes(self, now: datetime, limit: int) -> list[DueRoute]:
+        def retry_at(owned: OwnedTrip) -> datetime | None:
+            return self.retries.get(owned.trip.id, (0, None))[1]
+
+        def due(owned: OwnedTrip) -> bool:
+            at = retry_at(owned)
+            return owned.route.status is RouteStatus.PENDING or (
+                owned.route.status is RouteStatus.STRAIGHT and at is not None and at <= now
+            )
+
+        found = sorted(
+            (o for o in self._store.values() if due(o)),
+            key=lambda o: (o.route.status is not RouteStatus.PENDING, retry_at(o) or now),
+        )
+        return [
+            DueRoute(owned=o, attempts=self.retries.get(o.trip.id, (0, None))[0])
+            for o in found[:limit]
+        ]
 
     async def set_places_if_missing(self, trip_id: str, pickup: Place, dropoff: Place) -> bool:
         owned = self._store.get(trip_id)
@@ -75,6 +100,7 @@ class InMemoryTripRepository:
         self._store[trip_id] = OwnedTrip(
             trip=trip, driver_id=owned.driver_id, route=TripRoute.pending()
         )
+        self.retries.pop(trip_id, None)
         return True
 
     async def count(self) -> int:

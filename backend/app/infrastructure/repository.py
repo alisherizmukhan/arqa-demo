@@ -5,7 +5,7 @@ from sqlalchemy import case, delete, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.application.ports import ActiveSession, OwnedTrip
+from app.application.ports import ActiveSession, DueRoute, OwnedTrip
 from app.domain.geo import GeoPoint, Place
 from app.domain.route import RouteStatus, TripRoute
 from app.domain.trip import PaymentMethod, Trip
@@ -64,7 +64,14 @@ class SqlTripRepository:
         await self._session.commit()
         return inserted_id is not None
 
-    async def save_route(self, trip_id: str, route: TripRoute) -> None:
+    async def save_route(
+        self,
+        trip_id: str,
+        route: TripRoute,
+        *,
+        attempts: int = 0,
+        retry_at: datetime | None = None,
+    ) -> None:
         await self._session.execute(
             update(TripRow)
             .where(TripRow.id == trip_id)
@@ -73,18 +80,30 @@ class SqlTripRepository:
                 route_polyline=route.polyline,
                 route_distance_m=route.distance_m,
                 route_duration_s=route.duration_s,
+                route_attempts=attempts,
+                route_retry_at=retry_at,
             )
         )
         await self._session.commit()
 
-    async def list_pending_routes(self, limit: int) -> list[OwnedTrip]:
+    async def list_due_routes(self, now: datetime, limit: int) -> list[DueRoute]:
+        pending = TripRow.route_status == RouteStatus.PENDING.value
         stmt = (
             select(TripRow)
-            .where(TripRow.route_status == RouteStatus.PENDING.value)
-            .order_by(TripRow.created_at, TripRow.id)
+            .where(
+                pending
+                | (
+                    (TripRow.route_status == RouteStatus.STRAIGHT.value)
+                    & (TripRow.route_retry_at <= now)
+                )
+            )
+            .order_by(pending.desc(), TripRow.route_retry_at, TripRow.created_at, TripRow.id)
             .limit(limit)
         )
-        return [_owned(row) for row in await self._session.scalars(stmt)]
+        return [
+            DueRoute(owned=_owned(row), attempts=row.route_attempts)
+            for row in await self._session.scalars(stmt)
+        ]
 
     async def set_places_if_missing(self, trip_id: str, pickup: Place, dropoff: Place) -> bool:
         if self._driver_id is None:
@@ -96,7 +115,12 @@ class SqlTripRepository:
                 TripRow.driver_id == self._driver_id,
                 TripRow.pickup_lat.is_(None),
             )
-            .values(**_place_columns(pickup, dropoff), route_status=RouteStatus.PENDING.value)
+            .values(
+                **_place_columns(pickup, dropoff),
+                route_status=RouteStatus.PENDING.value,
+                route_attempts=0,
+                route_retry_at=None,
+            )
             .returning(TripRow.id)
         )
         await self._session.commit()

@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -14,8 +16,8 @@ from app.api.geo_routes import router as geo_router
 from app.api.routes import router
 from app.api.withdrawal_routes import router as withdrawal_router
 from app.application.geocoding import GeoService, RateLimiter, TtlCache
-from app.application.ports import Geocoder, Router
-from app.application.routing import complete_pending_routes
+from app.application.ports import Geocoder, Router, TripRepository
+from app.application.routing import run_route_retries
 from app.application.use_cases import seed_accounts, seed_trip_places, seed_trips
 from app.infrastructure.db import create_engine, create_sessionmaker
 from app.infrastructure.ors import MapsNotConfigured, OrsClient
@@ -26,17 +28,20 @@ from app.infrastructure.settings import Settings
 
 logger = logging.getLogger("app")
 
-# Routes still pending are built on start, at most this many per start.
-PENDING_ROUTES_PER_START = 50
 GEO_CACHE_ENTRIES = 10_000
 
 
 class Maps:
-    """The routing engine and the geocoder (one object in production)."""
+    """The routing engine and the geocoder (one object in production), and
+    the router the background retries use (longer timeout; by default the
+    same one)."""
 
-    def __init__(self, router: Router, geocoder: Geocoder) -> None:
+    def __init__(
+        self, router: Router, geocoder: Geocoder, background_router: Router | None = None
+    ) -> None:
         self.router = router
         self.geocoder = geocoder
+        self.background_router = background_router or router
 
 
 def _now() -> datetime:
@@ -47,18 +52,23 @@ def create_app(settings: Settings | None = None, maps: Maps | None = None) -> Fa
     """`maps` replaces OpenRouteService (tests); by default ORS when
     ORS_API_KEY is set, else straight-line routes and 503 for lookups."""
     settings = settings or Settings()
-    http: httpx.AsyncClient | None = None
+    clients: list[httpx.AsyncClient] = []
     if maps is None:
         key = settings.ors_key
         if key is None:
             unconfigured = MapsNotConfigured()
             maps = Maps(unconfigured, unconfigured)
         else:
-            http = httpx.AsyncClient(
-                base_url=settings.ors_base_url, timeout=settings.ors_timeout_seconds
-            )
-            ors = OrsClient(http, key)
-            maps = Maps(ors, ors)
+            clients = [
+                httpx.AsyncClient(base_url=settings.ors_base_url, timeout=timeout)
+                for timeout in (
+                    settings.ors_timeout_seconds,
+                    settings.ors_background_timeout_seconds,
+                )
+            ]
+            ors = OrsClient(clients[0], key)
+            maps = Maps(ors, ors, OrsClient(clients[1], key))
+    background_router = maps.background_router
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -67,14 +77,24 @@ def create_app(settings: Settings | None = None, maps: Maps | None = None) -> Fa
         try:
             if settings.seed_on_startup:
                 await _seed(app, settings)
-            await _complete_pending_routes(app)
         except (SQLAlchemyError, OSError):
             # Start anyway: /health then reports the database as unavailable
             # (a crash loop would hide the reason). The next start seeds.
             logger.exception("seed skipped: database unavailable")
+        # Routes are built in the background, never before the app answers
+        # (/health must not wait on ORS) and never in a request.
+        retries = (
+            asyncio.create_task(_route_retries(app, background_router, settings), name="routes")
+            if settings.route_retries_enabled
+            else None
+        )
         yield
-        if http is not None:
-            await http.aclose()
+        if retries is not None:
+            retries.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await retries
+        for client in clients:
+            await client.aclose()
         await engine.dispose()
 
     app = FastAPI(
@@ -117,13 +137,13 @@ def create_app(settings: Settings | None = None, maps: Maps | None = None) -> Fa
     return app
 
 
-async def _complete_pending_routes(app: FastAPI) -> None:
-    async with app.state.sessionmaker() as session:
-        built = await complete_pending_routes(
-            SqlTripRepository(session), app.state.router, PENDING_ROUTES_PER_START
-        )
-    if built:
-        logger.info("routes: built %d pending routes", built)
+async def _route_retries(app: FastAPI, router: Router, settings: Settings) -> None:
+    @contextlib.asynccontextmanager
+    async def open_repo() -> AsyncIterator[TripRepository]:
+        async with app.state.sessionmaker() as session:
+            yield SqlTripRepository(session)
+
+    await run_route_retries(open_repo, router, _now, per_minute=settings.route_retries_per_minute)
 
 
 async def _seed(app: FastAPI, settings: Settings) -> None:

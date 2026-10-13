@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import StrEnum
 
 from app.domain import polyline
@@ -43,3 +44,22 @@ class TripRoute:
 
 
 NO_ROUTE = TripRoute.none()
+
+# A route the engine could not build (a straight line, or pending) is tried
+# again in the background (docs/MAPS.md): 1 min, 5 min and 30 min after a
+# failure, then every 6 h, at most this many background attempts per trip.
+ROUTE_RETRY_DELAYS = (
+    timedelta(minutes=1),
+    timedelta(minutes=5),
+    timedelta(minutes=30),
+    timedelta(hours=6),
+)
+MAX_ROUTE_ATTEMPTS = 10
+
+
+def next_route_retry(attempts: int, now: datetime) -> datetime | None:
+    """When to try a failed route again after `attempts` background attempts
+    (0 when only the request's own call failed); None once they are spent."""
+    if attempts >= MAX_ROUTE_ATTEMPTS:
+        return None
+    return now + ROUTE_RETRY_DELAYS[min(attempts, len(ROUTE_RETRY_DELAYS) - 1)]
