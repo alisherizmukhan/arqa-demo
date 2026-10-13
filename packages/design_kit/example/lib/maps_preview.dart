@@ -39,16 +39,16 @@ abstract final class Places {
   static const almaty = LatLng(43.2389, 76.8897);
 }
 
-const _osm = '© OpenStreetMap contributors';
-const _withOrs = '© openrouteservice.org by HeiGIT | $_osm';
+/// The compact credits (DESIGN.md §9.1); the full ones open from the chip.
+const _osm = '© OpenStreetMap';
+const _ors = 'openrouteservice';
 
-DkMapTiles _tiles({String attribution = _osm, bool offline = false}) =>
-    DkMapTiles(
-      lightUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-      attribution: attribution,
-      userAgentPackageName: 'kz.driverdiary.design_kit_example',
-      provider: DkSketchTileProvider(offline: offline),
-    );
+DkMapTiles _tiles({bool offline = false}) => DkMapTiles(
+  lightUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: _osm,
+  userAgentPackageName: 'kz.driverdiary.design_kit_example',
+  provider: DkSketchTileProvider(offline: offline),
+);
 
 String _km(MapsCopy c, int metres) => DkFormat.distance(
   metres,
@@ -728,7 +728,8 @@ class _Details extends StatelessWidget {
           SizedBox(
             height: MediaQuery.sizeOf(context).height * 0.45,
             child: DkMapView(
-              tiles: _tiles(attribution: _withOrs, offline: tilesFail),
+              tiles: _tiles(offline: tilesFail),
+              extraAttribution: status == _Status.ready ? _ors : null,
               fit: points,
               animateTiles: false,
               layers: [
@@ -795,10 +796,15 @@ class _Details extends StatelessWidget {
           DkRouteStats(
             stats: [
               (label: c.distance, value: metres == null ? '—' : _km(c, metres)),
-              (label: c.inTransit, value: c.duration(trip.duration)),
               (
                 label: c.perKm,
                 value: perKm == null ? '—' : DkMoney.format(perKm),
+              ),
+              (
+                label: c.perMinute,
+                value: DkMoney.format(
+                  DkFormat.perMinute(trip.amount, trip.duration)!,
+                ),
               ),
             ],
           ),
@@ -917,7 +923,8 @@ class _DayMap extends StatelessWidget {
         children: [
           Expanded(
             child: DkMapView(
-              tiles: _tiles(attribution: _withOrs),
+              tiles: _tiles(),
+              extraAttribution: _ors,
               fit: [for (final r in routes) ...r.points],
               rounded: false,
               animateTiles: false,
@@ -945,18 +952,42 @@ class _DayMap extends StatelessWidget {
             ),
             child: SafeArea(
               top: false,
+              // The legend is the day's trips: a screen reader gets each
+              // one here, and each row opens it (DESIGN.md §9.5).
               child: Padding(
-                padding: EdgeInsets.all(spacing.s16),
-                child: DkFitLines([
-                  DkLine(
-                    c.routes(trips.length),
-                    style: text.titleM.copyWith(color: colors.textPrimary),
-                  ),
-                  DkLine(
-                    caption == null ? c.date : '$caption · ${c.date}',
-                    style: text.caption.copyWith(color: colors.textTertiary),
-                  ),
-                ]),
+                padding: EdgeInsets.only(top: spacing.s16, bottom: spacing.s8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: spacing.s16),
+                      child: DkFitLines([
+                        DkLine(
+                          c.routes(trips.length),
+                          style: text.titleM.copyWith(
+                            color: colors.textPrimary,
+                          ),
+                        ),
+                        DkLine(
+                          caption == null ? c.date : '$caption · ${c.date}',
+                          style: text.caption.copyWith(
+                            color: colors.textTertiary,
+                          ),
+                        ),
+                      ]),
+                    ),
+                    SizedBox(height: spacing.s8),
+                    for (final t in trips)
+                      DkListRow(
+                        title:
+                            '${DkFormat.timeRange(t.start, t.end)} · '
+                            '${DkMoney.format(t.amount)}',
+                        subtitle: '${t.from} → ${t.to}',
+                        onTap: () {},
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -995,7 +1026,8 @@ class _Kit extends StatelessWidget {
           SizedBox(
             height: 260,
             child: DkMapView(
-              tiles: _tiles(attribution: _withOrs),
+              tiles: _tiles(),
+              extraAttribution: _ors,
               fit: [...road, Places.republic],
               animateTiles: false,
               layers: [
@@ -1059,10 +1091,15 @@ class _Kit extends StatelessWidget {
           DkRouteStats(
             stats: [
               (label: c.distance, value: _km(c, 7429)),
-              (label: c.inTransit, value: c.minutes(22)),
               (
                 label: c.perKm,
                 value: DkMoney.format(DkFormat.perKilometre(2400, 7429)!),
+              ),
+              (
+                label: c.perMinute,
+                value: DkMoney.format(
+                  DkFormat.perMinute(2400, const Duration(minutes: 22))!,
+                ),
               ),
             ],
           ),

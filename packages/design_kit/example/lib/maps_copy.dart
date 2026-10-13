@@ -16,7 +16,7 @@ class MapsCopy {
     required this.notFound,
     required this.searchAddress,
     required this.distance,
-    required this.inTransit,
+    required this.perMinute,
     required this.perKm,
     required this.dayMap,
     required this.straightInfo,
@@ -101,8 +101,8 @@ class MapsCopy {
   /// «Расстояние».
   final String distance;
 
-  /// «В пути».
-  final String inTransit;
+  /// «За минуту» (proposed, approved).
+  final String perMinute;
 
   /// «За км».
   final String perKm;
@@ -296,7 +296,7 @@ final MapsCopy ruCopy = MapsCopy(
   notFound: 'Адрес не найден',
   searchAddress: 'Поиск адреса',
   distance: 'Расстояние',
-  inTransit: 'В пути',
+  perMinute: 'За минуту',
   perKm: 'За км',
   dayMap: 'Карта дня',
   straightInfo: 'Маршрут построен по прямой — сервис карт был недоступен',
@@ -367,7 +367,7 @@ final MapsCopy kkCopy = MapsCopy(
   notFound: 'Мекенжай табылмады',
   searchAddress: 'Мекенжай іздеу',
   distance: 'Қашықтық',
-  inTransit: 'Жолда',
+  perMinute: 'Минутына',
   perKm: '1 км үшін',
   dayMap: 'Күн картасы',
   straightInfo:

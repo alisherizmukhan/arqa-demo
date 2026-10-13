@@ -427,6 +427,29 @@ Three guards fail the build when DESIGN.md §10 breaks:
   - Copy not in the prompt is marked «proposed» in DESIGN.md §9.7: «Очистить», «Поездка», «N маршрутов», «м» / «км».
 - **The showcase has a fourth tab, «Карты»**, with a ru / kk switch. The tab bar scrolls: four tabs do not fit a 360 dp phone.
 
+## Maps — stage 3 (the app)
+
+Changes from the stage 2 review:
+- **«За минуту» replaces «В пути»** in the route stats: amount ÷ the trip's minutes (2 400 ₸ in 22 min → 109 ₸). → «В пути» repeated the «22 мин» right above it.
+- **The attribution is one compact line** («© OpenStreetMap», plus « · openrouteservice» while an ORS route is drawn); tapping it opens the full credits with the licence links. → The two-line chip covered markers. MAPS.md «Attribution» records why the short form meets the OSM and ORS terms, and the residual risk.
+- **The day map's legend lists the day's trips** (time · amount, A → B), each opening its details. → Screen readers get the routes there; the route taps on the map are left out of the semantics tree.
+
+The app:
+- **Places live in the trip entity** (`Trip.pickup` / `dropoff`); the route is a separate `TripRoute` that is not payload (as on the server).
+  - The polyline decoder is in the domain layer (pure Dart, tested on Google's reference string).
+  - An unreadable polyline draws nothing rather than failing the screen.
+- **The request leaves out `pickup` / `dropoff` when empty** (`includeIfNull: false`). → The production server (not yet updated) rejects unknown fields; a trip without places is byte-for-byte the old request.
+- **Tile URLs and the credit come from `--dart-define`** (`TILE_URL_LIGHT`, `TILE_URL_DARK`, `TILE_ATTRIBUTION`) through `mapTilesProvider`. Tests replace that provider with tiles drawn on the device, so no test reaches the network.
+- **Trip details show the list's copy of the trip at once** and refresh it from `GET /trips/{id}`. → No skeleton when opening a trip from the list; a straight route rebuilt elsewhere still shows.
+- **Picker:** the center marker ignores touches (a drag that starts on it still moves the map, found by a test).
+  - A search result keeps its own name; a camera move made by the app is not looked up again.
+  - A network failure shows the offline row; a map-service failure (503) reads as «address not found». Both still let the driver choose the point.
+- **A fitted map fits again after its first frame and is rebuilt when its size or points change.** → flutter_map fits its camera only at its first size. Under the golden tool's layout the fit was lost; on a device it is a safety net.
+- **The route golden is a plain `matchesGoldenFile` platform golden.** → Under alchemist the map never gets its size (no tiles, no fit). CI checks the route style through the kit tests (colors, widths, dash).
+- **Tappable trip rows: chevron 4 after the amounts, 8 from the edge.** → With the usual 12 / 16, «15 мин · Наличные» was cut at 360 dp (layout matrix).
+- **The layout matrix skips text inside a map** (markers move and are clipped by design) **and lets a place line («A → B») end in «…»** (place names come from the map service and can be any length).
+- **`--dart-define=THEME=dark|system`** for checking the dark theme on a device. The app stays light by default.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
