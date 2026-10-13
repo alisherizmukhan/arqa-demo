@@ -102,7 +102,7 @@ The ORS FAQ gives the same directions numbers.
 - Remaining quota is in the `x-ratelimit-remaining` / `x-ratelimit-reset` headers. What they really contain: see «Stage 1» below.
 
 What the quotas mean for us:
-- **Routes:** a route is built once per trip and stored. 2 000 a day is far more than a demo needs, and a failed or over-quota call gives a `straight` route, never a failed trip.
+- **Routes:** a route is built once per trip and stored. 2 000 a day is far more than a demo needs, and a failed or over-quota call gives a `straight` route, never a failed trip. The server tries such a route again in the background (see «Route building: timeouts and background retries»), at most 4 calls a minute.
 - **Geocoding:** results are cached for 24 h, by rounded coordinates for reverse and by the query text for search. The pin's reverse geocode is debounced by 500 ms and the search by 400 ms (3 characters minimum). With 1 000 calls a day each, these are the quotas to watch.
 - **Rate limit:** our own per-user limit on `/geo/*` keeps one user from using up the shared daily quota.
 
@@ -128,6 +128,31 @@ Terms:
   - OSM names in Almaty are often in Kazakh: Nominatim gave «Көк Базар», «Республика алаңы».
   - The prompt wants Russian labels («Зелёный базар»). ORS geocoding (Pelias) takes a `lang` parameter.
   - Checked in stage 1: see «Does `lang=ru` work?» below.
+
+## Route building: timeouts and background retries
+
+Decided after the day-map review (14 Oct 2026), when ORS answered in 1–2 minutes or timed out for hours.
+
+**Two timeouts.**
+- `ORS_TIMEOUT_SECONDS` (default 5): calls a request waits on — `POST /trips` with places and the manual rebuild `POST /trips/{id}/route`. The driver is waiting; after 5 s the trip is saved with a straight line.
+- `ORS_BACKGROUND_TIMEOUT_SECONDS` (default 30): the background round. Nobody waits on it.
+
+**Nothing waits on ORS at startup.**
+- Startup only migrates and seeds (database work). The routes of seed trips stay `pending`.
+- After the app is up, a background task runs one round a minute; `/health` and Railway's healthcheck never wait on ORS. Shutdown cancels the round (a call in flight is abandoned; the route stays as it was).
+
+**What a round does.** It takes at most `ROUTE_RETRIES_PER_MINUTE` (default 4) due routes, one ORS call each, then pauses a minute:
+- every `pending` route first (seed trips; a create interrupted before its route was saved);
+- then `straight` routes whose next retry is due, earliest first.
+- So the background never makes more than 4 ORS calls a minute (the free quota is 40 directions a minute, shared with drivers' own requests).
+
+**The schedule** (per trip, `trips.route_attempts` and `trips.route_retry_at`):
+- a straight line from a request: first retry 1 minute later;
+- after each failed background attempt: 5 min, 30 min, then every 6 h;
+- at most 10 background attempts, then no more (the straight line stays; the manual rebuild still works and starts the schedule again if it fails);
+- a ready route clears the schedule.
+
+`ROUTE_RETRIES_ENABLED=false` turns the round off (the tests do; the tests for it turn it on). Covered by unit tests (schedule, round limit, pending first, recovery, the loop surviving a failed round) and integration tests (a hanging map service does not delay startup or `/health`; a straight line is retried once due).
 
 ## Polyline
 
@@ -211,7 +236,7 @@ Coordinates more than 100 m from the OSM object were corrected. The seed labels 
 | Аэропорт Алматы | 43.3521, 77.0405 | area centre 43.35896, 77.02110 (1.7 km); reverse: the terminal «Almaty International Airport», 3 m | — | prompt (the terminal) |
 | MEGA Alma-Ata | 43.2016, 76.8920 | 43.20243, 76.89317 | 132 m | **43.2026, 76.8946** (after the day-map review: see below) |
 
-The seed trips with places (times and money as before). The routes were built on the developer database; user_2's routes are built the same way on the next start.
+The seed trips with places (times and money as before). The routes were built on the developer database; on any database they are built by the background round after the app starts.
 
 | Trip | Driver, time | Route | Distance | Time |
 |---|---|---|---|---|

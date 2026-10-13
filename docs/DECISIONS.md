@@ -477,6 +477,15 @@ The app:
   - t2's start: the mall's one-way driveway goes north round the block to Al-Farabi and a U-turn at the Есентай bridge;
   - t3 at 8 km (396 m) and u2-t2 at 1.3 km (272 m): U-turns on divided roads.
 
+## Maps — route building in the background (ORS timeouts)
+
+- **Two ORS timeouts:** 5 s for calls a request waits on (`POST /trips`, the manual rebuild), 30 s (`ORS_BACKGROUND_TIMEOUT_SECONDS`) for background building. → ORS was answering in 1–2 minutes; a driver must not wait that long, but seed routes and retries can.
+- **Routes are never built at startup any more.** Before, the seed routes were built inside the app's startup, so a slow ORS delayed `/health` and could fail Railway's healthcheck. Now a background task starts once the app is up.
+- **Automatic retries of straight lines:** 1 min, 5 min, 30 min, then every 6 h, at most 10 background attempts per trip (`route_attempts`, `route_retry_at`, migration 0006). → Every straight line used to wait for a manual rebuild; most ORS failures are short outages.
+- **At most 4 background ORS calls a minute** (`ROUTE_RETRIES_PER_MINUTE`): a round of at most 4 routes, then a minute's pause; pending routes first. → Stays well inside the free quota (40 directions a minute) shared with drivers' requests.
+- **A failed manual rebuild starts the schedule again** (attempts back to 0). → The driver asked for it; the straight line is fresh again.
+- Alternatives not taken: a job queue (one service, one replica: an asyncio task is enough); retrying inside the request (the driver would wait).
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.
