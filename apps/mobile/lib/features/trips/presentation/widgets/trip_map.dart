@@ -34,15 +34,32 @@ LatLng latLng(GeoPoint point) => LatLng(point.lat, point.lng);
 
 GeoPoint geoPoint(LatLng point) => GeoPoint(point.latitude, point.longitude);
 
+/// A route end farther than this from its place point gets a dashed
+/// connector (the routing engine snaps places to the nearest road).
+const connectorMetres = 30;
+
 /// The line to draw for [trip]: its route, or none (no places, or the
-/// route is not built yet).
+/// route is not built yet). The same for Trip details and the day map, so
+/// both screens draw the same geometry. Markers sit on the stored place
+/// points; where the line starts or ends more than [connectorMetres] from
+/// them, a dashed connector joins them.
 DkRoute? dkRouteOf(Trip trip) {
   final route = trip.route;
   if (!route.hasLine) return null;
+  final points = [for (final p in route.points) latLng(p)];
+  const distance = Distance();
+  List<LatLng>? connect(LatLng place, LatLng end) =>
+      distance.as(LengthUnit.Meter, place, end) > connectorMetres
+      ? [place, end]
+      : null;
   return DkRoute(
-    points: [for (final p in route.points) latLng(p)],
+    points: points,
     straight: route.status == RouteStatus.straight,
     id: trip.id,
+    connectors: [
+      if (trip.pickup case final a?) ?connect(latLng(a.point), points.first),
+      if (trip.dropoff case final b?) ?connect(points.last, latLng(b.point)),
+    ],
   );
 }
 
