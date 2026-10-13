@@ -92,90 +92,107 @@ class DkTripTile extends StatelessWidget {
         constraints: BoxConstraints(
           minHeight: context.dkSizes.tripTileMinHeight,
         ),
-        padding: EdgeInsets.symmetric(
-          horizontal: spacing.s16,
-          vertical: spacing.s12,
+        // A tappable row: the chevron sits 4 after the amounts and 8 from
+        // the edge (its glyph has its own margin), so the text keeps room.
+        padding: EdgeInsetsDirectional.fromSTEB(
+          spacing.s16,
+          spacing.s12,
+          onTap == null ? spacing.s16 : spacing.s8,
+          spacing.s12,
         ),
         child: Row(
-          spacing: spacing.s12,
           children: [
-            DkIconTile(
-              icon: method.icon,
-              background: highlighted ? colors.surface : null,
-            ),
             Expanded(
-              // DESIGN.md §10, rule 7: every line is one line. The time and
-              // the amounts are never cut; the meta and driver lines give way
-              // first; if the amounts still cannot fit at 85 %, they move to
-              // their own line under the text.
-              child: _withRoute(
-                context,
-                route,
-                DkAmountRow(
-                  gap: spacing.s12,
-                  start: DkFitLines([
-                    DkLine.span(
-                      TextSpan(
-                        style: text.bodyStrong.copyWith(
-                          color: colors.textPrimary,
-                        ),
-                        children: [
-                          TextSpan(text: timeRange),
-                          if (endsNextDay)
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.top,
-                              child: Padding(
-                                padding: EdgeInsetsDirectional.only(
-                                  start: spacing.s2,
-                                ),
-                                child: Text(
-                                  '+1',
-                                  semanticsLabel: nextDayLabel,
-                                  style: text.superscript.copyWith(
-                                    color: colors.accent,
+              child: Row(
+                spacing: spacing.s12,
+                children: [
+                  DkIconTile(
+                    icon: method.icon,
+                    background: highlighted ? colors.surface : null,
+                  ),
+                  Expanded(
+                    // DESIGN.md §10, rule 7: every line is one line. The
+                    // time and the amounts are never cut; the meta and
+                    // driver lines give way first; if the amounts still
+                    // cannot fit at 85 %, they move to their own line.
+                    child: _withRoute(
+                      context,
+                      route,
+                      DkAmountRow(
+                        gap: spacing.s12,
+                        start: DkFitLines([
+                          DkLine.span(
+                            TextSpan(
+                              style: text.bodyStrong.copyWith(
+                                color: colors.textPrimary,
+                              ),
+                              children: [
+                                TextSpan(text: timeRange),
+                                if (endsNextDay)
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.top,
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.only(
+                                        start: spacing.s2,
+                                      ),
+                                      child: Text(
+                                        '+1',
+                                        semanticsLabel: nextDayLabel,
+                                        style: text.superscript.copyWith(
+                                          color: colors.accent,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                              ],
+                            ),
+                            text: timeRange,
+                            ellipsis: false,
+                          ),
+                          DkLine(
+                            meta,
+                            style: text.bodyS.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                          if (driver case final name?)
+                            DkLine(
+                              name,
+                              style: text.caption.copyWith(
+                                color: colors.textTertiary,
                               ),
                             ),
-                        ],
-                      ),
-                      text: timeRange,
-                      ellipsis: false,
-                    ),
-                    DkLine(
-                      meta,
-                      style: text.bodyS.copyWith(color: colors.textSecondary),
-                    ),
-                    if (driver case final name?)
-                      DkLine(
-                        name,
-                        style: text.caption.copyWith(
-                          color: colors.textTertiary,
-                        ),
-                      ),
-                  ]),
-                  end: DkFitLines(textAlign: TextAlign.end, [
-                    DkLine(
-                      amount,
-                      ellipsis: false,
-                      style: text.bodyStrong.copyWith(
-                        color: colors.textPrimary,
+                        ]),
+                        end: DkFitLines(textAlign: TextAlign.end, [
+                          DkLine(
+                            amount,
+                            ellipsis: false,
+                            style: text.bodyStrong.copyWith(
+                              color: colors.textPrimary,
+                            ),
+                          ),
+                          DkLine(
+                            commission,
+                            ellipsis: false,
+                            style: text.caption.copyWith(
+                              color: colors.textTertiary,
+                            ),
+                          ),
+                        ]),
                       ),
                     ),
-                    DkLine(
-                      commission,
-                      ellipsis: false,
-                      style: text.caption.copyWith(color: colors.textTertiary),
-                    ),
-                  ]),
-                ),
+                  ),
+                ],
               ),
             ),
             if (onTap != null)
-              Icon(
-                DkIcons.next,
-                size: context.dkSizes.iconField,
-                color: colors.textTertiary,
+              Padding(
+                padding: EdgeInsetsDirectional.only(start: spacing.s4),
+                child: Icon(
+                  DkIcons.next,
+                  size: context.dkSizes.iconField,
+                  color: colors.textTertiary,
+                ),
               ),
           ],
         ),
@@ -183,9 +200,12 @@ class DkTripTile extends StatelessWidget {
     );
     final tap = onTap;
     if (tap == null) return tile;
-    return Semantics(
-      button: true,
-      child: InkWell(onTap: tap, child: tile),
+    // One node: the button carries the row's texts.
+    return MergeSemantics(
+      child: Semantics(
+        button: true,
+        child: InkWell(onTap: tap, child: tile),
+      ),
     );
   }
 }

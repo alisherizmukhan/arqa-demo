@@ -47,6 +47,13 @@ abstract final class DkFormat {
   static int? perKilometre(int amount, int metres) =>
       metres <= 0 ? null : (amount * 1000 / metres).round();
 
+  /// Tenge per minute of the trip, rounded to a whole tenge (`109`); null
+  /// for a trip under a minute.
+  static int? perMinute(int amount, Duration duration) {
+    final minutes = duration.inSeconds / 60;
+    return minutes < 1 ? null : (amount / minutes).round();
+  }
+
   /// U+00A0 between a number and its unit.
   static const String _noBreak = '\u00A0';
 

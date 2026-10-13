@@ -563,7 +563,11 @@ The driver may set where a trip started (A) and ended (B) on a map; the server b
 
 - **DkMapView** wraps flutter_map.
   - Radius `lg`, clipped. The full-screen picker has no radius.
-  - The attribution is always visible: a chip at the bottom right, `caption` textSecondary on `surface` at 90 %, radius `sm`. It wraps rather than being cut.
+  - The attribution is always visible, compact and on one line (stage 3 review):
+    - a chip at the bottom right, 11/14 textSecondary on `surface` at 90 %, radius `xs`;
+    - «© OpenStreetMap», plus « · openrouteservice» while a route built by ORS is drawn (`extraAttribution`);
+    - it never wraps: a long credit scales down; one line at 360 dp and text ×1.3 (tested);
+    - tapping it (a 48 dp area) opens «Данные карты» with the full credits and licence links, selectable (`showDkMapCredits`). See MAPS.md «Attribution».
   - Rotation is off. The camera fits the route with padding 48 (closest zoom 16).
   - On a small map the padding shrinks to a quarter of the shorter side.
   - The bottom padding has extra room (up to 32) so the attribution never covers a marker.
@@ -582,13 +586,13 @@ The driver may set where a trip started (A) and ended (B) on a map; the server b
   - otherwise a `chevron-right` 20 in textTertiary.
   - Read-only in trip details: no chevron, no clear button.
   - Each line is one line (§10: shrink to 85 %, then «…»).
-- **DkRouteStats:** three DkSummaryTiles in a DkCard (padding 16, gap 12).
+- **DkRouteStats:** three DkSummaryTiles in a DkCard (padding 16, gap 12):
   - «Расстояние» «7,4 км»;
-  - «В пути» «22 мин» — the trip's own time (end − start), the same figure as in the trip row; not the routing engine's estimate;
-  - «За км» «324 ₸» — amount ÷ km, a whole number.
+  - «За км» «324 ₸» — amount ÷ km, a whole number;
+  - «За минуту» «109 ₸» — amount ÷ the trip's own minutes (end − start), a whole number (stage 3 review: «В пути» repeated «22 мин» from the line above).
 - **DkTripTile** gets two optional parameters:
   - `route`: a line «Зелёный базар → ТРЦ Есентай Молл» (`caption`, textTertiary, one line, «…») under the time, meta and amount lines, across their full width. Beside the amounts it kept only «Зелёный базар → ТРЦ …»;
-  - `onTap`: a trailing `chevron-right` 20 in textTertiary.
+  - `onTap`: a trailing `chevron-right` 20 in textTertiary, 4 after the amounts and 8 from the edge, so the meta line keeps its room at 360 dp.
   - A trip without places stays read-only.
 - **DkTextField** gets two additions:
   - `showLabel: false`: the label is only the accessible name, and the placeholder says it (the search over the map);
@@ -671,8 +675,9 @@ A new pushed page with a back arrow and the title «Поездка».
 **Day map:** a pushed page «Карта дня» with a full-height DkMapView.
 - Every route of the day, each with its A/B markers, fitted to all of them.
 - Tapping a route opens its trip details.
-- A legend panel at the bottom (`surface`, shadow `e3`, full width): «N маршрутов» (`titleM`) and the date (`caption`).
-  - For the admin it starts with the filter: «Все водители · 1 октября 2026» or «Водитель 2 · 1 октября 2026».
+- A legend panel at the bottom (`surface`, shadow `e3`, full width, at most 40 % of the screen, scrolls):
+  - «N маршрутов» (`titleM`) and the date (`caption`); for the admin, the filter first: «Все водители · 1 октября 2026», «Водитель 2 · 1 октября 2026»;
+  - then the day's trips as DkListRows: «08:10 – 08:32 · 2 400 ₸» over «Зелёный базар → ТРЦ Есентай Молл», each opening its details. This is how a screen reader gets the routes (the map's route taps are not semantics nodes).
 - The admin sees the routes of the selected filter («Все водители» or one driver).
 
 ### 9.6 Formatting
@@ -682,6 +687,7 @@ A new pushed page with a back arrow and the title «Поездка».
   - from 1 000 m in kilometres with one decimal and a comma, «7,4 км»;
   - a no-break space before the unit (`DkFormat.distance`).
 - **Per km:** amount × 1 000 ÷ metres, rounded to a whole tenge (`DkFormat.perKilometre`), then `DkMoney.format` («324 ₸», U+202F).
+- **Per minute:** amount ÷ the trip's minutes, rounded (`DkFormat.perMinute`); none for a trip under a minute.
 - **Coordinates as a label:** «43.2380, 76.9455» — 4 decimals, a dot (a point, not a number to read).
 
 ### 9.7 Copy (ru; kk goes to app_kk.arb)
@@ -689,18 +695,22 @@ A new pushed page with a back arrow and the title «Поездка».
 From the prompt:
 - «Откуда», «Куда», «Выбрать на карте», «Выбрать это место»;
 - «Определяем адрес…», «Адрес не найден», «Поиск адреса»;
-- «Расстояние», «В пути», «За км», «Маршрут», «Карта дня»;
+- «Расстояние», «За км», «Маршрут», «Карта дня» («В пути» is no longer used);
 - «Маршрут построен по прямой — сервис карт был недоступен», «Построить заново»;
 - «Начало поездки», «Конец поездки»;
 - errors: «Укажите и начало, и конец поездки», «Точка вне Алматы», «Начало и конец совпадают».
 
 From §9.3 offline: «Нет связи — карта не загрузилась».
 
-Proposed (not in the prompt, waiting for approval):
+Proposed, approved after stage 2 (kk machine-translated, needs native review):
 - «Очистить» — the clear button;
 - «Поездка» — the details title;
 - «{n} маршрут / маршрута / маршрутов» — the day-map legend;
 - units «м», «км».
+
+Proposed in stage 3 (waiting for approval):
+- «За минуту» (kk «Минутына») — the third stat;
+- «Данные карты» (kk «Карта деректері») — the credits sheet title and the attribution's accessible name.
 
 ### 9.8 Kit implementation (stage 2)
 
@@ -713,14 +723,15 @@ Components live in `packages/design_kit/lib/src/components/dk_map.dart`. Like th
 | §9.1 item | Kit API |
 |---|---|
 | Tiles | `DkMapTiles(lightUrl, darkUrl, attribution, userAgentPackageName, provider)`. `darkens(brightness)`: the dark theme with no separate dark style. |
-| DkMapView | `DkMapView(tiles, fit \| center + zoom, layers, overlays, controller, onMapEvent, interactive, rounded, animateTiles, attributionInsets)`. |
+| DkMapView | `DkMapView(tiles, fit \| center + zoom, layers, overlays, controller, onMapEvent, interactive, rounded, animateTiles, attributionInsets, extraAttribution, onAttributionTap, attributionLabel, semanticsLabel)`. A fitted map fits again after its first frame and is rebuilt when its size or points change (flutter_map fits once). |
 | DkRouteLayer | `DkRouteLayer(routes: [DkRoute(points, straight, id)], onTap)`. `onTap` gives back the tapped route's `id` (the day map). |
 | DkPlaceMarker | `DkPlaceMarker(kind: DkPlaceKind.start / end, semanticsLabel)`. On a map: `DkPlaceMarkers(places: [(point, kind, label)])`. |
 | DkPlaceField | `DkPlaceField(kind, label, markerLabel, value, placeholder, onTap, onClear, clearLabel)`; 64 high (`dkPlaceFieldHeight`). |
 | DkRouteStats | `DkRouteStats(stats: [(label, value)])`. |
 | DkTripTile | `route` and `onTap` (optional). |
 | DkTextField | `showLabel`, `onClear` / `clearLabel`. |
-| Formatting | `DkFormat.distance(metres, metresUnit, kilometresUnit)`, `DkFormat.perKilometre(amount, metres)`. |
+| Formatting | `DkFormat.distance(metres, metresUnit, kilometresUnit)`, `DkFormat.perKilometre(amount, metres)`, `DkFormat.perMinute(amount, duration)`. |
+| Credits | `showDkMapCredits(title, credits)` / `DkMapCredits`. |
 | Tests and previews | `DkSketchTileProvider(offline)`: tiles drawn on the device (a street grid with parks and water), no network, the same picture every time. `offline: true` means tiles never arrive. |
 
 ## 10. Layout stability

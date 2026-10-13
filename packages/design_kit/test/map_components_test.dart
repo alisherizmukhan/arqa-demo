@@ -4,6 +4,7 @@
 
 import 'package:design_kit/design_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -59,6 +60,12 @@ void main() {
       expect(km(1050), '1,1 км');
       expect(km(7429), '7,4 км');
       expect(km(25641), '25,6 км');
+    });
+
+    test('tenge per minute of the trip, whole; none under a minute', () {
+      expect(DkFormat.perMinute(2400, const Duration(minutes: 22)), 109);
+      expect(DkFormat.perMinute(1500, const Duration(minutes: 15)), 100);
+      expect(DkFormat.perMinute(1500, const Duration(seconds: 30)), isNull);
     });
 
     test('tenge per km is a whole number; none without a distance', () {
@@ -411,6 +418,59 @@ void main() {
 
       await tester.tap(find.byIcon(DkIcons.close));
       expect(cleared, 1);
+    });
+  });
+
+  group('attribution', () {
+    Widget map({String? extra, VoidCallback? onTap}) => SizedBox(
+      height: 300,
+      child: DkMapView(
+        tiles: _tiles(),
+        center: _a,
+        animateTiles: false,
+        extraAttribution: extra,
+        onAttributionTap: onTap,
+        attributionLabel: onTap == null ? null : 'Данные карты',
+      ),
+    );
+
+    testWidgets('one line at 360 dp, text x1.3, 11 px', (tester) async {
+      await _pump(
+        tester,
+        map(extra: 'openrouteservice', onTap: () {}),
+        size: const Size(360, 780),
+        textScale: 1.3,
+      );
+      final text = find.text('© OpenStreetMap contributors · openrouteservice');
+      expect(text, findsOneWidget);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: text, matching: find.byType(RichText)),
+      );
+      expect(paragraph.maxLines, 1);
+      expect(paragraph.text.style!.fontSize, 11);
+      // The chip's visible height stays small; its tap area is 48.
+      expect(tester.getSize(find.bySemanticsLabel('Данные карты')).height, 48);
+    });
+
+    testWidgets('a tap opens the credits', (tester) async {
+      var taps = 0;
+      await _pump(tester, map(onTap: () => taps++));
+      await tester.tap(find.text('© OpenStreetMap contributors'));
+      expect(taps, 1);
+    });
+
+    testWidgets('the credits sheet shows every line, selectable', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        const DkMapCredits(
+          title: 'Данные карты',
+          credits: ['Map data © OpenStreetMap contributors', '© HeiGIT'],
+        ),
+      );
+      expect(find.text('Данные карты'), findsOneWidget);
+      expect(find.byType(SelectableText), findsNWidgets(2));
     });
   });
 }

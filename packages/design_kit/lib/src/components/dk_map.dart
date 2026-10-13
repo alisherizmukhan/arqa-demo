@@ -42,7 +42,7 @@ class DkMapTiles {
   /// rotated), so the map is never a white block next to dark cards.
   final String? darkUrl;
 
-  /// Always visible on the map, e.g. «© OpenStreetMap contributors».
+  /// The tiles' credit, always visible on the map, short: «© OpenStreetMap».
   final String attribution;
 
   /// Sent in the User-Agent (OSM tile policy).
@@ -80,8 +80,16 @@ class DkMapView extends StatelessWidget {
     this.rounded = true,
     this.animateTiles = true,
     this.attributionInsets = EdgeInsets.zero,
+    this.extraAttribution,
+    this.onAttributionTap,
+    this.attributionLabel,
+    this.semanticsLabel,
     super.key,
-  }) : assert(fit.length > 0 || center != null, 'give fit or center');
+  }) : assert(fit.length > 0 || center != null, 'give fit or center'),
+       assert(
+         onAttributionTap == null || attributionLabel != null,
+         'a tappable attribution needs its accessible name',
+       );
 
   /// Tile source and attribution.
   final DkMapTiles tiles;
@@ -120,6 +128,21 @@ class DkMapView extends StatelessWidget {
   /// overlays (the picker's bottom card).
   final EdgeInsets attributionInsets;
 
+  /// Added after the tiles' credit with « · » while the map shows its data,
+  /// e.g. «openrouteservice» when an ORS route is drawn.
+  final String? extraAttribution;
+
+  /// Opens the full credits and licence links (OSM asks that they be
+  /// reachable from the map).
+  final VoidCallback? onAttributionTap;
+
+  /// Accessible name of the attribution button («Данные карты»).
+  final String? attributionLabel;
+
+  /// The map's accessible name («Маршрут», «Карта дня»): an interactive
+  /// map is a tappable node and needs one.
+  final String? semanticsLabel;
+
   @override
   Widget build(BuildContext context) {
     final spacing = context.dkSpacing;
@@ -129,15 +152,21 @@ class DkMapView extends StatelessWidget {
         final map = _map(context, constraints.biggest, brightness);
         final stack = Stack(
           children: [
-            Positioned.fill(child: map),
+            Positioned.fill(
+              child: Semantics(label: semanticsLabel, child: map),
+            ),
             ...overlays,
             PositionedDirectional(
-              end: spacing.s8 + attributionInsets.right,
-              bottom: spacing.s8 + attributionInsets.bottom,
+              end: spacing.s4 + attributionInsets.right,
+              bottom: attributionInsets.bottom,
               start: spacing.s48,
               child: Align(
                 alignment: AlignmentDirectional.bottomEnd,
-                child: _Attribution(tiles.attribution),
+                child: _Attribution(
+                  [tiles.attribution, ?extraAttribution].join(' · '),
+                  onTap: onAttributionTap,
+                  label: attributionLabel,
+                ),
               ),
             ),
           ],
@@ -152,11 +181,12 @@ class DkMapView extends StatelessWidget {
   }
 
   /// The fit padding: 48, less on a small map (a quarter of its shorter
-  /// side), and more at the bottom so the attribution never covers a marker.
+  /// side), and a little more at the bottom so the attribution never covers
+  /// a marker.
   EdgeInsets _fitPadding(BuildContext context, Size size) {
     final side = size.shortestSide.isFinite ? size.shortestSide : 400.0;
     final pad = math.min(context.dkSpacing.s48, side / 4);
-    return EdgeInsets.fromLTRB(pad, pad, pad, pad + math.min(32, side / 8));
+    return EdgeInsets.fromLTRB(pad, pad, pad, pad + math.min(16, side / 8));
   }
 
   Widget _map(BuildContext context, Size size, Brightness brightness) {
@@ -169,6 +199,19 @@ class DkMapView extends StatelessWidget {
           )
         : null;
     return FlutterMap(
+      // flutter_map fits its camera once, at its first size. A fitted map is
+      // built again when its size or its points change, so the fit always
+      // matches what is shown (the picker centers instead and keeps its
+      // camera).
+      key: camera == null
+          ? null
+          : ValueKey(
+              Object.hash(
+                size.width.round(),
+                size.height.round(),
+                Object.hashAll(fit),
+              ),
+            ),
       mapController: controller,
       options: MapOptions(
         initialCenter: center ?? fit.first,
@@ -192,45 +235,110 @@ class DkMapView extends StatelessWidget {
               ? const TileDisplay.fadeIn()
               : const TileDisplay.instantaneous(),
         ),
+        // Fits again after the first frame: the initial fit can be lost
+        // when the map is first laid out before its final size.
+        if (camera != null) _FitOnReady(camera),
         ...layers,
       ],
     );
   }
 }
 
+/// Fits the map's camera once its first frame is drawn.
+class _FitOnReady extends StatefulWidget {
+  const new(this.fit);
+
+  final CameraFit fit;
+
+  @override
+  State<_FitOnReady> createState() => _FitOnReadyState();
+}
+
+class _FitOnReadyState extends State<_FitOnReady> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) MapController.of(context).fitCamera(widget.fit);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
 /// Closest a fitted camera goes: a short trip still shows its streets.
 const double _maxFitZoom = 16;
 
-/// The attribution chip: `caption`, textSecondary on `surface` (90 %),
-/// radius `sm`; it wraps rather than being cut (licence text).
+/// The attribution chip, DESIGN.md §9.1: one line, 11 px, textSecondary on
+/// `surface` (90 %), radius `xs`. It never wraps: a long credit scales down
+/// instead. Tappable ([onTap]) through a 48 dp high area, though the chip
+/// itself is small.
 class _Attribution extends StatelessWidget {
-  const new(this.text);
+  const new(this.text, {this.onTap, this.label});
 
   final String text;
+  final VoidCallback? onTap;
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
     final spacing = context.dkSpacing;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(context.dkRadii.sm),
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: spacing.s6,
-          vertical: spacing.s2,
+    final chip = Padding(
+      padding: EdgeInsets.only(bottom: spacing.s4),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(context.dkRadii.xs),
         ),
-        child: Text(
-          text,
-          textAlign: TextAlign.end,
-          style: context.dkText.caption.copyWith(color: colors.textSecondary),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: spacing.s4, vertical: 1),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerEnd,
+            child: Text(
+              text,
+              maxLines: 1,
+              softWrap: false,
+              style: context.dkText.caption.copyWith(
+                fontSize: _attributionSize,
+                height: _attributionLine / _attributionSize,
+                color: colors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final tap = onTap;
+    if (tap == null) return chip;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: tap,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: context.dkSizes.tapTargetMin,
+            minWidth: context.dkSizes.tapTargetMin,
+          ),
+          child: Align(
+            alignment: AlignmentDirectional.bottomEnd,
+            widthFactor: 1,
+            heightFactor: 1,
+            child: chip,
+          ),
         ),
       ),
     );
   }
 }
+
+const double _attributionSize = 11;
+const double _attributionLine = 14;
 
 /// One route on a map: its points (decoded by the app) and whether it is
 /// the straight-line fallback.
@@ -307,7 +415,10 @@ class _DkRouteLayerState extends State<DkRouteLayer> {
     );
     final onTap = widget.onTap;
     if (onTap == null) return layer;
+    // Not a semantics node: the screen lists the same routes for screen
+    // readers (the day map's legend).
     return GestureDetector(
+      excludeFromSemantics: true,
       onTap: () {
         final hit = _hits.value?.hitValues;
         if (hit != null && hit.isNotEmpty) onTap(hit.first);
@@ -452,69 +563,78 @@ class DkPlaceField extends StatelessWidget {
     final spacing = context.dkSpacing;
     final sizes = context.dkSizes;
     final address = value;
-    final clear = onClear;
-    final row = SizedBox(
-      height: dkPlaceFieldHeight,
-      child: Padding(
-        padding: EdgeInsetsDirectional.only(
-          start: spacing.s16,
-          end: clear != null && address != null ? spacing.s4 : spacing.s16,
-        ),
-        child: Row(
-          spacing: spacing.s12,
-          children: [
-            SizedBox(
-              width: sizes.iconTile,
-              child: Center(
-                child: DkPlaceMarker(kind: kind, semanticsLabel: markerLabel),
-              ),
+    final clear = address != null ? onClear : null;
+    // The marker, the texts and the chevron are one node (a button when
+    // [onTap]): «Начало поездки, Откуда, Зелёный базар». The clear button
+    // is its own node beside it.
+    final main = Padding(
+      padding: EdgeInsetsDirectional.only(
+        start: spacing.s16,
+        end: clear != null ? 0 : spacing.s16,
+      ),
+      child: Row(
+        spacing: spacing.s12,
+        children: [
+          SizedBox(
+            width: sizes.iconTile,
+            child: Center(
+              child: DkPlaceMarker(kind: kind, semanticsLabel: markerLabel),
             ),
-            Expanded(
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: DkFitLines([
+          ),
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: DkFitLines([
+                DkLine(
+                  label,
+                  style: text.caption.copyWith(color: colors.textTertiary),
+                ),
+                if (address != null)
                   DkLine(
-                    label,
-                    style: text.caption.copyWith(color: colors.textTertiary),
+                    address,
+                    style: text.bodyStrong.copyWith(color: colors.textPrimary),
+                  )
+                else if (placeholder case final hint?)
+                  DkLine(
+                    hint,
+                    style: text.body.copyWith(color: colors.textTertiary),
                   ),
-                  if (address != null)
-                    DkLine(
-                      address,
-                      style: text.bodyStrong.copyWith(
-                        color: colors.textPrimary,
-                      ),
-                    )
-                  else if (placeholder case final hint?)
-                    DkLine(
-                      hint,
-                      style: text.body.copyWith(color: colors.textTertiary),
-                    ),
-                ]),
-              ),
+              ]),
             ),
-            if (address != null && clear != null)
-              DkIconButton(
-                icon: DkIcons.close,
-                label: clearLabel!,
-                onPressed: clear,
-              )
-            else if (onTap != null)
-              Icon(
-                DkIcons.next,
-                size: sizes.iconField,
-                color: colors.textTertiary,
-              ),
-          ],
-        ),
+          ),
+          if (clear == null && onTap != null)
+            Icon(
+              DkIcons.next,
+              size: sizes.iconField,
+              color: colors.textTertiary,
+            ),
+        ],
       ),
     );
     final tap = onTap;
-    if (tap == null) return MergeSemantics(child: row);
-    return Semantics(
-      button: true,
-      child: InkWell(
-        onTap: tap,
-        child: MergeSemantics(child: row),
+    final tappable = MergeSemantics(
+      child: tap == null
+          ? main
+          : Semantics(
+              button: true,
+              child: InkWell(onTap: tap, child: main),
+            ),
+    );
+    return SizedBox(
+      height: dkPlaceFieldHeight,
+      child: Row(
+        children: [
+          Expanded(child: tappable),
+          if (clear != null)
+            Padding(
+              padding: EdgeInsetsDirectional.only(end: spacing.s4),
+              child: DkIconButton(
+                icon: DkIcons.close,
+                label: clearLabel!,
+                onPressed: clear,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -545,6 +665,79 @@ class DkRouteStats extends StatelessWidget {
               child: DkSummaryTile(label: stat.label, value: stat.value),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// The map's full credits (DESIGN.md §9.1): opened from the attribution
+/// chip. [credits] are shown as they are (licence texts are not translated)
+/// and can be selected and copied, links included.
+Future<void> showDkMapCredits(
+  BuildContext context, {
+  required String title,
+  required List<String> credits,
+}) {
+  final colors = context.dkColors;
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: colors.surface,
+    barrierColor: colors.scrim,
+    useSafeArea: true,
+    isScrollControlled: true,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(context.dkRadii.xl),
+      ),
+    ),
+    builder: (_) => DkMapCredits(title: title, credits: credits),
+  );
+}
+
+/// The content of [showDkMapCredits] (public for previews and tests).
+class DkMapCredits extends StatelessWidget {
+  /// Creates the content.
+  const new({required this.title, required this.credits, super.key});
+
+  /// «Данные карты».
+  final String title;
+
+  /// One paragraph each.
+  final List<String> credits;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dkColors;
+    final text = context.dkText;
+    final spacing = context.dkSpacing;
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          spacing.s16,
+          spacing.s20,
+          spacing.s16,
+          spacing.s24,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          spacing: spacing.s12,
+          children: [
+            Semantics(
+              header: true,
+              child: Text(
+                title,
+                style: text.titleM.copyWith(color: colors.textPrimary),
+              ),
+            ),
+            for (final credit in credits)
+              SelectableText(
+                credit,
+                style: text.bodyS.copyWith(color: colors.textSecondary),
+              ),
+          ],
+        ),
       ),
     );
   }
