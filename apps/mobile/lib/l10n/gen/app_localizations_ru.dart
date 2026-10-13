@@ -637,4 +637,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String dayMapTrip(String time, String amount) {
     return '$time · $amount';
   }
+
+  @override
+  String routeOf(int index, int total) {
+    return 'Маршрут $index из $total';
+  }
+
+  @override
+  String get openTrip => 'Открыть поездку';
 }

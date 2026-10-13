@@ -633,4 +633,12 @@ class AppLocalizationsKk extends AppLocalizations {
   String dayMapTrip(String time, String amount) {
     return '$time · $amount';
   }
+
+  @override
+  String routeOf(int index, int total) {
+    return 'Бағыт $index / $total';
+  }
+
+  @override
+  String get openTrip => 'Сапарды ашу';
 }

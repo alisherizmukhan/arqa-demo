@@ -219,5 +219,8 @@
   "routePlaces": "{from} → {to}",
   "@routePlaces": {"placeholders": {"from": {"type": "String"}, "to": {"type": "String"}}},
   "dayMapTrip": "{time} · {amount}",
-  "@dayMapTrip": {"placeholders": {"time": {"type": "String"}, "amount": {"type": "String"}}}
+  "@dayMapTrip": {"placeholders": {"time": {"type": "String"}, "amount": {"type": "String"}}},
+  "routeOf": "Маршрут {index} из {total}",
+  "@routeOf": {"placeholders": {"index": {"type": "int"}, "total": {"type": "int"}}},
+  "openTrip": "Открыть поездку"
 }

@@ -193,5 +193,7 @@
   "unitKilometres": "км",
   "routesCount": "{count, plural, one{{count} бағыт} other{{count} бағыт}}",
   "routePlaces": "{from} → {to}",
-  "dayMapTrip": "{time} · {amount}"
+  "dayMapTrip": "{time} · {amount}",
+  "routeOf": "Бағыт {index} / {total}",
+  "openTrip": "Сапарды ашу"
 }

@@ -24,11 +24,13 @@ Future<void> openDayMap(
   ),
 );
 
-/// Every route of a day on one map, DESIGN.md §9.5. Under the map, the
-/// legend is the list of the day's trips (time · amount, A → B): a screen
-/// reader gets each trip there, and each row opens its details, like a tap
-/// on its route.
-class DayMapScreen extends ConsumerWidget {
+/// Every route of a day on one map, DESIGN.md §9.5. The trips are numbered
+/// in time order: the start marker shows the number, the end is a dot (an
+/// end that is the next trip's start is not drawn twice). Under the map,
+/// the same numbers in the list. Tapping a row or a route selects it: it
+/// stays in `routeLine` over the others (muted) and the map fits to it;
+/// tapping it again clears the selection. Each row's button opens the trip.
+class DayMapScreen extends ConsumerStatefulWidget {
   const new({required this.day, this.driverId, this.filter, super.key});
 
   final CalendarDay day;
@@ -36,17 +38,31 @@ class DayMapScreen extends ConsumerWidget {
   final String? filter;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DayMapScreen> createState() => _DayMapScreenState();
+}
+
+class _DayMapScreenState extends ConsumerState<DayMapScreen> {
+  String? _selected;
+
+  void _toggle(Object id) =>
+      setState(() => _selected = _selected == id ? null : id as String);
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final trips = [
       for (final trip
-          in ref.watch(dayTripsProvider(day, driverId: driverId)).value ??
+          in ref
+                  .watch(
+                    dayTripsProvider(widget.day, driverId: widget.driverId),
+                  )
+                  .value ??
               const <Trip>[])
         if (trip.hasPlaces) trip,
-    ];
+    ]..sort((a, b) => a.start.compareTo(b.start));
+    final selected = trips.where((t) => t.id == _selected).firstOrNull;
     final routes = [for (final t in trips) ?dkRouteOf(t)];
-    final fit = fitPointsOf(trips);
-    final byId = {for (final t in trips) t.id: t};
+    final fit = fitPointsOf(selected == null ? trips : [selected]);
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -76,21 +92,20 @@ class DayMapScreen extends ConsumerWidget {
                       layers: [
                         DkRouteLayer(
                           routes: routes,
-                          onTap: (id) {
-                            if (byId[id] case final trip?) {
-                              unawaited(openTripDetails(context, trip));
-                            }
-                          },
+                          selected: _selected,
+                          onTap: _toggle,
                         ),
-                        DkPlaceMarkers(
-                          places: [
-                            for (final t in trips) ...markersOf(t, l10n),
-                          ],
-                        ),
+                        DkPlaceMarkers(markers: dayMapMarkers(trips, l10n)),
                       ],
                     ),
             ),
-            _Legend(day: day, trips: trips, filter: filter),
+            _Legend(
+              day: widget.day,
+              trips: trips,
+              filter: widget.filter,
+              selected: _selected,
+              onSelect: _toggle,
+            ),
           ],
         ),
       ),
@@ -98,13 +113,22 @@ class DayMapScreen extends ConsumerWidget {
   }
 }
 
-/// «N маршрутов» and the date (with the admin's filter), then the trips.
+/// «N маршрутов» and the date (with the admin's filter), then the trips,
+/// numbered as on the map.
 class _Legend extends ConsumerWidget {
-  const new({required this.day, required this.trips, this.filter});
+  const new({
+    required this.day,
+    required this.trips,
+    required this.selected,
+    required this.onSelect,
+    this.filter,
+  });
 
   final CalendarDay day;
   final List<Trip> trips;
   final String? filter;
+  final String? selected;
+  final ValueChanged<Object> onSelect;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -153,14 +177,27 @@ class _Legend extends ConsumerWidget {
                 ),
               ),
               SizedBox(height: spacing.s8),
-              for (final trip in trips)
+              for (final (i, trip) in trips.indexed)
                 DkListRow(
+                  leading: DkPlaceMarker(
+                    kind: DkPlaceKind.start,
+                    number: i + 1,
+                    semanticsLabel: '',
+                  ),
+                  semanticsLabel: l10n.routeOf(i + 1, trips.length),
                   title: l10n.dayMapTrip(
                     DkFormat.timeRange(clock(trip.start), clock(trip.end)),
                     DkMoney.format(trip.amount),
                   ),
                   subtitle: routeLine(trip, l10n),
-                  onTap: () => openTripDetails(context, trip),
+                  selected: trip.id == selected,
+                  onTap: () => onSelect(trip.id),
+                  trailingIsAction: true,
+                  trailing: DkIconButton(
+                    icon: DkIcons.next,
+                    label: l10n.openTrip,
+                    onPressed: () => unawaited(openTripDetails(context, trip)),
+                  ),
                 ),
             ],
           ),

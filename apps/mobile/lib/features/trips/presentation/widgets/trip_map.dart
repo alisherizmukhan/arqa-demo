@@ -6,9 +6,9 @@ import 'package:driver_diary/features/trips/domain/entities/trip_route.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
-/// The routing service's short credit, added to the tile credit while a
-/// route it built is on the map (DESIGN.md §9.1).
-const orsAttribution = 'openrouteservice';
+/// The routing service's credit in its requested wording, added to the
+/// tile credit while a route it built is on the map (DESIGN.md §9.1).
+const orsAttribution = '© openrouteservice.org by HeiGIT';
 
 /// The map's full credits (the licence texts, not translated; docs/MAPS.md).
 const List<String> mapCreditLines = [_osmCredit, _tilesCredit, _orsCredit];
@@ -56,6 +56,46 @@ List<({LatLng point, DkPlaceKind kind, String label})> markersOf(
   if (trip.dropoff case final b?)
     (point: latLng(b.point), kind: DkPlaceKind.end, label: l10n.markerEnd),
 ];
+
+/// An end this close to the next trip's start is the same place: one
+/// marker, the next trip's number (DESIGN.md §9.5).
+const sharedPlaceMetres = 50;
+
+/// The day map's markers for [trips] (in time order, numbered from 1): a
+/// numbered start each, and an end dot unless the next trip starts within
+/// [sharedPlaceMetres]. Dots first, so a number covers a dot.
+List<({LatLng point, DkPlaceMarker marker})> dayMapMarkers(
+  List<Trip> trips,
+  AppLocalizations l10n,
+) {
+  const distance = Distance();
+  final dots = <({LatLng point, DkPlaceMarker marker})>[];
+  final numbers = <({LatLng point, DkPlaceMarker marker})>[];
+  for (final (i, trip) in trips.indexed) {
+    final (a, b) = (trip.pickup, trip.dropoff);
+    if (a == null || b == null) continue;
+    numbers.add((
+      point: latLng(a.point),
+      marker: DkPlaceMarker(
+        kind: DkPlaceKind.start,
+        number: i + 1,
+        semanticsLabel: l10n.markerStart,
+      ),
+    ));
+    final next = i + 1 < trips.length ? trips[i + 1].pickup : null;
+    final shared =
+        next != null &&
+        distance.as(LengthUnit.Meter, latLng(b.point), latLng(next.point)) <=
+            sharedPlaceMetres;
+    if (!shared) {
+      dots.add((
+        point: latLng(b.point),
+        marker: DkPlaceMarker.dot(semanticsLabel: l10n.markerEnd),
+      ));
+    }
+  }
+  return [...dots, ...numbers];
+}
 
 /// Every point a map of [trips] should fit: their lines and places.
 List<LatLng> fitPointsOf(Iterable<Trip> trips) => [

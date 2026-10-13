@@ -293,7 +293,10 @@ void main() {
       ); // per minute: 2400 / 22
       expect(find.text('Зелёный базар'), findsOneWidget);
       expect(find.text('ТРЦ Есентай Молл'), findsOneWidget);
-      expect(find.text('© OpenStreetMap · openrouteservice'), findsOneWidget);
+      expect(
+        find.text('© OpenStreetMap · © openrouteservice.org by HeiGIT'),
+        findsOneWidget,
+      );
       expect(find.text(tr.routeStraightInfo), findsNothing);
       await disposeApp(tester);
     });
@@ -365,7 +368,9 @@ void main() {
 
     testWidgets('the attribution opens the full credits', (tester) async {
       await openDetails(tester, FakeTripsRepository([mapT1]), mapT1);
-      await tester.tap(find.text('© OpenStreetMap · openrouteservice'));
+      await tester.tap(
+        find.text('© OpenStreetMap · © openrouteservice.org by HeiGIT'),
+      );
       await tester.pumpAndSettle();
       expect(find.text(tr.mapCredits), findsOneWidget);
       expect(
@@ -373,7 +378,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.textContaining('© openrouteservice.org by HeiGIT'),
+        find.textContaining('Routes and addresses: © openrouteservice.org'),
         findsOneWidget,
       );
       await disposeApp(tester);
@@ -409,9 +414,8 @@ void main() {
       await disposeApp(tester);
     });
 
-    testWidgets('the day map: two routes, and the list opens a trip', (
-      tester,
-    ) async {
+    testWidgets('the day map: numbered routes; one marker where a trip '
+        'starts at the previous end', (tester) async {
       useDevice(tester, phone390);
       await pumpDiary(tester, FakeTripsRepository([mapT1, mapT2]));
       await selectDay(tester, referenceDay);
@@ -423,17 +427,64 @@ void main() {
           .widget<DkRouteLayer>(find.byType(DkRouteLayer))
           .routes;
       expect(routes.map((r) => r.id), ['t1', 't2']);
+      final markers = tester
+          .widget<DkPlaceMarkers>(find.byType(DkPlaceMarkers))
+          .markers;
+      // t1 ends at ТРЦ Есентай Молл, where t2 starts: one marker («2»)
+      // there, no dot under it; t2's end is a dot.
+      expect(markers.map((m) => m.marker.dot ? 'dot' : '${m.marker.number}'), [
+        'dot',
+        '1',
+        '2',
+      ]);
+      expect(markers.last.marker.number, 2);
       expect(find.text(tr.routesCount(2)), findsOneWidget);
+      await disposeApp(tester);
+    });
+
+    testWidgets('a row selects its route (map fits to it); again clears; '
+        'the button opens the trip', (tester) async {
+      final semantics = tester.ensureSemantics();
+      useDevice(tester, phone390);
+      await pumpDiary(tester, FakeTripsRepository([mapT1, mapT2]));
+      await selectDay(tester, referenceDay);
+      await tester.tap(iconButton(tr.dayMap));
+      await tester.pumpAndSettle();
+      final allFit = tester.widget<DkMapView>(find.byType(DkMapView)).fit;
       expect(
-        find.text('ТРЦ Есентай Молл → Площадь Республики'),
+        find.bySemanticsLabel(RegExp('^${tr.routeOf(2, 2)}')),
         findsOneWidget,
       );
 
       await tester.tap(find.text('ТРЦ Есентай Молл → Площадь Республики'));
       await tester.pumpAndSettle();
+      final layer = tester.widget<DkRouteLayer>(find.byType(DkRouteLayer));
+      expect(layer.selected, 't2');
+      final fit = tester.widget<DkMapView>(find.byType(DkMapView)).fit;
+      expect(fit.length, lessThan(allFit.length));
+      final rows = tester.widgetList<DkListRow>(find.byType(DkListRow));
+      expect(rows.map((r) => r.selected), [false, true]);
+
+      // Tapping the selected route on the map clears it too.
+      layer.onTap!('t2');
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<DkRouteLayer>(find.byType(DkRouteLayer)).selected,
+        isNull,
+      );
+
+      await tester.tap(
+        find
+            .byWidgetPredicate(
+              (w) => w is DkIconButton && w.label == tr.openTrip,
+            )
+            .last,
+      );
+      await tester.pumpAndSettle();
       expect(find.byType(TripDetailsScreen), findsOneWidget);
       expect(find.text('Площадь Республики'), findsOneWidget);
       await disposeApp(tester);
+      semantics.dispose();
     });
 
     testWidgets('admin: the day map follows the driver filter', (tester) async {

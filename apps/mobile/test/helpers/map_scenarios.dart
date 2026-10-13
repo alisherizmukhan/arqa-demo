@@ -177,6 +177,19 @@ final mapScenarios = <Scenario>[
       await tester.pumpAndSettle();
     },
   ),
+  (
+    id: 'm15_day_map_selected',
+    run: (tester) async {
+      await pumpDiary(
+        tester,
+        FakeTripsRepository([mapT1, mapT2, _plain]),
+        home: DayMapScreen(day: referenceDay),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ТРЦ Есентай Молл → Площадь Республики'));
+      await tester.pumpAndSettle();
+    },
+  ),
 ];
 
 /// Map states also shot in the dark theme.
@@ -187,4 +200,5 @@ const darkMapScenarioIds = {
   'm10_details_ready',
   'm11_details_straight',
   'm13_day_map',
+  'm15_day_map_selected',
 };

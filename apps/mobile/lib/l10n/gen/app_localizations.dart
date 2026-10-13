@@ -1207,6 +1207,18 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'{time} · {amount}'**
   String dayMapTrip(String time, String amount);
+
+  /// No description provided for @routeOf.
+  ///
+  /// In ru, this message translates to:
+  /// **'Маршрут {index} из {total}'**
+  String routeOf(int index, int total);
+
+  /// No description provided for @openTrip.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть поездку'**
+  String get openTrip;
 }
 
 class _AppLocalizationsDelegate
