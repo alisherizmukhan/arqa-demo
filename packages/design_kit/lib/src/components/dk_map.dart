@@ -4,6 +4,7 @@ import 'package:design_kit/src/components/dk_card.dart';
 import 'package:design_kit/src/components/dk_chrome.dart';
 import 'package:design_kit/src/format/dk_fit_text.dart';
 import 'package:design_kit/src/theme/dk_context.dart';
+import 'package:design_kit/src/tokens/dk_colors.dart';
 import 'package:design_kit/src/tokens/dk_icons.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -345,10 +346,21 @@ const double _attributionLine = 14;
 @immutable
 class DkRoute {
   /// Creates a route.
-  const new({required this.points, this.straight = false, this.id});
+  const new({
+    required this.points,
+    this.straight = false,
+    this.id,
+    this.connectors = const [],
+  });
 
   /// The line, start to end.
   final List<LatLng> points;
+
+  /// Short pieces from a place point to the line's end when the routing
+  /// engine started or ended the line away from it (it snaps to a road):
+  /// drawn thin and dashed, so the line visibly reaches its marker
+  /// (DESIGN.md §9.1).
+  final List<List<LatLng>> connectors;
 
   /// `route_status = straight`: drawn dashed (6/6).
   final bool straight;
@@ -384,6 +396,10 @@ const double _routeWidth = 5;
 /// Casing on each side: 5 + 2 × 1.5 = 8 dp in all.
 const double _casingWidth = 1.5;
 
+/// A connector to a place point: 2 dp, dashed 4/4.
+const double _connectorWidth = 2;
+const List<double> _connectorDashes = [4, 4];
+
 /// Straight-line fallback: 6 dp dash, 6 dp gap.
 const List<double> _dashes = [6, 6];
 
@@ -395,6 +411,11 @@ class _DkRouteLayerState extends State<DkRouteLayer> {
     _hits.dispose();
     super.dispose();
   }
+
+  Color _colorOf(DkRoute route, DkColors colors) =>
+      widget.selected == null || route.id == widget.selected
+      ? colors.routeLine
+      : colors.routeMuted;
 
   /// The selected route last, so it is drawn over the others.
   List<DkRoute> get _ordered {
@@ -415,13 +436,21 @@ class _DkRouteLayerState extends State<DkRouteLayer> {
       hitNotifier: widget.onTap == null ? null : _hits,
       minimumHitbox: context.dkSizes.tapTargetMin / 2,
       polylines: [
-        for (final route in _ordered)
+        for (final route in _ordered) ...[
+          for (final connector in route.connectors)
+            Polyline<Object>(
+              points: connector,
+              strokeWidth: _connectorWidth,
+              color: _colorOf(route, colors),
+              borderStrokeWidth: _casingWidth,
+              borderColor: colors.routeCasing,
+              pattern: StrokePattern.dashed(segments: _connectorDashes),
+              hitValue: route.id,
+            ),
           Polyline<Object>(
             points: route.points,
             strokeWidth: _routeWidth,
-            color: widget.selected == null || route.id == widget.selected
-                ? colors.routeLine
-                : colors.routeMuted,
+            color: _colorOf(route, colors),
             borderStrokeWidth: _casingWidth,
             borderColor: colors.routeCasing,
             pattern: route.straight
@@ -429,6 +458,7 @@ class _DkRouteLayerState extends State<DkRouteLayer> {
                 : const StrokePattern.solid(),
             hitValue: route.id,
           ),
+        ],
       ],
     );
     final onTap = widget.onTap;

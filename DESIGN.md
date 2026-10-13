@@ -575,6 +575,7 @@ The driver may set where a trip started (A) and ended (B) on a map; the server b
   - The bottom padding has extra room (up to 32) so the attribution never covers a marker.
   - `surfaceMuted` shows behind the tiles. If tiles fail to load, the map is a grey area with the attribution, and the screen still works.
 - **DkRouteLayer:** a 5 dp line in `routeLine` over an 8 dp `routeCasing`.
+  - **Markers always sit on the stored place points.** The routing engine snaps a place to the nearest road, so its line can start or end away from it. Where the line's first or last point is more than 30 m from its place point, a dashed connector (2 dp, 4/4, the route's colour) joins them. Trip details and the day map draw exactly the same geometry (`dkRouteOf`, tested).
   - Dashed 6/6 when `route_status = straight`.
   - On the day map, tapping a route opens its trip.
 - **DkPlaceMarker:** a 32 dp circle with a 2 dp `markerRing` and the letter «A» / «B» (13/800).

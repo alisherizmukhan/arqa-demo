@@ -586,4 +586,42 @@ void main() {
       semantics.dispose();
     });
   });
+
+  testWidgets('a connector is a thin dashed line in the route colour', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      SizedBox(
+        height: 300,
+        child: DkMapView(
+          tiles: _tiles(),
+          fit: const [_a, _b],
+          animateTiles: false,
+          layers: const [
+            DkRouteLayer(
+              routes: [
+                DkRoute(
+                  points: [_a, _b],
+                  id: 'one',
+                  connectors: [
+                    [LatLng(43.2635, 76.9552), _a],
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    final lines = tester
+        .widget<PolylineLayer<Object>>(find.byType(PolylineLayer<Object>))
+        .polylines;
+    expect(lines, hasLength(2));
+    final connector = lines.first;
+    expect(connector.strokeWidth, 2);
+    expect(connector.color, DkColors.light.routeLine);
+    expect(connector.pattern, isNot(const StrokePattern.solid()));
+    expect(connector.hitValue, 'one');
+  });
 }
