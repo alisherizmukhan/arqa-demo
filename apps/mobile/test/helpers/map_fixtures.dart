@@ -17,7 +17,7 @@ const bazaar = Place(
   label: 'Зелёный базар',
 );
 const esentai = Place(
-  point: GeoPoint(43.2185, 76.928),
+  point: GeoPoint(43.2189, 76.9279),
   label: 'ТРЦ Есентай Молл',
 );
 const republic = Place(
@@ -29,20 +29,20 @@ const airport = Place(
   label: 'Аэропорт Алматы',
 );
 const mega = Place(
-  point: GeoPoint(43.20243, 76.89317),
+  point: GeoPoint(43.2026, 76.8946),
   label: 'ТРЦ MEGA Alma-Ata',
 );
 
 const TripRoute bazaarToEsentai = TripRoute(
   status: RouteStatus.ready,
-  distanceMetres: 7203,
-  polyline: r'{v`gG_iutMJzCJjEFbCTbI@TLlFDjB~CUp@Ev@ElCSTCfCOpE[ZCn@E~AIz@GtAIVpI@Z@Z@^F~BFrCdIq@FxAJrCFtBHxCZbJLjD?l@TrHZfI@j@LlEFpBFApCSzDYlE[~M{@^CjEY`BMlAE|BM`CMbDUn@GdCQbBKpBOdAGvCOZ?ZBbBK^CpBSPCnAMf@EnBSp@G~C[X?LzE@LFfCJjDFfB@^xAs@|Au@jCcA~Bs@~@W`MqBr@MnImAdCWnGo@~@O`@On@]f@]v@e@XUTWtFcIHET@LHn@z@XZjA|@vC`FdAhBhEnH`FlIR^l@bAzEdI|@zAr@lA^n@Dt@b@bATZ@F@FPRf@bATl@R^HLJTjClE',
+  distanceMetres: 7496,
+  polyline: r'{v`gG_iutMJzCJjEFbCTbI@TLlFDjB~CUp@Ev@ElCSTCfCOpE[ZCn@E~AIz@GtAIVpI@Z@Z@^F~BFrCdIq@FxAJrCFtBHxCZbJLjD?l@TrHZfI@j@LlEFpBFApCSzDYlE[~M{@^CjEY`BMlAE|BM`CMbDUn@GdCQbBKpBOdAGvCOZ?ZBbBK^CpBSPCnAMf@EnBSp@G~C[X?LzE@LFfCJjDFfB@^xAs@|Au@jCcA~Bs@~@W`MqBr@MnImAdCWnGo@~@O`@On@]f@]v@e@XUTWtFcIHET@LHn@z@XZjA|@vC`FdAhBhEnH`FlIR^l@bAzEdI|@zAr@lA^n@Dt@b@bATZ@F@FPRf@bATl@R^HLJThFxICH}BlDID]EQUw@aAm@o@CC',
 );
 
 const TripRoute esentaiToRepublic = TripRoute(
   status: RouteStatus.ready,
-  distanceMetres: 5211,
-  polyline: r'k`xfG{aptM|AjCCH}BlDID]EQUw@aAm@o@i@u@CCSSKEg@OYAOAw@?MAkA?MCEi@AeAA{A?IAqBN_@TQhDgBRIRCPHAGD?RVd@bAL`@Vd@jAhB`@^pBhDNTJFPALENWDY@UCYOUsCaE}BcC]m@e@u@yBwDu@kAGKi@_AiFaJy@uAeFyI{@wAqC{Ey@wAuA_CkAsBoBmEC]J_@lJeNL@\APILQFW@MCYQ_@OKU?IBOHILEREZOf@Q\iA`BuGlJoAhB_G|Ie@j@w@t@k@^oBj@aE^OBcD?_JdAU?SCUQ}@yAk@aAi@}Aw@cBu@eAiAqA}BmCS]K[IYEqA?wAQc@GEOCeADw@FcEXe@BkAFeAF[AGiBG_F?cHEcB',
+  distanceMetres: 4918,
+  polyline: r'sfxfGc|otMe@q@CCSSKEg@OYAOAw@?MAkA?MCEi@AeAA{A?IAqBN_@TQhDgBRIRCPHAGD?RVd@bAL`@Vd@jAhB`@^pBhDNTJFPALENWDY@UCYOUsCaE}BcC]m@e@u@yBwDu@kAGKi@_AiFaJy@uAeFyI{@wAqC{Ey@wAuA_CkAsBoBmEC]J_@lJeNL@\APILQFW@MCYQ_@OKU?IBOHILEREZOf@Q\iA`BuGlJoAhB_G|Ie@j@w@t@k@^oBj@aE^OBcD?_JdAU?SCUQ}@yAk@aAi@}Aw@cBu@eAiAqA}BmCS]K[IYEqA?wAQc@GEOCeADw@FcEXe@BkAFeAF[AGiBG_F?cHEcB',
 );
 
 const TripRoute republicToAirport = TripRoute(
@@ -53,8 +53,8 @@ const TripRoute republicToAirport = TripRoute(
 
 const TripRoute megaToEsentai = TripRoute(
   status: RouteStatus.ready,
-  distanceMetres: 5525,
-  polyline: r'e~tfGmkitMZ?^Op@EFA\GcDGW?Q?Y?Q?uC@[F@o@?a@B{J?EIcJA}ABs@D_@?qAH]?oACcBCg@Eo@E_JGsE~BQhASh@QhA]dAi@fBkAtAcAx@o@bCeBd@QRAJFFHDV?HCLKNaBlA]TYFYESUU]Sq@Y_BK}AOsGG}BEq@MmAOq@WcAi@wAc@{@_CyDsCiEqA_Bm@k@WQsBm@qAKkIIcBS]I]OWU_BkBsEeHWa@kAgBe@u@cF_IkDmFoE}GiMkRw@sA}@iB}@gBCc@i@mB_@aAo@qAUs@[y@OQMGS?IB]^{@jAeBpCGFK@IAYQQUw@aAm@o@i@u@CCSSKEg@OYAOAw@?MAkA?MCEi@AeAA{A?IAqBN_@TQhDgBRIRCPHPRf@bATl@R^HLJTjClE',
+  distanceMetres: 4660,
+  polyline: r'w~tfGgnitM@p@W?Q?Y?Q?uC@[F@o@?a@B{J?EIcJA}ABs@D_@?qAH]?oACcBCg@Eo@E_JGsE~BQhASh@QhA]dAi@fBkAtAcAx@o@bCeBd@QRAJFFHDV?HCLKNaBlA]TYFYESUU]Sq@Y_BK}AOsGG}BEq@MmAOq@WcAi@wAc@{@_CyDsCiEqA_Bm@k@WQsBm@qAKkIIcBS]I]OWU_BkBsEeHWa@kAgBe@u@cF_IkDmFoE}GiMkRw@sA}@iB}@gBCc@i@mB_@aAo@qAUs@[y@OQMGS?IB]^{@jAeBpCGFK@IAYQQUw@aAm@o@CC',
 );
 
 /// t1 with its places and road route (08:10–08:32, 2 400 ₸, card).
@@ -115,8 +115,8 @@ final mapU2t2 = Trip(
 final Trip mapT1Straight = mapT1.withRoute(
   const TripRoute(
     status: RouteStatus.straight,
-    distanceMetres: 5391,
-    polyline: r'ew`gG}hutMpsG|hD',
+    distanceMetres: 5354,
+    polyline: r'ew`gG}hutM`qGpiD',
   ),
 );
 

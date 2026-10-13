@@ -463,6 +463,20 @@ The app:
 - **A row tap now selects; a trailing button «Открыть поездку» opens the trip.** → One gesture cannot both select and navigate. The button is its own semantics node (`DkListRow(trailingIsAction: true)`); the row reads «Маршрут 1 из 2, …» and its selected state.
 - **The ORS credit on the map is ORS's requested wording** «© openrouteservice.org by HeiGIT» (decided after stage 3). It stays one line at 360 dp and text ×1.3.
 
+## Maps — snapped route ends and seed points
+
+- **Markers always sit on the stored place points; the line is ORS's.** ORS snaps each place to the nearest road (radius 1 000 m), so a line can start or end tens of metres away.
+  - Where the line's first or last point is more than 30 m from its place, a dashed connector (2 dp, 4/4, the route's colour) joins them (`DkRoute.connectors`).
+  - We do not move the line's ends onto the places: the distance and the polyline stay what ORS returned.
+  - Trip details and the day map build the route with the same function (`dkRouteOf`); a test checks both draw the same points and connectors, and that every fixture route reaches both places (≤ 30 m) or has a connector.
+- **Two seed points moved to the right side of the road** (snapping detours, checked against live ORS):
+  - ТРЦ Есентай Молл 43.2185, 76.9280 → **43.2189, 76.9279**: from the old point t2 started with a 987 m loop around the block; now t2 is 4 918 m (was 5 211 m).
+  - ТРЦ MEGA Alma-Ata 43.20243, 76.89317 → **43.2026, 76.8946** (on the northbound side of Rozybakiev): the old point snapped to the southbound side, so t4 started with an 85 m drive south and a U-turn (175 m); now t4 is 12 200 m (was 12 356 m).
+- **Turnarounds that are not snapping stay.** ORS follows OSM's turn restrictions; these are the real path, and their metres are in the distance:
+  - t2 at 2.5 km: no left turn from Al-Farabi, so it goes ~150 m on, turns round through the parking loop by «Горный Гигант» and comes back (the «stray dot» from the review: the end of that spur, not a marker or a route end);
+  - t2's start: the mall's one-way driveway goes north round the block to Al-Farabi and a U-turn at the Есентай bridge;
+  - t3 at 8 km (396 m) and u2-t2 at 1.3 km (272 m): U-turns on divided roads.
+
 ## Post-redesign UI fixes (user feedback)
 
 - **iOS-style pickers on every platform** → the Material date and time dialogs are replaced by `DkPickerSheet` (`showDkDatePicker` / `showDkTimePicker`): a bottom sheet with a Cupertino wheel and «Готово». *Why:* the user found the Material Android pickers awkward; one wheel works the same on Android and iOS and is thumb-friendly. The date sheet has a «Сегодня» shortcut.

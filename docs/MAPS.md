@@ -206,21 +206,36 @@ Coordinates more than 100 m from the OSM object were corrected. The seed labels 
 | Seed point | Prompt | `/geo/search` | Gap | Used |
 |---|---|---|---|---|
 | Зелёный базар | 43.2627, 76.9539 | «Зелёный базар» 43.26275, 76.95519 | 105 m | **43.26275, 76.95519** |
-| Есентай Молл | 43.2185, 76.9280 | «Esentai Mall» 43.21847, 76.92745 | 45 m | prompt |
+| Есентай Молл | 43.2185, 76.9280 | «Esentai Mall» 43.21847, 76.92745 | 45 m | **43.2189, 76.9279** (after the day-map review: see below) |
 | Площадь Республики | 43.2380, 76.9455 | 43.23863, 76.94536 | 71 m | prompt |
 | Аэропорт Алматы | 43.3521, 77.0405 | area centre 43.35896, 77.02110 (1.7 km); reverse: the terminal «Almaty International Airport», 3 m | — | prompt (the terminal) |
-| MEGA Alma-Ata | 43.2016, 76.8920 | 43.20243, 76.89317 | 132 m | **43.20243, 76.89317** |
+| MEGA Alma-Ata | 43.2016, 76.8920 | 43.20243, 76.89317 | 132 m | **43.2026, 76.8946** (after the day-map review: see below) |
 
 The seed trips with places (times and money as before). The routes were built on the developer database; user_2's routes are built the same way on the next start.
 
 | Trip | Driver, time | Route | Distance | Time |
 |---|---|---|---|---|
-| t1 | user_1, 1 Oct 08:10 | Зелёный базар → ТРЦ Есентай Молл | 7 203 m | 738 s |
-| t2 | user_1, 1 Oct 09:05 | ТРЦ Есентай Молл → Площадь Республики | 5 211 m | 600 s |
+| t1 | user_1, 1 Oct 08:10 | Зелёный базар → ТРЦ Есентай Молл | 7 496 m | 788 s |
+| t2 | user_1, 1 Oct 09:05 | ТРЦ Есентай Молл → Площадь Республики | 4 918 m | 550 s |
 | t3 | user_1, 30 Sep 18:40 | Площадь Республики → Аэропорт Алматы | 25 641 m | 2 867 s |
-| t4 | user_1, 30 Sep 23:50 (crosses midnight) | ТРЦ MEGA Alma-Ata → Зелёный базар | 12 356 m | 1 071 s |
-| u2-t1 | user_2, 1 Oct 10:00 | Площадь Республики → Аэропорт Алматы | — | — |
-| u2-t2 | user_2, 1 Oct 12:15 | ТРЦ MEGA Alma-Ata → ТРЦ Есентай Молл | — | — |
+| t4 | user_1, 30 Sep 23:50 (crosses midnight) | ТРЦ MEGA Alma-Ata → Зелёный базар | 12 200 m | 1 042 s |
+| u2-t1 | user_2, 1 Oct 10:00 | Площадь Республики → Аэропорт Алматы | 25 641 m | 2 867 s |
+| u2-t2 | user_2, 1 Oct 12:15 | ТРЦ MEGA Alma-Ata → ТРЦ Есентай Молл | 4 660 m | 423 s |
+
+**Snapped route ends (after the day-map review, 13 Oct 2026).** ORS snaps a place to the nearest road; how far each seed route's line ends from its place points (developer database, live ORS):
+
+| Trip | Route | Start gap | End gap | Detours left (real turnarounds) |
+|---|---|---|---|---|
+| t1 | Зелёный базар → ТРЦ Есентай Молл | 6 m | 40 m | — |
+| t2 | ТРЦ Есентай Молл → Площадь Республики | 40 m | 25 m | parking-loop U-turn at 2.5 km (156 m) |
+| t3 | Площадь Республики → Аэропорт Алматы | 25 m | 67 m | U-turn at 8 km (396 m) |
+| t4 | ТРЦ MEGA Alma-Ata → Зелёный базар | 9 m | 6 m | — |
+| u2-t1 | Площадь Республики → Аэропорт Алматы | 25 m | 67 m | as t3 |
+| u2-t2 | ТРЦ MEGA Alma-Ata → ТРЦ Есентай Молл | 9 m | 40 m | U-turn at 1.3 km (272 m) |
+
+- Gaps over 30 m get a dashed connector from the place (DESIGN.md §9.1).
+- t1 ends and t2 starts at the same snapped point (43.21914, 76.92754), so both lines meet; the «2» marker sits on the place point 40 m away.
+- Moved: Есентай (t2 began with a 987 m loop) and MEGA (t4 began with a U-turn); see DECISIONS.
 
 ## Sources
 

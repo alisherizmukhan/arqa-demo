@@ -13,14 +13,14 @@ typedef PreviewRoute = ({int metres, String polyline});
 
 /// Seed trip t1.
 const PreviewRoute bazaarToEsentai = (
-  metres: 7203,
-  polyline: r'{v`gG_iutMJzCJjEFbCTbI@TLlFDjB~CUp@Ev@ElCSTCfCOpE[ZCn@E~AIz@GtAIVpI@Z@Z@^F~BFrCdIq@FxAJrCFtBHxCZbJLjD?l@TrHZfI@j@LlEFpBFApCSzDYlE[~M{@^CjEY`BMlAE|BM`CMbDUn@GdCQbBKpBOdAGvCOZ?ZBbBK^CpBSPCnAMf@EnBSp@G~C[X?LzE@LFfCJjDFfB@^xAs@|Au@jCcA~Bs@~@W`MqBr@MnImAdCWnGo@~@O`@On@]f@]v@e@XUTWtFcIHET@LHn@z@XZjA|@vC`FdAhBhEnH`FlIR^l@bAzEdI|@zAr@lA^n@Dt@b@bATZ@F@FPRf@bATl@R^HLJTjClE',
+  metres: 7496,
+  polyline: r'{v`gG_iutMJzCJjEFbCTbI@TLlFDjB~CUp@Ev@ElCSTCfCOpE[ZCn@E~AIz@GtAIVpI@Z@Z@^F~BFrCdIq@FxAJrCFtBHxCZbJLjD?l@TrHZfI@j@LlEFpBFApCSzDYlE[~M{@^CjEY`BMlAE|BM`CMbDUn@GdCQbBKpBOdAGvCOZ?ZBbBK^CpBSPCnAMf@EnBSp@G~C[X?LzE@LFfCJjDFfB@^xAs@|Au@jCcA~Bs@~@W`MqBr@MnImAdCWnGo@~@O`@On@]f@]v@e@XUTWtFcIHET@LHn@z@XZjA|@vC`FdAhBhEnH`FlIR^l@bAzEdI|@zAr@lA^n@Dt@b@bATZ@F@FPRf@bATl@R^HLJThFxICH}BlDID]EQUw@aAm@o@CC',
 );
 
 /// Seed trip t2.
 const PreviewRoute esentaiToRepublic = (
-  metres: 5211,
-  polyline: r'k`xfG{aptM|AjCCH}BlDID]EQUw@aAm@o@i@u@CCSSKEg@OYAOAw@?MAkA?MCEi@AeAA{A?IAqBN_@TQhDgBRIRCPHAGD?RVd@bAL`@Vd@jAhB`@^pBhDNTJFPALENWDY@UCYOUsCaE}BcC]m@e@u@yBwDu@kAGKi@_AiFaJy@uAeFyI{@wAqC{Ey@wAuA_CkAsBoBmEC]J_@lJeNL@\APILQFW@MCYQ_@OKU?IBOHILEREZOf@Q\iA`BuGlJoAhB_G|Ie@j@w@t@k@^oBj@aE^OBcD?_JdAU?SCUQ}@yAk@aAi@}Aw@cBu@eAiAqA}BmCS]K[IYEqA?wAQc@GEOCeADw@FcEXe@BkAFeAF[AGiBG_F?cHEcB',
+  metres: 4918,
+  polyline: r'sfxfGc|otMe@q@CCSSKEg@OYAOAw@?MAkA?MCEi@AeAA{A?IAqBN_@TQhDgBRIRCPHAGD?RVd@bAL`@Vd@jAhB`@^pBhDNTJFPALENWDY@UCYOUsCaE}BcC]m@e@u@yBwDu@kAGKi@_AiFaJy@uAeFyI{@wAqC{Ey@wAuA_CkAsBoBmEC]J_@lJeNL@\APILQFW@MCYQ_@OKU?IBOHILEREZOf@Q\iA`BuGlJoAhB_G|Ie@j@w@t@k@^oBj@aE^OBcD?_JdAU?SCUQ}@yAk@aAi@}Aw@cBu@eAiAqA}BmCS]K[IYEqA?wAQc@GEOCeADw@FcEXe@BkAFeAF[AGiBG_F?cHEcB',
 );
 
 /// Seed trip t3.
@@ -31,14 +31,14 @@ const PreviewRoute republicToAirport = (
 
 /// Seed trip t4.
 const PreviewRoute megaToBazaar = (
-  metres: 12356,
-  polyline: r'e~tfGmkitMZ?^Op@EFA\GcDGW?Q?Y?Q?uC@[F@o@?a@B{J?EIcJA}ABs@iCJyCNI@i@BeDTQ@WByAJeDRyBN_AFcAHcCNS@aAH_CNg@DuBLwAJoEZwE\iEZy@FsAJi@DaBJyDXM@qBNK@{BNkBLiBJgBLO@}AHc@ByCROgFAWA_@M}DGmBIaC?IOeFsCRyDXs@DoDV_@Di@Bi@Dq@DcCNs@DuAHiAHS@gCPsCRyAJgBLo@DWBi@D_AFg@DQ@eDTsCPeDTg@DkAHoDTgAHoCRoAJsAHsEZk@DO@sBNcAFsCPY@eETqE\wCTkIh@C_ACkAIyBMkEM{EEeAA_@G}BKqDSyGIqCM}DG_CIwBEaBAUCaAKcDKsDC_@CiAIaCCc@EaBKiDC_AA]EqAGkBGsByIj@qIr@yFZqAHcBJmF\O@_EZkCLI{DIeCCqBEmAOuFKiDEoAE_BE{ASgGqDXeDTSBs@BuBLqCNKoEGaCK{DKaDY}HUeHE{AKqEGcDGoBOoFKiDCk@KkCYqIQoGEgBAGSwHEsAOeGKkDMmDMsDEy@GgBW_JWqIAWWoIIcDOcFA_@SiGKiDIcDUwIMoEEyB{AJyBNY@gDTBjAPdGLpD??',
+  metres: 12200,
+  polyline: r'w~tfGgnitM@p@W?Q?Y?Q?uC@[F@o@?a@B{J?EIcJA}ABs@iCJyCNI@i@BeDTQ@WByAJeDRyBN_AFcAHcCNS@aAH_CNg@DuBLwAJoEZwE\iEZy@FsAJi@DaBJyDXM@qBNK@{BNkBLiBJgBLO@}AHc@ByCROgFAWA_@M}DGmBIaC?IOeFsCRyDXs@DoDV_@Di@Bi@Dq@DcCNs@DuAHiAHS@gCPsCRyAJgBLo@DWBi@D_AFg@DQ@eDTsCPeDTg@DkAHoDTgAHoCRoAJsAHsEZk@DO@sBNcAFsCPY@eETqE\wCTkIh@C_ACkAIyBMkEM{EEeAA_@G}BKqDSyGIqCM}DG_CIwBEaBAUCaAKcDKsDC_@CiAIaCCc@EaBKiDC_AA]EqAGkBGsByIj@qIr@yFZqAHcBJmF\O@_EZkCLI{DIeCCqBEmAOuFKiDEoAE_BE{ASgGqDXeDTSBs@BuBLqCNKoEGaCK{DKaDY}HUeHE{AKqEGcDGoBOoFKiDCk@KkCYqIQoGEgBAGSwHEsAOeGKkDMmDMsDEy@GgBW_JWqIAWWoIIcDOcFA_@SiGKiDIcDUwIMoEEyB{AJyBNY@gDTBjAPdGLpD??',
 );
 
 /// Seed trip u2-t2.
 const PreviewRoute megaToEsentai = (
-  metres: 5525,
-  polyline: r'e~tfGmkitMZ?^Op@EFA\GcDGW?Q?Y?Q?uC@[F@o@?a@B{J?EIcJA}ABs@D_@?qAH]?oACcBCg@Eo@E_JGsE~BQhASh@QhA]dAi@fBkAtAcAx@o@bCeBd@QRAJFFHDV?HCLKNaBlA]TYFYESUU]Sq@Y_BK}AOsGG}BEq@MmAOq@WcAi@wAc@{@_CyDsCiEqA_Bm@k@WQsBm@qAKkIIcBS]I]OWU_BkBsEeHWa@kAgBe@u@cF_IkDmFoE}GiMkRw@sA}@iB}@gBCc@i@mB_@aAo@qAUs@[y@OQMGS?IB]^{@jAeBpCGFK@IAYQQUw@aAm@o@i@u@CCSSKEg@OYAOAw@?MAkA?MCEi@AeAA{A?IAqBN_@TQhDgBRIRCPHPRf@bATl@R^HLJTjClE',
+  metres: 4660,
+  polyline: r'w~tfGgnitM@p@W?Q?Y?Q?uC@[F@o@?a@B{J?EIcJA}ABs@D_@?qAH]?oACcBCg@Eo@E_JGsE~BQhASh@QhA]dAi@fBkAtAcAx@o@bCeBd@QRAJFFHDV?HCLKNaBlA]TYFYESUU]Sq@Y_BK}AOsGG}BEq@MmAOq@WcAi@wAc@{@_CyDsCiEqA_Bm@k@WQsBm@qAKkIIcBS]I]OWU_BkBsEeHWa@kAgBe@u@cF_IkDmFoE}GiMkRw@sA}@iB}@gBCc@i@mB_@aAo@qAUs@[y@OQMGS?IB]^{@jAeBpCGFK@IAYQQUw@aAm@o@CC',
 );
 
 /// Decodes a Google-encoded polyline (precision 5). A copy for the previews;

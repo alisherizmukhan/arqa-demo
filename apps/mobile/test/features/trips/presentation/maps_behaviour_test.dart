@@ -170,7 +170,7 @@ void main() {
       expect(geo.reverses, isEmpty);
       expect(find.text('ТРЦ Есентай Молл'), findsOneWidget);
       final camera = _controller(tester).camera;
-      expect(camera.center, const LatLng(43.2185, 76.928));
+      expect(camera.center, const LatLng(43.2189, 76.9279));
       expect(camera.zoom, 16);
       await disposeApp(tester);
     });
@@ -285,8 +285,8 @@ void main() {
           .routes
           .single;
       expect(line.straight, isFalse);
-      expect(find.text('7,2 км'), findsOneWidget);
-      expect(find.text(DkMoney.format(333)), findsOneWidget); // per km
+      expect(find.text('7,5 км'), findsOneWidget);
+      expect(find.text(DkMoney.format(320)), findsOneWidget); // per km
       expect(
         find.text(DkMoney.format(109)),
         findsOneWidget,

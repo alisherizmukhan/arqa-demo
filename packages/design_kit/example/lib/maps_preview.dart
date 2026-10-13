@@ -24,7 +24,7 @@ abstract final class Places {
   static const bazaar = LatLng(43.26275, 76.95519);
 
   /// ТРЦ Есентай Молл.
-  static const esentai = LatLng(43.2185, 76.928);
+  static const esentai = LatLng(43.2189, 76.9279);
 
   /// Площадь Республики.
   static const republic = LatLng(43.238, 76.9455);
@@ -33,7 +33,7 @@ abstract final class Places {
   static const airport = LatLng(43.3521, 77.0405);
 
   /// ТРЦ MEGA Alma-Ata.
-  static const mega = LatLng(43.20243, 76.89317);
+  static const mega = LatLng(43.2026, 76.8946);
 
   /// Almaty center: the picker's start view.
   static const almaty = LatLng(43.2389, 76.8897);
@@ -744,6 +744,7 @@ class _Details extends StatelessWidget {
                       DkRoute(
                         points: points,
                         straight: status == _Status.straight,
+                        connectors: _connectors(points, a, b),
                       ),
                     ],
                   ),
@@ -925,7 +926,15 @@ class _DayMap extends StatelessWidget {
     final spacing = context.dkSpacing;
     final routes = [
       for (final (i, t) in trips.indexed)
-        DkRoute(points: decodePolyline(t.route!.polyline), id: i),
+        DkRoute(
+          points: decodePolyline(t.route!.polyline),
+          id: i,
+          connectors: _connectors(
+            decodePolyline(t.route!.polyline),
+            t.a!,
+            t.b!,
+          ),
+        ),
     ];
     final shown = selected == null ? routes : [routes[selected!]];
     return _Screen(
@@ -1041,6 +1050,18 @@ class _DayMap extends StatelessWidget {
     }
     return [...dots, ...numbers];
   }
+}
+
+/// A dashed connector from a place to its line's end where they are more
+/// than 30 m apart (the routing engine snaps places to a road; DESIGN.md
+/// §9.1).
+List<List<LatLng>> _connectors(List<LatLng> line, LatLng a, LatLng b) {
+  const distance = Distance();
+  bool far(LatLng x, LatLng y) => distance.as(LengthUnit.Meter, x, y) > 30;
+  return [
+    if (far(a, line.first)) [a, line.first],
+    if (far(line.last, b)) [line.last, b],
+  ];
 }
 
 // ----------------------------------------------------------------------- Kit
