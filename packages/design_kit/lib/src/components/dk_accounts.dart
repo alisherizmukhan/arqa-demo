@@ -80,7 +80,7 @@ class _DkPasswordFieldState extends State<DkPasswordField> {
     enabled: widget.enabled,
     obscureText: !_visible,
     autofillHints: const [AutofillHints.password],
-    trailing: DkIconButton(
+    action: DkIconButton(
       icon: _visible ? DkIcons.eyeOff : DkIcons.eye,
       label: _visible ? widget.hideLabel : widget.showLabel,
       onPressed: () => setState(() => _visible = !_visible),

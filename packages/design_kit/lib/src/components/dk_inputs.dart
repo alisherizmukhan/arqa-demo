@@ -176,6 +176,7 @@ class DkTextField extends StatefulWidget {
     this.showLabel = true,
     this.onClear,
     this.clearLabel,
+    this.action,
     super.key,
   }) : assert(
          onClear == null || clearLabel != null,
@@ -203,6 +204,7 @@ class DkTextField extends StatefulWidget {
        showLabel = true,
        onClear = null,
        clearLabel = null,
+       action = null,
        suffix = DkMoney.currency,
        style = null,
        keyboardType = TextInputType.number,
@@ -221,6 +223,11 @@ class DkTextField extends StatefulWidget {
 
   /// Accessible name of the clear button («Очистить»).
   final String? clearLabel;
+
+  /// A fixed-size button at the end (the password eye, a `DkIconButton`):
+  /// its own width and its own semantics node, so the input gets the rest of
+  /// the row. [trailing] is for text that may shrink (a badge).
+  final Widget? action;
 
   /// Text controller.
   final TextEditingController controller;
@@ -407,12 +414,19 @@ class _DkTextFieldState extends State<DkTextField> {
                 suffix,
                 style: _suffixStyle.copyWith(color: colors.textTertiary),
               ),
+            if (widget.action case final action?)
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: context.dkSpacing.s4,
+                ),
+                child: Semantics(container: true, child: action),
+              ),
             if (widget.trailing case final trailing?) ...[
               SizedBox(width: context.dkSpacing.s8),
-              // Its own node, so a trailing button (the password eye) stays
-              // reachable by screen readers instead of merging into the field.
-              // At most half the row: a long label shrinks inside it
-              // (DESIGN.md §10, rule 4).
+              // Its own node, so it stays reachable by screen readers
+              // instead of merging into the field. At most half the row: a
+              // long label shrinks inside it (DESIGN.md §10, rule 4). A
+              // button goes in [action] instead (its own width).
               Flexible(child: Semantics(container: true, child: trailing)),
             ],
           ],

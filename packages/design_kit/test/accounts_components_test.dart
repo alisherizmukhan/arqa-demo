@@ -34,6 +34,50 @@ void main() {
     expect(find.bySemanticsLabel('Скрыть пароль'), findsOneWidget);
   });
 
+  for (final scale in [1.0, 1.3]) {
+    testWidgets('password: the eye keeps its 48 dp, the input the rest of the '
+        'row (360 dp, text x$scale)', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final controller = TextEditingController(text: 'secret-password');
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        wrap(
+          MediaQuery(
+            data: MediaQueryData(
+              size: const Size(360, 640),
+              textScaler: TextScaler.linear(scale),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DkPasswordField(
+                label: 'Пароль',
+                controller: controller,
+                showLabel: 'Показать пароль',
+                hideLabel: 'Скрыть пароль',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final eye = find.ancestor(
+        of: find.byIcon(DkIcons.eye),
+        matching: find.byType(DkIconButton),
+      );
+      expect(tester.getSize(eye), const Size(48, 48));
+      final field = tester.getRect(find.byType(DkTextField));
+      final input = tester.getRect(find.byType(TextField));
+      // Was about half the row (the eye sat in a Flexible).
+      expect(input.width, greaterThan(field.width - 48 - 40));
+      // The eye sits at the end, right after the input.
+      expect(tester.getRect(eye).left, greaterThanOrEqualTo(input.right));
+      expect(tester.getRect(eye).right, lessThanOrEqualTo(field.right));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('list group: dividers between rows, none before an attachment', (
     tester,
   ) async {

@@ -458,7 +458,7 @@ Keep copy in one file (`core/l10n/strings_ru.dart` or ARB). No English strings i
 - DkListGroup + DkListRow: DkCard(padding 0, clip) with rows min 56, padding 0 16, gap 12: leading icon tile 40 (surfaceMuted, icon 22), title bodyStrong (or titleM-weight 600 16/24), optional subtitle caption textTertiary, trailing (chevron-right 20 textTertiary | value | control). Dividers 1px divider inset 68. Destructive row: title + icon in `error`.
 - DkStatusChip: height 24, radius sm, padding h 8, gap 4, icon 14 + text badge style.
   pending: bg surfaceMuted, fg textSecondary, icon clock; paid: bg successSoft, fg success, icon circle-check; rejected: bg errorSoft, fg error, icon circle-x. Always icon + text.
-- DkPasswordField: DkTextField + trailing DkIconButton eye / eye-off («Показать пароль» / «Скрыть пароль»).
+- DkPasswordField: DkTextField + DkIconButton eye / eye-off («Показать пароль» / «Скрыть пароль») in the field's `action` slot: 48 dp of its own, the typed text gets the rest of the row.
 - DkLanguageSwitch: DkSegmentedControl with two segments «Русский» / «Қазақша» (no icons). Labels are always in their own language, never translated.
 - DkFilterChips: horizontal scroll row of chips height 40 (tap area 48), radius pill, padding h 16; selected bg accent fg onAccent; unselected bg surface, border 1 border, fg textPrimary; label 14/600.
 
@@ -748,7 +748,7 @@ Components live in `packages/design_kit/lib/src/components/dk_map.dart`. Like th
 | DkRouteStats | `DkRouteStats(stats: [(label, value)])`. |
 | DkTripTile | `route` and `onTap` (optional). |
 | DkListRow | `leading` (a widget in the 40 slot), `selected` (`accentSoft`), `semanticsLabel` (spoken first), `trailingIsAction` (the trailing button stays its own node). |
-| DkTextField | `showLabel`, `onClear` / `clearLabel`. |
+| DkTextField | `showLabel`, `onClear` / `clearLabel`; `action`: a fixed-size button at the end with its own width and semantics node (the password eye; was in `trailing`, which took half the row). |
 | Formatting | `DkFormat.distance(metres, metresUnit, kilometresUnit)`, `DkFormat.perKilometre(amount, metres)`, `DkFormat.perMinute(amount, duration)`. |
 | Credits | `showDkMapCredits(title, credits)` / `DkMapCredits`. |
 | Tests and previews | `DkSketchTileProvider(offline)`: tiles drawn on the device (a street grid with parks and water), no network, the same picture every time. `offline: true` means tiles never arrive. |
