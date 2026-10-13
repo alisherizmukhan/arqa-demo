@@ -38,6 +38,7 @@ class DkColors extends ThemeExtension<DkColors> {
     required this.markerA,
     required this.markerB,
     required this.markerRing,
+    required this.routeMuted,
   });
 
   /// Light theme.
@@ -75,6 +76,7 @@ class DkColors extends ThemeExtension<DkColors> {
     markerA: Color(0xFF0F1419),
     markerB: Color(0xFF2450D8),
     markerRing: Color(0xFFFFFFFF),
+    routeMuted: Color(0xFF9AA3AF),
   );
 
   /// Dark theme.
@@ -112,6 +114,7 @@ class DkColors extends ThemeExtension<DkColors> {
     markerA: Color(0xFFF2F4F7),
     markerB: Color(0xFF7B9BFF),
     markerRing: Color(0xFFFFFFFF),
+    routeMuted: Color(0xFF5B6370),
   );
 
   /// Screen background, bottom bar.
@@ -213,6 +216,9 @@ class DkColors extends ThemeExtension<DkColors> {
   /// 2 dp ring around the place markers (white in both themes).
   final Color markerRing;
 
+  /// The day map's other routes while one is selected (DESIGN.md §9.5).
+  final Color routeMuted;
+
   /// Every token by its DESIGN.md name, for tests and the showcase.
   Map<String, Color> get all => {
     'bg': bg,
@@ -248,6 +254,7 @@ class DkColors extends ThemeExtension<DkColors> {
     'markerA': markerA,
     'markerB': markerB,
     'markerRing': markerRing,
+    'routeMuted': routeMuted,
   };
 
   @override
@@ -285,6 +292,7 @@ class DkColors extends ThemeExtension<DkColors> {
     Color? markerA,
     Color? markerB,
     Color? markerRing,
+    Color? routeMuted,
   }) {
     return DkColors(
       bg: bg ?? this.bg,
@@ -320,6 +328,7 @@ class DkColors extends ThemeExtension<DkColors> {
       markerA: markerA ?? this.markerA,
       markerB: markerB ?? this.markerB,
       markerRing: markerRing ?? this.markerRing,
+      routeMuted: routeMuted ?? this.routeMuted,
     );
   }
 
@@ -361,6 +370,7 @@ class DkColors extends ThemeExtension<DkColors> {
       markerA: l(markerA, other.markerA),
       markerB: l(markerB, other.markerB),
       markerRing: l(markerRing, other.markerRing),
+      routeMuted: l(routeMuted, other.routeMuted),
     );
   }
 }

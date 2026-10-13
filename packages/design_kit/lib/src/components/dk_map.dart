@@ -362,7 +362,11 @@ class DkRoute {
 /// a tap on a route gives back its [DkRoute.id] (the day map).
 class DkRouteLayer extends StatefulWidget {
   /// Creates the layer.
-  const new({required this.routes, this.onTap, super.key});
+  const new({required this.routes, this.onTap, this.selected, super.key});
+
+  /// The selected route's [DkRoute.id] (the day map): it stays `routeLine`
+  /// and is drawn last; the others turn `routeMuted`. Null: all alike.
+  final Object? selected;
 
   /// The routes, drawn in order.
   final List<DkRoute> routes;
@@ -392,6 +396,18 @@ class _DkRouteLayerState extends State<DkRouteLayer> {
     super.dispose();
   }
 
+  /// The selected route last, so it is drawn over the others.
+  List<DkRoute> get _ordered {
+    final selected = widget.selected;
+    if (selected == null) return widget.routes;
+    return [
+      for (final r in widget.routes)
+        if (r.id != selected) r,
+      for (final r in widget.routes)
+        if (r.id == selected) r,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.dkColors;
@@ -399,11 +415,13 @@ class _DkRouteLayerState extends State<DkRouteLayer> {
       hitNotifier: widget.onTap == null ? null : _hits,
       minimumHitbox: context.dkSizes.tapTargetMin / 2,
       polylines: [
-        for (final route in widget.routes)
+        for (final route in _ordered)
           Polyline<Object>(
             points: route.points,
             strokeWidth: _routeWidth,
-            color: colors.routeLine,
+            color: widget.selected == null || route.id == widget.selected
+                ? colors.routeLine
+                : colors.routeMuted,
             borderStrokeWidth: _casingWidth,
             borderColor: colors.routeCasing,
             pattern: route.straight
@@ -432,17 +450,41 @@ class _DkRouteLayerState extends State<DkRouteLayer> {
 /// the letter «A» / «B» (13/800); A = `markerA`, B = `markerB`.
 /// [semanticsLabel]: «Начало поездки» / «Конец поездки».
 class DkPlaceMarker extends StatelessWidget {
-  /// Creates a marker.
-  const new({required this.kind, required this.semanticsLabel, super.key});
+  /// Creates a marker: «A» / «B», or the trip's [number] (the day map's
+  /// start markers).
+  const new({
+    required this.kind,
+    required this.semanticsLabel,
+    this.number,
+    super.key,
+  }) : dot = false;
+
+  /// The day map's end marker: a 14 dp `markerB` dot with the 2 dp ring.
+  const new dot({required this.semanticsLabel, super.key})
+    : kind = DkPlaceKind.end,
+      number = null,
+      dot = true;
 
   /// A or B.
   final DkPlaceKind kind;
+
+  /// Shown instead of the letter (1, 2, …).
+  final int? number;
+
+  /// The small end marker.
+  final bool dot;
 
   /// Accessible name.
   final String semanticsLabel;
 
   /// Diameter (dp).
   static const double size = 32;
+
+  /// Diameter of the [DkPlaceMarker.dot] (dp).
+  static const double dotSize = 14;
+
+  /// This marker's diameter.
+  double get diameter => dot ? dotSize : size;
 
   @override
   Widget build(BuildContext context) {
@@ -455,7 +497,7 @@ class DkPlaceMarker extends StatelessWidget {
       label: semanticsLabel,
       excludeSemantics: true,
       child: SizedBox.square(
-        dimension: size,
+        dimension: diameter,
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: fill,
@@ -464,19 +506,21 @@ class DkPlaceMarker extends StatelessWidget {
             boxShadow: context.dkElevation.e1,
           ),
           // Fixed: the letter does not grow with the text scale (§10).
-          child: Center(
-            child: MediaQuery.withNoTextScaling(
-              child: Text(
-                kind.letter,
-                style: context.dkText.badge.copyWith(
-                  fontSize: _letterSize,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                  color: letter,
+          child: dot
+              ? null
+              : Center(
+                  child: MediaQuery.withNoTextScaling(
+                    child: Text(
+                      number?.toString() ?? kind.letter,
+                      style: context.dkText.badge.copyWith(
+                        fontSize: _letterSize,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        color: letter,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -489,10 +533,14 @@ const double _letterSize = 13;
 /// Markers on a map: one [DkPlaceMarker] per entry, centered on its point.
 class DkPlaceMarkers extends StatelessWidget {
   /// Creates the layer.
-  const new({required this.places, super.key});
+  const new({this.places = const [], this.markers = const [], super.key});
 
-  /// Point, kind, accessible name.
+  /// Point, kind, accessible name: «A» / «B» markers.
   final List<({LatLng point, DkPlaceKind kind, String label})> places;
+
+  /// Any markers (numbered starts, end dots), drawn after [places] in
+  /// order: a later one covers an earlier one.
+  final List<({LatLng point, DkPlaceMarker marker})> markers;
 
   @override
   Widget build(BuildContext context) {
@@ -504,6 +552,13 @@ class DkPlaceMarkers extends StatelessWidget {
             width: DkPlaceMarker.size,
             height: DkPlaceMarker.size,
             child: DkPlaceMarker(kind: place.kind, semanticsLabel: place.label),
+          ),
+        for (final m in markers)
+          Marker(
+            point: m.point,
+            width: m.marker.diameter,
+            height: m.marker.diameter,
+            child: m.marker,
           ),
       ],
     );

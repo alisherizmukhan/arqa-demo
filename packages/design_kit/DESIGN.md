@@ -81,6 +81,7 @@ Access via `context.dkColors`, `context.dkText`, etc. (extension on `BuildContex
 | markerA | `#0F1419` | `#F2F4F7` | Start marker «A» (= textPrimary), §9 |
 | markerB | `#2450D8` | `#7B9BFF` | End marker «B» (= accent), §9 |
 | markerRing | `#FFFFFF` | `#FFFFFF` | Ring around the place markers, §9 |
+| routeMuted | `#9AA3AF` | `#5B6370` | The day map's other routes while one is selected, §9.5 |
 
 Contrast: textTertiary ≥ 4.5:1 on `surface` in both themes. Do not put textTertiary on `bg` for essential text.
 `border` (field outline) ≥ 3:1 on `surface` in both themes (WCAG 1.4.11).
@@ -556,6 +557,7 @@ The driver may set where a trip started (A) and ended (B) on a map; the server b
 | markerA | `#0F1419` (= textPrimary) | `#F2F4F7` (= textPrimary) | Marker «A»; its letter is `surface` |
 | markerB | `#2450D8` (= accent) | `#7B9BFF` (= accent) | Marker «B»; its letter is `onAccent` |
 | markerRing | `#FFFFFF` | `#FFFFFF` | 2 dp ring around both markers |
+| routeMuted | `#9AA3AF` | `#5B6370` | The day map's other routes while one is selected |
 
 **Tiles follow the theme.** The tile URLs and the attribution come from the build (`--dart-define` `TILE_URL_LIGHT`, `TILE_URL_DARK`, `TILE_ATTRIBUTION`), never literals in widgets. The demo uses OpenStreetMap tiles for both themes. In the dark theme they are drawn through flutter_map's `darkModeTileBuilder` (inverted, hue rotated), so the map is not a white block. A real dark style (`TILE_URL_DARK` ≠ `TILE_URL_LIGHT`) is shown as it is. The filter touches only the tiles: route, markers and attribution are drawn above them in theme colors.
 
@@ -565,7 +567,7 @@ The driver may set where a trip started (A) and ended (B) on a map; the server b
   - Radius `lg`, clipped. The full-screen picker has no radius.
   - The attribution is always visible, compact and on one line (stage 3 review):
     - a chip at the bottom right, 11/14 textSecondary on `surface` at 90 %, radius `xs`;
-    - «© OpenStreetMap», plus « · openrouteservice» while a route built by ORS is drawn (`extraAttribution`);
+    - «© OpenStreetMap», plus « · © openrouteservice.org by HeiGIT» (ORS's requested wording) while a route built by ORS is drawn (`extraAttribution`);
     - it never wraps: a long credit scales down; one line at 360 dp and text ×1.3 (tested);
     - tapping it (a 48 dp area) opens «Данные карты» with the full credits and licence links, selectable (`showDkMapCredits`). See MAPS.md «Attribution».
   - Rotation is off. The camera fits the route with padding 48 (closest zoom 16).
@@ -672,12 +674,23 @@ A new pushed page with a back arrow and the title «Поездка».
 - A DkIconButton (`map`, «Карта дня») in the trips list header, before the sort button.
 - It is shown only when at least one trip of the day has places.
 
-**Day map:** a pushed page «Карта дня» with a full-height DkMapView.
-- Every route of the day, each with its A/B markers, fitted to all of them.
-- Tapping a route opens its trip details.
+**Day map:** a pushed page «Карта дня» with a full-height DkMapView. (Reworked after the stage 3 review: with A/B on every route it was unclear which line was which, and one trip's B hid under the next trip's A.)
+- **Numbered routes.** The day's trips are numbered in time order (1, 2, …):
+  - the start marker shows the trip's number (32 dp, `markerA`, 13/800);
+  - the end marker is a 14 dp `markerB` dot with the 2 dp ring;
+  - when a trip ends within 50 m of where the next one starts, one marker is drawn: the next trip's number (no dot under it).
+  - Trip details keep A/B.
+- **Selection.** Tapping a route or a list row selects that trip:
+  - its route stays `routeLine` and is drawn over the others, which turn `routeMuted`;
+  - the map fits to the selected route;
+  - its row is shown selected (`accentSoft`);
+  - tapping the same route or row again clears the selection (all routes `routeLine`, the map fits all).
+- The fit covers every route and marker.
 - A legend panel at the bottom (`surface`, shadow `e3`, full width, at most 40 % of the screen, scrolls):
   - «N маршрутов» (`titleM`) and the date (`caption`); for the admin, the filter first: «Все водители · 1 октября 2026», «Водитель 2 · 1 октября 2026»;
-  - then the day's trips as DkListRows: «08:10 – 08:32 · 2 400 ₸» over «Зелёный базар → ТРЦ Есентай Молл», each opening its details. This is how a screen reader gets the routes (the map's route taps are not semantics nodes).
+  - then the day's trips as DkListRows: the numbered marker (the same number as on the map), «08:10 – 08:32 · 2 400 ₸» over «Зелёный базар → ТРЦ Есентай Молл»;
+  - a row tap selects the route (above); a trailing DkIconButton (`chevron-right`, «Открыть поездку») opens the trip details;
+  - screen readers: each row reads «Маршрут 1 из 2» first, then its texts, and says when it is selected; the open button is its own node. The map's route taps are not semantics nodes.
 - The admin sees the routes of the selected filter («Все водители» or one driver).
 
 ### 9.6 Formatting
@@ -708,9 +721,13 @@ Proposed, approved after stage 2 (kk machine-translated, needs native review):
 - «{n} маршрут / маршрута / маршрутов» — the day-map legend;
 - units «м», «км».
 
-Proposed in stage 3 (waiting for approval):
+Proposed in stage 3, approved:
 - «За минуту» (kk «Минутына») — the third stat;
 - «Данные карты» (kk «Карта деректері») — the credits sheet title and the attribution's accessible name.
+
+Proposed with the day-map numbering (waiting for approval):
+- «Маршрут {n} из {total}» (kk «Бағыт {n} / {total}») — spoken first on each day-map row;
+- «Открыть поездку» (kk «Сапарды ашу») — the row's button.
 
 ### 9.8 Kit implementation (stage 2)
 
@@ -724,11 +741,12 @@ Components live in `packages/design_kit/lib/src/components/dk_map.dart`. Like th
 |---|---|
 | Tiles | `DkMapTiles(lightUrl, darkUrl, attribution, userAgentPackageName, provider)`. `darkens(brightness)`: the dark theme with no separate dark style. |
 | DkMapView | `DkMapView(tiles, fit \| center + zoom, layers, overlays, controller, onMapEvent, interactive, rounded, animateTiles, attributionInsets, extraAttribution, onAttributionTap, attributionLabel, semanticsLabel)`. A fitted map fits again after its first frame and is rebuilt when its size or points change (flutter_map fits once). |
-| DkRouteLayer | `DkRouteLayer(routes: [DkRoute(points, straight, id)], onTap)`. `onTap` gives back the tapped route's `id` (the day map). |
-| DkPlaceMarker | `DkPlaceMarker(kind: DkPlaceKind.start / end, semanticsLabel)`. On a map: `DkPlaceMarkers(places: [(point, kind, label)])`. |
+| DkRouteLayer | `DkRouteLayer(routes: [DkRoute(points, straight, id)], onTap, selected)`. `onTap` gives back the tapped route's `id`; `selected` draws that route last in `routeLine` and the others in `routeMuted` (the day map). |
+| DkPlaceMarker | `DkPlaceMarker(kind: DkPlaceKind.start / end, semanticsLabel, number)` (a number instead of the letter) and `DkPlaceMarker.dot(semanticsLabel)` (14 dp end dot). On a map: `DkPlaceMarkers(places: [(point, kind, label)], markers: [(point, marker)])`. |
 | DkPlaceField | `DkPlaceField(kind, label, markerLabel, value, placeholder, onTap, onClear, clearLabel)`; 64 high (`dkPlaceFieldHeight`). |
 | DkRouteStats | `DkRouteStats(stats: [(label, value)])`. |
 | DkTripTile | `route` and `onTap` (optional). |
+| DkListRow | `leading` (a widget in the 40 slot), `selected` (`accentSoft`), `semanticsLabel` (spoken first), `trailingIsAction` (the trailing button stays its own node). |
 | DkTextField | `showLabel`, `onClear` / `clearLabel`. |
 | Formatting | `DkFormat.distance(metres, metresUnit, kilometresUnit)`, `DkFormat.perKilometre(amount, metres)`, `DkFormat.perMinute(amount, duration)`. |
 | Credits | `showDkMapCredits(title, credits)` / `DkMapCredits`. |

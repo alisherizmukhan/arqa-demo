@@ -188,11 +188,30 @@ class DkListRow extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.destructive = false,
+    this.leading,
+    this.selected = false,
+    this.semanticsLabel,
+    this.trailingIsAction = false,
     super.key,
   });
 
+  /// [trailing] is its own control (a button), not part of the row's
+  /// reading: it stays a separate node for screen readers.
+  final bool trailingIsAction;
+
   /// Title.
   final String title;
+
+  /// Leading widget in the 40 slot instead of [icon] (the day map's
+  /// numbered marker).
+  final Widget? leading;
+
+  /// Shown selected: `accentSoft` background (the day map's highlighted
+  /// route).
+  final bool selected;
+
+  /// Spoken before the row's texts («Маршрут 1 из 2»).
+  final String? semanticsLabel;
 
   /// Leading icon (in a 40 tile).
   final IconData? icon;
@@ -235,7 +254,12 @@ class DkListRow extends StatelessWidget {
         child: Row(
           spacing: spacing.s12,
           children: [
-            if (icon case final iconData?)
+            if (leading case final widget?)
+              SizedBox(
+                width: sizes.iconTile,
+                child: Center(child: widget),
+              )
+            else if (icon case final iconData?)
               ExcludeSemantics(
                 child: Container(
                   width: sizes.iconTile,
@@ -260,17 +284,27 @@ class DkListRow extends StatelessWidget {
                 ]),
               ),
             ),
-            ?end,
+            if (end case final widget? when trailingIsAction)
+              Semantics(container: true, child: widget)
+            else
+              ?end,
           ],
         ),
       ),
     );
+    final shown = selected
+        ? ColoredBox(color: colors.accentSoft, child: content)
+        : content;
+    final labelled = semanticsLabel == null
+        ? shown
+        : Semantics(label: semanticsLabel, child: shown);
     final tap = onTap;
-    if (tap == null) return MergeSemantics(child: content);
+    if (tap == null) return MergeSemantics(child: labelled);
     return MergeSemantics(
       child: Semantics(
         button: true,
-        child: InkWell(onTap: tap, child: content),
+        selected: selected,
+        child: InkWell(onTap: tap, child: labelled),
       ),
     );
   }
